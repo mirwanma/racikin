@@ -2,7 +2,8 @@ import { icon } from "../icons.js";
 import { store } from "../store.js";
 import { esc, toast } from "../ui.js";
 import { render, go } from "../app.js";
-import { cloud, signIn, signUp, sendReset, setNewPassword, signOut, syncNow } from "../cloud.js";
+import { cloud, signIn, signUp, sendReset, setNewPassword, signOut, syncNow, isMember } from "../cloud.js";
+import { peranNama } from "./tim.js";
 
 let mode = "masuk"; // masuk | daftar | lupa
 let busy = false;
@@ -65,6 +66,18 @@ export const akun = {
           <button class="btn soft" data-action="sync" ${cloud.status === "syncing" ? "disabled" : ""}>${icon("sync", 16)} Sinkron sekarang</button>
         </section>
 
+        <a href="#/tim" class="card module">
+          <span class="module-num">${icon("team", 18)}</span>
+          <div><h3>${isMember() ? esc(cloud.team.bisnis || "Tim") : "Tim & Karyawan"}</h3><p class="muted small">${
+            isMember()
+              ? `Kamu ${esc(peranNama(cloud.team.role))} · atas nama ${esc(cloud.team.nama)}`
+              : cloud.team?.anggota
+                ? `${cloud.team.anggota} anggota tim`
+                : "Undang kasir & manajer pakai kode"
+          }</p></div>
+          <span class="chev">${icon("chevron", 18)}</span>
+        </a>
+
         <section class="card">
           <h2 class="card-title">AI Online</h2>
           <p class="small">${store.get().settings.aiMode === "online" ? "Aktif" : `Masih Mode Demo. <a href="#/setelan" class="link">Aktifkan di Setelan</a>`}</p>
@@ -126,7 +139,10 @@ export const akun = {
     },
     sync: () => syncNow(),
     logout() {
-      const clear = confirm("Keluar dari akun.\n\nHapus juga data bisnis dari perangkat ini? (Data tetap aman di cloud)\n\nOK = hapus dari perangkat ini\nBatal = biarkan di perangkat ini");
+      const clear = isMember()
+        ? (confirm("Keluar dari akun? Data usaha tim akan dihapus dari perangkat ini.") || null)
+        : confirm("Keluar dari akun.\n\nHapus juga data bisnis dari perangkat ini? (Data tetap aman di cloud)\n\nOK = hapus dari perangkat ini\nBatal = biarkan di perangkat ini");
+      if (clear === null) return;
       return run(async () => {
         await signOut({ clearLocal: clear });
         mode = "masuk";

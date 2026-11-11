@@ -76,8 +76,14 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Komisi & markup per platform (GoFood, GrabFood, ShopeeFood), harga manual per menu, saran markup agar untung sama dengan di toko.
 - Kasir memilih saluran; Kas mencatat penjualan kotor + komisi sebagai pengeluaran; rekap menampilkan bersih.
 
+### Fase 8: Mode tim / karyawan (selesai)
+- Pemilik mengundang karyawan pakai kode/link (peran Kasir atau Manajer), bisa ubah peran & mengeluarkan anggota.
+- Kasir hanya melihat Kasir, Pelanggan & Stok; data keuangan & perencanaan tidak dikirim ke perangkatnya (dibatasi di server).
+- Sinkron diganti jadi penggabungan otomatis per item + versi dokumen, jadi beberapa HP bisa jualan bersamaan tanpa data hilang.
+- Order mencatat nama kasir; rekap harian per kasir.
+
 ### Di luar MVP (fase berikutnya)
-Mode tim/karyawan, foto produk AI (gambar), integrasi WhatsApp, push notification terjadwal, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
+Foto produk AI (gambar), integrasi WhatsApp, push notification terjadwal, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
 
 ## 6. Arsitektur MVP
 - **Frontend**: PWA statis (HTML + CSS + JS modules, tanpa build) di root repo ini, di-host di GitHub Pages. Data disimpan di `localStorage` (offline-first).

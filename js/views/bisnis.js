@@ -1,4 +1,5 @@
 import { icon } from "../icons.js";
+import { cloud, isMember } from "../cloud.js";
 import { journey } from "./home.js";
 
 const desc = {
@@ -49,6 +50,11 @@ export const bisnis = {
         <a href="#/pelanggan" class="card module">
           <span class="module-num">${icon("receipt", 18)}</span>
           <div><h3>Pelanggan Setia</h3><p class="muted small">${s.loyalty ? `${s.pelanggan.length} pelanggan · kartu stempel digital` : "Kartu stempel digital + ajak pelanggan balik"}</p></div>
+          <span class="chev">${icon("chevron", 18)}</span>
+        </a>
+        <a href="#/tim" class="card module">
+          <span class="module-num">${icon("team", 18)}</span>
+          <div><h3>Tim & Karyawan</h3><p class="muted small">${cloud.team?.role === "owner" && cloud.team.anggota ? `${cloud.team.anggota} anggota tim` : isMember() ? `Kamu ${cloud.team.role} di tim ini` : "Undang kasir & manajer, jualan dari banyak HP"}</p></div>
           <span class="chev">${icon("chevron", 18)}</span>
         </a>
         <a href="#/mentor" class="card module">
