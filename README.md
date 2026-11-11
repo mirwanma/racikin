@@ -14,7 +14,17 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - **Jadwal Konten**: kalender 14/30 hari, centang selesai, generator caption
 - **Mentor AI**: chat dengan konteks bisnis
 - **Setelan**: Mode Demo / AI Online, backup & restore JSON
+- **Stok & Resep** (fase 3): resep per menu → HPP/porsi & margin otomatis, stok bahan (beli, opname, riwayat), catat penjualan per menu (stok berkurang + masuk Kas), resep pakai AI, peringatan stok menipis
 - **Akun & Cloud** (fase 2): daftar/masuk pakai email + password, data tersinkron otomatis antar perangkat, AI Online wajib login dengan kuota per user
+
+## Stok & resep
+- Halaman `#/stok` (tab **Menu & Resep** dan **Bahan & Stok**), editor `#/resep?id=…`.
+- Data: `bahan` (nama, satuan, harga per satuan, stok, min), `resep` (harga jual, hasil porsi, item bahan + qty), `stokLog` (beli / jual / opname). Ikut tersinkron ke cloud.
+- HPP/porsi = Σ(qty × harga per satuan) ÷ hasil porsi. "Bisa dibuat" = porsi terbanyak yang bisa dibuat dari stok sekarang.
+- **Beli** bahan menambah stok, memperbarui harga per satuan dari total bayar, dan (opsional) mencatat pengeluaran *Bahan Baku* di Kas.
+- **Catat penjualan** per menu mengurangi stok semua bahan resep dan (opsional) mencatat pemasukan *Penjualan* di Kas.
+- AI task `generate_recipe` menyusun bahan + takaran + estimasi harga (ditandai "estimasi" sampai diganti harga belanja asli).
+- Rata-rata HPP resep dipakai sebagai default HPP di kalkulator BEP, dan ringkasan menu ikut jadi konteks Mentor AI.
 
 ## Akun & sinkron cloud
 - **Auth**: Supabase Auth (email + password, alur PKCE). Halaman `#/akun`: masuk, daftar, lupa password, keluar.
@@ -78,6 +88,7 @@ js/app.js          router hash + event delegation
 js/store.js        data lokal (localStorage)
 js/cloud.js        login Supabase + sinkron data ke cloud
 js/ai.js           klien AI (online pakai token login / demo)
+js/stok-utils.js   hitung HPP, porsi yang bisa dibuat, stok menipis
 js/vendor/         supabase-js (UMD, disimpan lokal supaya jalan offline)
 js/demo.js         generator Mode Demo (shape = schema di tasks.ts)
 js/views/*.js      satu file per halaman

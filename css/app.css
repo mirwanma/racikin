@@ -325,6 +325,28 @@ ul.checks li::before { content: "✓"; position: absolute; left: 0; top: 0; widt
 .sync-box p { margin: 2px 0 0; }
 .sync-box.error { background: rgba(214, 69, 69, 0.08); }
 
+/* Stok & resep */
+.warn-card { border-color: var(--accent-line); background: var(--accent); }
+.resep-card h3 { margin: 0; }
+.inline-form { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.bahan { padding: 10px 0; border-top: 1px solid var(--line); }
+.bahan:first-child { border-top: 0; padding-top: 0; }
+.bahan p { margin: 2px 0 0; }
+.bahan.low { background: linear-gradient(90deg, rgba(214, 69, 69, 0.06), transparent); }
+.stok-num { text-align: right; line-height: 1.1; }
+.stok-num b { font-size: 18px; display: block; }
+.stok-num small { color: var(--muted); font-size: 11px; }
+.bahan-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.resep-rows { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+.resep-row { display: grid; grid-template-columns: 1fr 72px 84px 28px; gap: 6px; align-items: center; }
+.resep-row input, .resep-row select { padding: 9px 8px !important; font-size: 14px; }
+.resep-row .new-price, .resep-row .row-hint { grid-column: 1 / -1; }
+.new-price { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--warn); }
+.new-price input { max-width: 130px; }
+.row-hint { font-size: 12px; margin-top: -4px; }
+.breakdown { margin-top: 8px; border-top: 1px dashed var(--accent-line); padding-top: 6px; }
+.breakdown .row-between { padding: 2px 0; }
+
 /* Tab bar */
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;

@@ -4,6 +4,7 @@ import { store } from "../store.js";
 import { render } from "../app.js";
 import { syncBadge } from "./akun.js";
 import { cloud } from "../cloud.js";
+import { menipis, bahanMap, bisaDibuat, fmtQty } from "../stok-utils.js";
 
 export function journey(s) {
   const steps = [
@@ -21,6 +22,18 @@ export function todayContent(s) {
   if (!s.calendar) return [];
   const today = todayISO();
   return s.calendar.jadwal.filter((j) => addDays(s.calendar.start, j.hari_ke - 1) === today);
+}
+
+function stokCard(s) {
+  if (!s.bahan.length && !s.resep.length) return "";
+  const low = menipis(s.bahan);
+  const map = bahanMap(s.bahan);
+  const menu = s.resep.map((r) => ({ r, bd: bisaDibuat(r, map) })).filter((x) => x.bd.porsi !== null);
+  return `<section class="card ${low.length ? "warn-card" : ""}">
+    <div class="row-between"><h2 class="card-title">📦 Stok</h2><a href="#/stok?tab=bahan" class="link">Kelola →</a></div>
+    ${low.length ? `<p><b>⚠️ Menipis:</b> ${low.map((b) => `${esc(b.nama)} (${fmtQty(Number(b.stok) || 0)} ${esc(b.satuan)})`).join(", ")}</p>` : `<p class="muted small">Semua bahan aman 👍</p>`}
+    ${menu.length ? `<p class="small muted">Bisa dibuat: ${menu.map((x) => `${esc(x.r.nama)} <b>${x.bd.porsi}</b> porsi`).join(" · ")}</p>` : ""}
+  </section>`;
 }
 
 export const home = {
@@ -72,6 +85,8 @@ export const home = {
         <a href="#/kas?add=1" class="btn soft block">+ Catat transaksi</a>
       </section>
 
+      ${stokCard(s)}
+
       <section class="card">
         <div class="row-between">
           <h2 class="card-title">📅 Konten hari ini</h2>
@@ -92,7 +107,7 @@ export const home = {
 
       <section class="quick">
         <a href="#/mentor" class="quick-item">🤖<span>Tanya Mentor</span></a>
-        <a href="#/konten?caption=1" class="quick-item">✍️<span>Bikin caption</span></a>
+        <a href="#/stok" class="quick-item">📦<span>Stok & resep</span></a>
         <a href="#/profil" class="quick-item">🧾<span>Edit profil</span></a>
       </section>`;
   },

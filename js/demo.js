@@ -275,6 +275,34 @@ export const demo = {
     };
   },
 
+  generate_recipe(p, input) {
+    const porsi = Number(input.porsi) || 1;
+    const nama = String(input.menu || "Menu").toLowerCase();
+    const base = /kopi|teh|es |susu|minum|jus/.test(nama)
+      ? [
+          ["Kopi bubuk / teh", 15, "gram", 120],
+          ["Susu UHT", 120, "ml", 18],
+          ["Gula aren cair", 25, "ml", 30],
+          ["Es batu", 150, "gram", 2],
+          ["Cup plastik + tutup", 1, "pcs", 900],
+          ["Sedotan", 1, "pcs", 100],
+        ]
+      : [
+          [/tahu/.test(nama) ? "Tahu putih" : "Bahan utama", /tahu/.test(nama) ? 4 : 120, /tahu/.test(nama) ? "pcs" : "gram", /tahu/.test(nama) ? 500 : 60],
+          ["Kaldu / kuah", 200, "ml", 10],
+          ["Cabai rawit", 10, "gram", 80],
+          ["Bawang putih", 5, "gram", 40],
+          ["Minyak goreng", 20, "ml", 18],
+          ["Paper bowl", 1, "pcs", 900],
+          ["Sendok plastik", 1, "pcs", 150],
+        ];
+    return {
+      porsi_hasil: porsi,
+      bahan: base.map(([n, q, sat, h]) => ({ nama: n, qty: q * porsi, satuan: sat, harga_per_satuan: h })),
+      tips: ["Timbang bahan pakai timbangan digital biar rasa konsisten", "Belanja bahan kering seminggu sekali di pasar induk biar lebih murah"],
+    };
+  },
+
   mentor_chat(p, input) {
     const last = (input.messages || []).slice(-1)[0]?.content || "";
     return {
