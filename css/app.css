@@ -608,6 +608,24 @@ body[data-route="kasir"] .toast { bottom: calc(160px + env(safe-area-inset-botto
 .pos-order.batal .pos-order-head { opacity: 0.5; text-decoration: line-through; }
 .pos-order .inline-form { margin-top: 0; padding-bottom: 10px; }
 
+/* ---------- Harga online ---------- */
+.pos-channels { align-items: center; margin-bottom: 2px; }
+.pos-channels .icon-btn { margin-left: auto; }
+.pos-online-link { margin: 0; }
+.ch-card .ch-toggle { border-top: 0; padding: 0; }
+.ch-card .ch-toggle b { font-size: 16px; }
+.ch-card .ch-toggle input:checked + span { text-decoration: none; color: var(--ink); }
+.ch-card.on { border-color: var(--ink); }
+.ch-fields { grid-template-columns: 1fr 1fr 1.1fr; margin: 12px 0 10px; }
+.om-menu { padding: 12px 0; border-top: 1px dashed var(--line-2); }
+.om-menu:first-of-type { border-top: 0; }
+.om-row { display: grid; grid-template-columns: 92px 108px 1fr; gap: 8px; align-items: center; padding: 4px 0; font-size: 14px; }
+.om-row > span:first-child { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.om-row.toko > b { padding-left: 2px; font-variant-numeric: tabular-nums; }
+.om-row input { padding: 7px 9px !important; font-variant-numeric: tabular-nums; }
+.om-row .small { line-height: 1.3; }
+.warn { color: var(--warn); }
+
 /* ---------- Tab bar ---------- */
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;

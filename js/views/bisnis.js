@@ -36,6 +36,11 @@ export const bisnis = {
           <div><h3>Kasir (POS)</h3><p class="muted small">Jual dari daftar menu, langsung masuk Kas, stok & stempel</p></div>
           <span class="chev">${icon("chevron", 18)}</span>
         </a>
+        <a href="#/online" class="card module">
+          <span class="module-num">${icon("megaphone", 18)}</span>
+          <div><h3>Harga Online</h3><p class="muted small">Harga & komisi GoFood, GrabFood, ShopeeFood + untung per porsi</p></div>
+          <span class="chev">${icon("chevron", 18)}</span>
+        </a>
         <a href="#/stok" class="card module">
           <span class="module-num">${icon("box", 18)}</span>
           <div><h3>Stok & Resep</h3><p class="muted small">${s.resep.length ? `${s.resep.length} menu · ${s.bahan.length} bahan` : "HPP otomatis dari resep, stok bahan, catat penjualan"}</p></div>

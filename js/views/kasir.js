@@ -7,6 +7,7 @@ import { bahanMap, bisaDibuat } from "../stok-utils.js";
 import { program, waLink } from "../loyalty.js";
 import { markCards } from "../cloud.js";
 import { METODE, metodeNama, subtotal, buatOrder, batalOrder, rekapHari, struk } from "../pos.js";
+import { activeChannels, channelCfg, channelNama, hargaDi, isOnline, komisiRp } from "../online.js";
 
 // State layar kasir (tidak disimpan; keranjang hilang kalau app ditutup).
 let tab = "jual"; // jual | rekap
@@ -15,6 +16,16 @@ let cart = []; // { key, resepId, nama, harga, qty }
 let form = { diskon: 0, metode: "tunai", bayar: 0, pelangganId: "" };
 let last = null; // { order, stempelInfo }
 let openOrder = null;
+let channel = "toko"; // toko | gofood | grabfood | shopeefood
+
+/** Ganti saluran: harga item menu di keranjang ikut menyesuaikan. */
+function setChannel(s, id) {
+  channel = id;
+  cart = cart.map((c) => {
+    const r = c.resepId && s.resep.find((x) => x.id === c.resepId);
+    return r ? { ...c, harga: hargaDi(s, r, channel) } : c;
+  });
+}
 
 const totalNow = () => Math.max(0, subtotal(cart) - Math.min(Number(form.diskon) || 0, subtotal(cart)));
 const count = () => cart.reduce((a, i) => a + i.qty, 0);
@@ -37,6 +48,16 @@ function quickCash(total) {
   return [...opts].sort((a, b) => a - b).slice(0, 4);
 }
 
+function channelChips(s) {
+  const act = activeChannels(s);
+  if (channel !== "toko" && !act.some((c) => c.id === channel)) channel = "toko";
+  if (!act.length) return `<p class="small muted pos-online-link"><a href="#/online" class="link">Atur harga GoFood / GrabFood / ShopeeFood</a></p>`;
+  return `<div class="chips pos-channels">
+    ${[{ id: "toko", nama: "Toko" }, ...act].map((c) => `<label class="chip"><input type="radio" name="channel" value="${c.id}" data-change="channel" ${channel === c.id ? "checked" : ""}><span>${esc(c.nama)}</span></label>`).join("")}
+    <a href="#/online" class="icon-btn sm" aria-label="Atur harga online">${icon("gear", 14)}</a>
+  </div>`;
+}
+
 function menuView(s) {
   const map = bahanMap(s.bahan);
   const grid = s.resep.length
@@ -48,7 +69,7 @@ function menuView(s) {
           return `<button class="pos-item ${inCart ? "in" : ""} ${habis ? "habis" : ""}" data-action="add" data-id="${r.id}">
             ${inCart ? `<span class="pos-qty">${inCart}</span>` : ""}
             <b>${esc(r.nama)}</b>
-            <span class="pos-price">${rupiah(r.harga)}</span>
+            <span class="pos-price">${rupiah(hargaDi(s, r, channel))}</span>
             ${bd.porsi !== null ? `<small class="mono">${habis ? "stok habis" : `sisa ±${bd.porsi}`}</small>` : ""}
           </button>`;
         })
@@ -59,7 +80,7 @@ function menuView(s) {
         <p>Menu kasir diambil dari resep. Bikin resep dulu biar harga, HPP & stok nyambung otomatis.</p>
         <a href="#/resep?id=new" class="btn primary">+ Bikin menu</a>
       </section>`;
-  return `${grid}
+  return `${channelChips(s)}${grid}
     <details class="card">
       <summary><b>Item lain (di luar menu)</b></summary>
       <form class="row3 pos-custom" data-form="custom">
@@ -72,7 +93,7 @@ function menuView(s) {
       cart.length
         ? `<div class="pos-bar">
             <button class="btn ghost sm" data-action="clear" aria-label="Kosongkan">${icon("x", 14)}</button>
-            <div><small class="mono">${count()} item</small><b>${rupiah(subtotal(cart))}</b></div>
+            <div><small class="mono">${count()} item${channel !== "toko" ? ` · ${esc(channelNama(channel))}` : ""}</small><b>${rupiah(subtotal(cart))}</b></div>
             <button class="btn primary" data-action="checkout">Bayar ${icon("chevron", 16)}</button>
           </div>`
         : ""
@@ -82,12 +103,13 @@ function menuView(s) {
 function bayarView(s) {
   const total = totalNow();
   const sub = subtotal(cart);
-  const kurang = form.metode === "tunai" && (Number(form.bayar) || 0) < total;
+  const online = isOnline(channel);
+  const kurang = !online && form.metode === "tunai" && (Number(form.bayar) || 0) < total;
   const kembali = Math.max(0, (Number(form.bayar) || 0) - total);
   const pelanggan = s.loyalty && s.pelanggan.length;
   return `
     <section class="card">
-      <div class="row-between"><h2 class="card-title">Pesanan</h2><button class="btn ghost sm" data-action="back">+ Tambah item</button></div>
+      <div class="row-between"><h2 class="card-title">Pesanan${online ? ` <span class="tag">${esc(channelNama(channel))}</span>` : ""}</h2><button class="btn ghost sm" data-action="back">+ Tambah item</button></div>
       ${cart
         .map(
           (c) => `<div class="pos-line">
@@ -118,7 +140,17 @@ function bayarView(s) {
         : ""
     }
 
-    <section class="card stack">
+    ${
+      online
+        ? `<section class="card stack">
+            <h2 class="card-title" style="margin:0">Pesanan ${esc(channelNama(channel))}</h2>
+            <p class="small muted">Dibayar pembeli lewat aplikasi. Komisi ${channelCfg(s, channel).komisi}% dipotong platform.</p>
+            <div class="row-between pos-sum"><span>Harga ke pembeli</span><b>${rupiah(total)}</b></div>
+            <div class="row-between pos-sum"><span>Komisi platform</span><b class="neg">−${rupiah(komisiRp(s, channel, total))}</b></div>
+            <div class="row-between pos-total"><span>Kamu terima</span><b class="pos">${rupiah(total - komisiRp(s, channel, total))}</b></div>
+            <button class="btn primary block lg" data-action="selesai" ${!cart.length ? "disabled" : ""}>Catat pesanan · ${rupiah(total)}</button>
+          </section>`
+        : `<section class="card stack">
       <h2 class="card-title" style="margin:0">Pembayaran</h2>
       <div class="chips">${METODE.map((m) => `<label class="chip"><input type="radio" name="metode" value="${m.id}" data-change="metode" ${form.metode === m.id ? "checked" : ""}><span>${m.nama}</span></label>`).join("")}</div>
       ${
@@ -129,7 +161,8 @@ function bayarView(s) {
           : ""
       }
       <button class="btn primary block lg" data-action="selesai" ${kurang || !cart.length ? "disabled" : ""}>Selesaikan · ${rupiah(total)}</button>
-    </section>`;
+    </section>`
+    }`;
 }
 
 function strukView(s) {
@@ -143,7 +176,13 @@ function strukView(s) {
       ${o.items.map((i) => `<div class="row-between"><span>${i.qty}× ${esc(i.nama)}</span><span>${rupiah(i.harga * i.qty)}</span></div>`).join("")}
       ${o.diskon ? `<div class="row-between muted"><span>Diskon</span><span>−${rupiah(o.diskon)}</span></div>` : ""}
       <div class="row-between struk-total"><span>Total</span><b>${rupiah(o.total)}</b></div>
-      <div class="row-between"><span>${metodeNama(o.metode)}</span><span>${rupiah(o.bayar)}</span></div>
+      ${
+        isOnline(o.channel)
+          ? `<div class="row-between"><span>${esc(channelNama(o.channel))}</span><span>dibayar di aplikasi</span></div>
+             <div class="row-between muted"><span>Komisi</span><span>−${rupiah(o.komisi)}</span></div>
+             <div class="row-between struk-kembali"><span>Kamu terima</span><b>${rupiah(o.total - o.komisi)}</b></div>`
+          : `<div class="row-between"><span>${metodeNama(o.metode)}</span><span>${rupiah(o.bayar)}</span></div>`
+      }
       ${o.metode === "tunai" ? `<div class="row-between struk-kembali"><span>Kembalian</span><b>${rupiah(o.kembali)}</b></div>` : ""}
       ${si?.nama ? `<p class="struk-note">${si.siap ? `${esc(si.nama)} dapat hadiah! (${si.stempel}/${si.target})` : `+1 stempel ${esc(si.nama)} (${si.stempel}/${si.target})`}</p>` : ""}
       <p class="struk-note small">Tercatat di Kas${o.items.some((i) => i.resepId) ? " · stok bahan diperbarui" : ""}</p>
@@ -164,11 +203,12 @@ function rekapView(s) {
       <div><small>Order</small><b>${r.n}</b></div>
       <div><small>Rata-rata</small><b>${rupiah(r.rata)}</b></div>
     </div>
+    ${r.komisi ? `<div class="stats3"><div><small>Komisi ojol</small><b class="neg">−${rupiah(r.komisi)}</b></div><div><small>Bersih</small><b class="pos">${rupiah(r.bersih)}</b></div><div><small>Porsi online</small><b>${Math.round((r.aktif.filter((o) => isOnline(o.channel)).reduce((a, o) => a + o.total, 0) / (r.omzet || 1)) * 100)}%</b></div></div>` : ""}
     ${
       r.n
         ? `<section class="card">
             <h2 class="card-title">Per metode bayar</h2>
-            ${r.perMetode.map((m) => `<div class="row-between pos-sum"><span>${m.nama} <small class="muted">· ${m.n} order</small></span><b>${rupiah(m.total)}</b></div>`).join("")}
+            ${r.perMetode.map((m) => `<div class="row-between pos-sum"><span>${m.nama} <small class="muted">· ${m.n} order${m.komisi ? ` · komisi ${rupiah(m.komisi)}` : ""}</small></span><b>${rupiah(m.total)}</b></div>`).join("")}
             <h4>Terlaris hari ini</h4>
             ${r.terlaris.slice(0, 5).map(([nama, q], i) => `<div class="row-between pos-sum"><span><b class="mono">${i + 1}.</b> ${esc(nama)}</span><b>${q} porsi</b></div>`).join("")}
             <p class="muted small">Penjualan kasir otomatis masuk ke <a href="#/kas" class="link">Kas</a>, digabung per metode bayar per hari.</p>
@@ -222,7 +262,7 @@ export const kasir = {
     add(el) {
       const r = store.get().resep.find((x) => x.id === el.dataset.id);
       if (!r) return;
-      addItem({ key: r.id, resepId: r.id, nama: r.nama, harga: Number(r.harga) || 0 });
+      addItem({ key: r.id, resepId: r.id, nama: r.nama, harga: hargaDi(store.get(), r, channel) });
       render();
     },
     inc(el) {
@@ -257,7 +297,7 @@ export const kasir = {
     },
     selesai() {
       const s = store.get();
-      const { patch, order, stempelInfo } = buatOrder(s, { cart, ...form });
+      const { patch, order, stempelInfo } = buatOrder(s, { cart, ...form, channel });
       store.set(patch);
       if (order.stempel) markCards({ ids: [order.pelangganId] });
       last = { order, stempelInfo };
@@ -291,6 +331,10 @@ export const kasir = {
   },
 
   changes: {
+    channel(el) {
+      setChannel(store.get(), el.value);
+      render();
+    },
     tab(el) {
       tab = el.value;
       render();

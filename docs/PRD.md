@@ -72,6 +72,10 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Otomatis tersambung ke Kas (gabungan harian per metode), stok bahan, dan kartu stempel; batal order mengembalikan semuanya.
 - Rekap harian: omzet, jumlah & rata-rata order, per metode, menu terlaris.
 
+### Fase 7: Harga khusus order online (selesai)
+- Komisi & markup per platform (GoFood, GrabFood, ShopeeFood), harga manual per menu, saran markup agar untung sama dengan di toko.
+- Kasir memilih saluran; Kas mencatat penjualan kotor + komisi sebagai pengeluaran; rekap menampilkan bersih.
+
 ### Di luar MVP (fase berikutnya)
 Mode tim/karyawan, foto produk AI (gambar), integrasi WhatsApp, push notification terjadwal, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
 
