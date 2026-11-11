@@ -57,8 +57,14 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Catat penjualan per menu: stok berkurang sesuai resep + pemasukan masuk Kas.
 - HPP resep dipakai di kalkulator BEP dan konteks Mentor AI.
 
+### Fase 4: Pelanggan Setia (selesai)
+- Kartu stempel digital per pelanggan, link dikirim via WhatsApp & dibuka tanpa login.
+- Stempel otomatis dari Catat penjualan (dengan minimal belanja), tukar hadiah.
+- Daftar "ajak balik" (≥ 21 hari tidak datang) + pesan WA terisi otomatis, template bisa ditulis AI.
+- Metrik terkait: % pelanggan yang kembali dalam 30 hari (north star game TAHGUY).
+
 ### Di luar MVP (fase berikutnya)
-Mode tim/karyawan, CRM/kartu stempel digital, foto produk AI, generator logo (gambar), integrasi WhatsApp, push notification terjadwal, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
+Mode tim/karyawan, foto produk AI, generator logo (gambar), integrasi WhatsApp, push notification terjadwal, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
 
 ## 6. Arsitektur MVP
 - **Frontend**: PWA statis (HTML + CSS + JS modules, tanpa build) di root repo ini, di-host di GitHub Pages. Data disimpan di `localStorage` (offline-first).

@@ -5,6 +5,7 @@ import { store } from "../store.js";
 import { render } from "../app.js";
 import { syncBadge } from "./akun.js";
 import { cloud } from "../cloud.js";
+import { program, siapTukar, perluDiajak } from "../loyalty.js";
 import { menipis, belumDiisi, bahanMap, bisaDibuat, fmtQty } from "../stok-utils.js";
 
 export function journey(s) {
@@ -47,6 +48,22 @@ function stokCard(s) {
         : ""
     }
     ${menu.length ? `<p class="small muted">Bisa dibuat: ${menu.map((x) => `${esc(x.r.nama)} <b>${x.bd.porsi}</b> porsi`).join(" · ")}</p>` : ""}
+  </section>`;
+}
+
+function loyalCard(s) {
+  if (!s.loyalty || !s.pelanggan.length) return "";
+  const prog = program(s);
+  const ready = s.pelanggan.filter((p) => siapTukar(p, prog));
+  const ajak = perluDiajak(s.pelanggan);
+  return `<section class="card">
+    <div class="row-between"><h2 class="card-title">Pelanggan setia</h2><a href="#/pelanggan" class="link">Buka</a></div>
+    <div class="stats3">
+      <div><small>Pelanggan</small><b>${s.pelanggan.length}</b></div>
+      <div><small>Hadiah siap</small><b class="${ready.length ? "pos" : ""}">${ready.length}</b></div>
+      <div><small>Perlu diajak</small><b class="${ajak.length ? "neg" : ""}">${ajak.length}</b></div>
+    </div>
+    ${ajak.length ? `<p class="small">${ajak.length} pelanggan lama nggak balik. <a href="#/pelanggan" class="link">Kirim pesan ajak balik</a></p>` : ""}
   </section>`;
 }
 
@@ -100,6 +117,7 @@ export const home = {
       </section>
 
       ${stokCard(s)}
+      ${loyalCard(s)}
 
       <section class="card">
         <div class="row-between">
@@ -122,7 +140,7 @@ export const home = {
       <section class="quick">
         <a href="#/mentor" class="quick-item">${icon("chat", 22)}<span>Tanya Mentor</span></a>
         <a href="#/stok" class="quick-item">${icon("box", 22)}<span>Stok & resep</span></a>
-        <a href="#/profil" class="quick-item">${icon("user", 22)}<span>Edit profil</span></a>
+        <a href="#/pelanggan" class="quick-item">${icon("receipt", 22)}<span>Pelanggan</span></a>
       </section>`;
   },
   actions: {

@@ -166,6 +166,14 @@ Beri juga 2-3 tips menjaga rasa konsisten / hemat HPP.`,
     }),
   },
 
+  winback_template: {
+    effort: "low",
+    instruction: `Tulis SATU template pesan WhatsApp untuk mengajak pelanggan yang sudah input.hari hari lebih nggak mampir agar datang lagi ke input.bisnis. Program loyalitas: input.program, kumpulkan input.target stempel dapat input.hadiah.
+Wajib pakai kode ini persis (akan diganti otomatis per pelanggan): {nama} untuk nama panggilan, {stempel} jumlah stempel sekarang, {sisa} sisa stempel menuju hadiah. Boleh pakai {hadiah}. Kalau mau sertakan {link}, itu link untuk MELIHAT kartu stempel digital pelanggan (bukan alamat toko), contoh: "cek kartumu di {link}".
+Gaya: hangat, santai, personal, seperti pemilik warung ngechat langsung. Maks 3 kalimat, maksimal 1 emoji. Tanpa nada memaksa, tanpa promosi berlebihan.`,
+    schema: obj({ pesan: str() }),
+  },
+
   mentor_chat: {
     effort: "medium",
     instruction: `Kamu sedang ngobrol sebagai mentor bisnis. input.messages berisi riwayat obrolan (role user/assistant). Jawab pesan terakhir user dengan ringkas (maks ~150 kata), praktis, pakai konteks bisnis & data yang ada. Boleh pakai poin-poin.`,

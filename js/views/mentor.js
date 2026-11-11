@@ -74,6 +74,9 @@ function send(q) {
           return { nama: r.nama, harga: r.harga, hpp: Math.round(h.hpp), margin_persen: Math.round(h.margin) };
         }),
         stok_menipis: menipis(s.bahan).map((b) => `${b.nama} (${b.stok} ${b.satuan})`),
+        pelanggan_setia: s.loyalty
+          ? { program: `${s.loyalty.target} stempel = ${s.loyalty.hadiah}`, jumlah: s.pelanggan.length, aktif_30_hari: s.pelanggan.filter((p) => p.terakhir && (Date.now() - new Date(p.terakhir)) / 864e5 <= 30).length }
+          : null,
       },
     });
     store.set((s2) => ({ chat: [...s2.chat, { role: "assistant", content: r.balasan }] }));
