@@ -1,5 +1,5 @@
 // Service worker: app shell offline-first. Naikkan VERSION tiap rilis.
-const VERSION = "racikin-v10";
+const VERSION = "racikin-v11";
 const SHELL = [
   "./",
   "index.html",
@@ -13,6 +13,7 @@ const SHELL = [
   "js/loyalty.js",
   "js/pos.js",
   "js/online.js",
+  "js/merge.js",
   "js/studio/theme.js",
   "js/studio/art.js",
   "js/stok-utils.js",
@@ -41,6 +42,7 @@ const SHELL = [
   "js/views/studio.js",
   "js/views/kasir.js",
   "js/views/online.js",
+  "js/views/tim.js",
 ];
 
 self.addEventListener("install", (e) => {

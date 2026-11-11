@@ -4,7 +4,7 @@ import { render } from "../app.js";
 import { ai } from "../ai.js";
 import { icon } from "../icons.js";
 import { busy, runAI, head } from "./_shared.js";
-import { cloud, markCards } from "../cloud.js";
+import { cloud, markCards, isKasir } from "../cloud.js";
 import {
   program, DEFAULT_PROGRAM, normWa, waLink, cardUrl, newToken, daysSince, siapTukar, perluDiajak, AJAK_HARI,
   patchStempel, patchTukar, isiPesan, PESAN_AJAK_DEFAULT, PESAN_KARTU,
@@ -91,6 +91,9 @@ function row(p, s, prog) {
 
 export const pelanggan = {
   render(s) {
+    if (!s.loyalty && isKasir()) {
+      return `${head("Pelanggan Setia", "#/kasir")}<section class="card empty"><div class="empty-icon">${icon("receipt", 30)}</div><h3>Kartu stempel belum aktif</h3><p>Minta pemilik usaha bikin program kartu stempel dulu di menu Pelanggan Setia.</p></section>`;
+    }
     if (!s.loyalty) {
       return `${head("Pelanggan Setia", "#/")}
         <section class="card empty">
@@ -108,12 +111,12 @@ export const pelanggan = {
     const bisnis = bisnisOf(s);
 
     return `
-      ${head("Pelanggan Setia", "#/")}
+      ${head("Pelanggan Setia", isKasir() ? "#/kasir" : "#/")}
       <section class="card program-card">
         <div class="row-between">
           <div><small class="mono muted">${esc(prog.nama)}</small><h2 style="margin:2px 0 0">${prog.target} stempel = ${esc(prog.hadiah)}</h2>
           ${prog.minBelanja ? `<p class="small muted">Min. belanja ${prog.minBelanja.toLocaleString("id-ID")} per stempel</p>` : ""}</div>
-          <button class="btn ghost sm" data-action="open" data-type="program" data-id="p">Ubah</button>
+          ${isKasir() ? "" : `<button class="btn ghost sm" data-action="open" data-type="program" data-id="p">Ubah</button>`}
         </div>
         ${isOpen("program", "p") ? `<div class="inline-form">${programForm(prog, false)}</div>` : ""}
       </section>
@@ -159,7 +162,7 @@ export const pelanggan = {
                   }</div>`,
                 )
                 .join("")}
-              <details class="tpl">
+              ${isKasir() ? "" : `<details class="tpl">
                 <summary class="small"><b>Ubah pesan</b></summary>
                 <form class="stack" data-form="tpl">
                   <textarea name="pesan" rows="4">${esc(tpl)}</textarea>
@@ -169,7 +172,7 @@ export const pelanggan = {
                     <button class="btn primary">Simpan pesan</button>
                   </div>
                 </form>
-              </details>
+              </details>`}
             </section>`
           : ""
       }`;

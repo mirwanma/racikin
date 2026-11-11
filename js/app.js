@@ -1,5 +1,5 @@
 import { store } from "./store.js";
-import { $, toast } from "./ui.js";
+import { $, esc, toast } from "./ui.js";
 import { home } from "./views/home.js";
 import { profil } from "./views/profil.js";
 import { bisnis } from "./views/bisnis.js";
@@ -19,10 +19,16 @@ import { kartu } from "./views/kartu.js";
 import { studio } from "./views/studio.js";
 import { kasir } from "./views/kasir.js";
 import { online } from "./views/online.js";
-import { initCloud, onCloudChange } from "./cloud.js";
+import { tim, gabung } from "./views/tim.js";
+import { initCloud, onCloudChange, cloud, role } from "./cloud.js";
+import { icon } from "./icons.js";
 
-const routes = { "": home, profil, bisnis, ide, rab, brand, aktivasi, kas, konten, mentor, setelan, akun, stok, resep, pelanggan, kartu, studio, kasir, online };
-const tabOf = { "": "", bisnis: "bisnis", ide: "bisnis", rab: "bisnis", brand: "bisnis", aktivasi: "bisnis", kas: "kas", stok: "bisnis", resep: "bisnis", pelanggan: "bisnis", studio: "bisnis", konten: "konten", kasir: "kasir", online: "kasir" };
+const routes = { "": home, profil, bisnis, ide, rab, brand, aktivasi, kas, konten, mentor, setelan, akun, stok, resep, pelanggan, kartu, studio, kasir, online, tim, gabung };
+const tabOf = { "": "", bisnis: "bisnis", ide: "bisnis", rab: "bisnis", brand: "bisnis", aktivasi: "bisnis", kas: "kas", stok: "bisnis", resep: "bisnis", pelanggan: "bisnis", studio: "bisnis", konten: "konten", kasir: "kasir", online: "kasir", tim: "bisnis" };
+// Kasir hanya melihat halaman jualan, pelanggan, dan stok bahan.
+const KASIR_ROUTES = new Set(["kasir", "pelanggan", "stok", "akun", "setelan", "kartu", "tim", "gabung"]);
+const tabOfKasir = { kasir: "kasir", pelanggan: "pelanggan", stok: "stok", akun: "akun", setelan: "akun", tim: "akun" };
+const FREE_ROUTES = ["profil", "setelan", "akun", "kartu", "gabung", "tim"];
 
 const view = $("#view");
 let current = home;
@@ -33,16 +39,40 @@ function routeName() {
 
 export function render() {
   const name = routeName();
-  // Wajib isi profil dulu sebelum pakai fitur lain
-  if (!store.get().profile && !["profil", "setelan", "akun", "kartu"].includes(name)) {
+  const peran = role();
+  document.body.dataset.role = peran;
+  if (peran === "kasir" && !KASIR_ROUTES.has(name)) {
+    location.replace("#/kasir");
+    return;
+  }
+  if (!store.get().profile && !FREE_ROUTES.includes(name)) {
+    if (peran !== "owner") {
+      // Anggota tim: data usaha pemilik sedang diambil dari cloud.
+      current = { render: () => waitingTeam() };
+      view.innerHTML = waitingTeam();
+      document.body.dataset.route = name || "home";
+      return;
+    }
+    // Wajib isi profil dulu sebelum pakai fitur lain
     location.replace("#/profil");
     return;
   }
   current = routes[name] || home;
   view.innerHTML = current.render(store.get());
   current.after?.(view);
-  document.querySelectorAll(".tabbar a").forEach((a) => a.classList.toggle("active", a.dataset.tab === (tabOf[name] ?? "")));
+  const tab = peran === "kasir" ? tabOfKasir[name] : tabOf[name];
+  document.querySelectorAll(".tabbar a").forEach((a) => a.classList.toggle("active", a.dataset.tab === (tab ?? "")));
   document.body.dataset.route = name || "home";
+}
+
+function waitingTeam() {
+  const t = cloud.team;
+  return `<section class="card empty">
+    <div class="empty-icon">${icon("sync", 30)}</div>
+    <h3>Lagi ambil data ${t?.bisnis ? esc(t.bisnis) : "usaha"}…</h3>
+    <p>${cloud.status === "error" ? esc(cloud.error) : cloud.status === "offline" ? "Kamu lagi offline. Data muncul begitu tersambung internet." : "Kamu anggota tim. Data menu, stok & pelanggan diambil dari akun pemilik."}</p>
+    <a href="#/tim" class="btn ghost">Info tim</a>
+  </section>`;
 }
 
 export function go(path) {

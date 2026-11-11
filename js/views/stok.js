@@ -4,7 +4,7 @@ import { esc, rupiah, todayISO, fmtDate, toast } from "../ui.js";
 import { render } from "../app.js";
 import { head } from "./_shared.js";
 import { program, patchStempel, siapTukar } from "../loyalty.js";
-import { markCards } from "../cloud.js";
+import { markCards, isKasir } from "../cloud.js";
 import { SATUAN, bahanMap, hppOf, bisaDibuat, menipis, belumDiisi, kebutuhan, fmtQty } from "../stok-utils.js";
 
 let tab = "menu"; // menu | bahan
@@ -80,7 +80,7 @@ function bahanRow(b) {
           <label class="field"><span>Jumlah beli (${esc(b.satuan)})</span><input name="qty" type="number" min="0" step="any" required autofocus></label>
           <label class="field"><span>Total bayar (Rp)</span><input name="total" type="number" min="0" placeholder="opsional"></label>
         </div>
-        <label class="todo"><input type="checkbox" name="kas" checked><span>Catat pengeluaran ke Kas</span></label>
+        ${isKasir() ? "" : `<label class="todo"><input type="checkbox" name="kas" checked><span>Catat pengeluaran ke Kas</span></label>`}
         <div class="row2"><button type="button" class="btn ghost" data-action="close">Batal</button><button class="btn primary">Tambah stok</button></div>
       </form>`,
     opname: `<form class="inline-form stack" data-form="opname" data-id="${b.id}">
@@ -120,7 +120,7 @@ function bahanRow(b) {
                 : `<button class="btn soft sm" data-action="open" data-type="opname" data-id="${b.id}">Isi stok</button>
             <button class="btn ghost sm" data-action="open" data-type="beli" data-id="${b.id}">+ Beli</button>`
             }
-            <button class="btn ghost sm" data-action="open" data-type="edit" data-id="${b.id}">Edit</button>
+            ${isKasir() ? "" : `<button class="btn ghost sm" data-action="open" data-type="edit" data-id="${b.id}">Edit</button>`}
           </div>`
     }
   </div>`;
@@ -162,7 +162,7 @@ function bahanTab(s) {
       ${sorted.length ? sorted.map(bahanRow).join("") : `<p class="muted">Belum ada bahan. Tambah di bawah, atau bikin resep pakai AI biar bahannya terisi otomatis.</p>`}
     </section>
 
-    <details class="card">
+    ${isKasir() ? "" : `<details class="card">
       <summary><b>Tambah bahan</b></summary>
       <form class="stack" data-form="addBahan">
         <input name="nama" placeholder="Nama bahan, cth: Tahu putih" required>
@@ -176,7 +176,7 @@ function bahanTab(s) {
         </div>
         <button class="btn primary">Simpan bahan</button>
       </form>
-    </details>
+    </details>`}
 
     ${
       log.length
@@ -194,6 +194,12 @@ function bahanTab(s) {
 export const stok = {
   render(s) {
     if (location.hash.includes("tab=bahan")) tab = "bahan";
+    if (isKasir()) {
+      // Kasir: cukup bahan & stok (resep, HPP & penjualan manual lewat Kasir saja).
+      tab = "bahan";
+      if (open?.type === "bulk") open = null;
+      return `${head("Stok Bahan", "#/kasir")}${bahanTab(s)}`;
+    }
     if (location.hash.includes("isi=1")) {
       open = { type: "bulk", id: "all" };
       history.replaceState(null, "", "#/stok?tab=bahan");

@@ -64,8 +64,8 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 
 ## Akun & sinkron cloud
 - **Auth**: Supabase Auth (email + password, alur PKCE). Halaman `#/akun`: masuk, daftar, lupa password, keluar.
-- **Data**: satu dokumen JSON per user di tabel `public.user_data` (RLS: user hanya bisa baca/tulis miliknya). Setelan per perangkat tidak ikut disinkron.
-- **Sinkron**: perubahan lokal di-upload otomatis (±1,5 dtk). Saat app dibuka, tab aktif lagi, atau online lagi, versi cloud diambil. Kalau dua perangkat mengubah data bersamaan, user ditanya mau pakai data cloud atau data perangkat ini (seluruh dokumen, bukan per item).
+- **Data**: satu dokumen JSON per usaha (milik pemilik) di tabel `public.user_data`, dibaca/ditulis lewat fungsi `doc_get` / `doc_save` yang memeriksa peran. Setelan per perangkat tidak ikut disinkron.
+- **Sinkron**: perubahan lokal di-upload otomatis (±1,5 dtk). Saat app dibuka, tab aktif lagi, atau online lagi, versi cloud diambil. Data dari beberapa perangkat **digabung otomatis** (3-way merge, `js/merge.js`): item ber-id (order, transaksi, bahan, pelanggan) digabung per item, angka penghitung (stok, stempel) digabung sebagai selisih, lalu total Kas & rekap kasir dihitung ulang dari daftar order. Penyimpanan memakai nomor versi (`rev`), jadi tulisan yang bertabrakan selalu digabung ulang, tidak saling timpa. Dialog "pakai cloud / perangkat ini" hanya muncul sekali, saat login pertama di perangkat yang sudah berisi data lain.
 - **Offline**: app tetap jalan tanpa internet; perubahan dikirim saat online lagi.
 - **Kuota AI**: tabel `public.ai_usage` + fungsi `consume_ai_quota` (hanya service role). Default 6 permintaan/menit & 60/hari per user, ubah lewat secret `RACIKIN_LIMIT_MINUTE` / `RACIKIN_LIMIT_DAY`.
 - Migrasi database ada di `supabase/migrations/`.
@@ -75,6 +75,15 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 2. **Email**: server email bawaan Supabase hanya mengirim ke anggota tim project (maks. 2 email/jam). Untuk user umum pilih salah satu:
    - Pasang **Custom SMTP** (Authentication → Emails → SMTP Settings), mis. Resend/Brevo, **atau**
    - Matikan **Confirm email** (Authentication → Sign In / Providers → Email) supaya daftar langsung bisa masuk. Catatan: fitur *lupa password* tetap butuh SMTP.
+
+## Tim & karyawan
+- Halaman `#/tim` (Bisnis > Tim & Karyawan): pemilik bikin **kode undangan** (8 karakter, sekali pakai, berlaku 7 hari) untuk peran **Kasir** atau **Manajer**, lalu kirim link-nya via WA. Karyawan buka link `#/gabung?kode=…`, login/daftar dengan email sendiri, lalu bergabung.
+- **Kasir**: hanya Kasir, Pelanggan, Stok bahan, Akun (tab bar khusus). Data Kas, insight, ide, RAB, BEP, aktivasi, kalender & chat mentor **tidak dikirim server** ke HP kasir, dan server hanya menerima perubahan kasir untuk order, rekap harian, bahan, riwayat stok, pelanggan & riwayat stempel. Kasir hanya bisa membatalkan order yang dia catat sendiri.
+- **Manajer**: semua fitur, kecuali mengelola tim. AI memakai kuota akun masing-masing.
+- Setiap order mencatat siapa kasirnya; Kasir > Hari ini menampilkan rekap per kasir.
+- Ada tim → data ditarik ulang tiap 30 detik saat app terbuka. Anggota dikeluarkan → data usaha dihapus dari HP-nya saat sinkron berikutnya.
+- Tabel: `team_members`, `team_invites`; fungsi: `my_team`, `team_list`, `create_invite`, `join_team`, `doc_get`, `doc_save`, `team_role` (juga dipakai RLS `stamp_cards`, supaya kasir bisa memperbarui kartu stempel).
+- Batasan: nomor order harian dihitung per perangkat, jadi dua HP yang mencatat order hampir bersamaan bisa dapat nomor yang sama (nama kasir ditampilkan untuk membedakan).
 
 ## Desain: "papan warung"
 - **Warna**: kuning marigold `#FFC531` (utama) + hitam tinta `#1B1916` di atas kertas krem `#F6EFDC`. Aksen hemat: merah cabai (minus/peringatan) & hijau daun (untung/selesai). Mode gelap otomatis.
@@ -128,7 +137,8 @@ index.html, manifest.webmanifest, sw.js, icons/
 css/app.css
 js/app.js          router hash + event delegation
 js/store.js        data lokal (localStorage)
-js/cloud.js        login Supabase + sinkron data ke cloud
+js/cloud.js        login Supabase, sinkron data ke cloud, mode tim (undang/gabung/keluar)
+js/merge.js        penggabungan otomatis data dari beberapa perangkat (3-way merge)
 js/ai.js           klien AI (online pakai token login / demo)
 js/stok-utils.js   hitung HPP, porsi yang bisa dibuat, stok menipis
 js/loyalty.js      program stempel, no. WA, link kartu, template pesan
@@ -139,7 +149,7 @@ js/vendor/         supabase-js (UMD, disimpan lokal supaya jalan offline)
 js/demo.js         generator Mode Demo (shape = schema di tasks.ts)
 js/views/*.js      satu file per halaman
 docs/PRD.md        Product Requirements Document
-supabase/migrations/   user_data, ai_usage + consume_ai_quota, stamp_cards + get_stamp_card
+supabase/migrations/   user_data, ai_usage + consume_ai_quota, stamp_cards + get_stamp_card, mode tim (rev, team_members, team_invites, doc_get/doc_save)
 supabase/functions/racikin-ai/
   index.ts         endpoint (wajib login + kuota) → Gemini API / Claude API
   tasks.ts         prompt + JSON schema tiap task

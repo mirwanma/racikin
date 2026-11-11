@@ -5,8 +5,8 @@ import { icon } from "../icons.js";
 import { head } from "./_shared.js";
 import { bahanMap, bisaDibuat } from "../stok-utils.js";
 import { program, waLink } from "../loyalty.js";
-import { markCards } from "../cloud.js";
-import { METODE, metodeNama, subtotal, buatOrder, batalOrder, rekapHari, struk } from "../pos.js";
+import { cloud, markCards, isKasir, pelaku, teamActive } from "../cloud.js";
+import { METODE, metodeNama, subtotal, buatOrder, batalOrder, rekapHari, struk, perKasir } from "../pos.js";
 import { activeChannels, channelCfg, channelNama, hargaDi, isOnline, komisiRp } from "../online.js";
 
 // State layar kasir (tidak disimpan; keranjang hilang kalau app ditutup).
@@ -51,10 +51,10 @@ function quickCash(total) {
 function channelChips(s) {
   const act = activeChannels(s);
   if (channel !== "toko" && !act.some((c) => c.id === channel)) channel = "toko";
-  if (!act.length) return `<p class="small muted pos-online-link"><a href="#/online" class="link">Atur harga GoFood / GrabFood / ShopeeFood</a></p>`;
+  if (!act.length) return isKasir() ? "" : `<p class="small muted pos-online-link"><a href="#/online" class="link">Atur harga GoFood / GrabFood / ShopeeFood</a></p>`;
   return `<div class="chips pos-channels">
     ${[{ id: "toko", nama: "Toko" }, ...act].map((c) => `<label class="chip"><input type="radio" name="channel" value="${c.id}" data-change="channel" ${channel === c.id ? "checked" : ""}><span>${esc(c.nama)}</span></label>`).join("")}
-    <a href="#/online" class="icon-btn sm" aria-label="Atur harga online">${icon("gear", 14)}</a>
+    ${isKasir() ? "" : `<a href="#/online" class="icon-btn sm" aria-label="Atur harga online">${icon("gear", 14)}</a>`}
   </div>`;
 }
 
@@ -78,7 +78,7 @@ function menuView(s) {
         <div class="empty-icon">${icon("register", 30)}</div>
         <h3>Belum ada menu</h3>
         <p>Menu kasir diambil dari resep. Bikin resep dulu biar harga, HPP & stok nyambung otomatis.</p>
-        <a href="#/resep?id=new" class="btn primary">+ Bikin menu</a>
+        ${isKasir() ? `<p class="small muted">Minta pemilik usaha bikin menu dulu.</p>` : `<a href="#/resep?id=new" class="btn primary">+ Bikin menu</a>`}
       </section>`;
   return `${channelChips(s)}${grid}
     <details class="card">
@@ -185,7 +185,7 @@ function strukView(s) {
       }
       ${o.metode === "tunai" ? `<div class="row-between struk-kembali"><span>Kembalian</span><b>${rupiah(o.kembali)}</b></div>` : ""}
       ${si?.nama ? `<p class="struk-note">${si.siap ? `${esc(si.nama)} dapat hadiah! (${si.stempel}/${si.target})` : `+1 stempel ${esc(si.nama)} (${si.stempel}/${si.target})`}</p>` : ""}
-      <p class="struk-note small">Tercatat di Kas${o.items.some((i) => i.resepId) ? " · stok bahan diperbarui" : ""}</p>
+      <p class="struk-note small">${isKasir() ? `Tercatat atas nama ${esc(o.kasir?.nama || "kamu")}` : "Tercatat di Kas"}${o.items.some((i) => i.resepId) ? " · stok bahan diperbarui" : ""}</p>
     </section>
     <div class="row2">
       <a class="btn ghost" href="${esc(wa)}" target="_blank" rel="noopener">Kirim struk WA</a>
@@ -193,8 +193,12 @@ function strukView(s) {
     </div>`;
 }
 
+/** Kasir hanya boleh membatalkan order yang dia catat sendiri. */
+const bolehBatal = (o) => !isKasir() || (o.kasir && o.kasir.id === cloud.user?.id);
+
 function rekapView(s) {
   const r = rekapHari(s);
+  const tim = teamActive() || new Set(r.semua.map((o) => o.kasir?.id || "-")).size > 1;
   const tgl = new Date(todayISO() + "T00:00:00").toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" });
   return `
     <p class="muted small">${esc(tgl)}</p>
@@ -209,9 +213,16 @@ function rekapView(s) {
         ? `<section class="card">
             <h2 class="card-title">Per metode bayar</h2>
             ${r.perMetode.map((m) => `<div class="row-between pos-sum"><span>${m.nama} <small class="muted">· ${m.n} order${m.komisi ? ` · komisi ${rupiah(m.komisi)}` : ""}</small></span><b>${rupiah(m.total)}</b></div>`).join("")}
+            ${
+              tim
+                ? `<h4>Per kasir</h4>${perKasir(r.aktif)
+                    .map((k) => `<div class="row-between pos-sum"><span>${esc(k.nama)} <small class="muted">· ${k.n} order</small></span><b>${rupiah(k.total)}</b></div>`)
+                    .join("")}`
+                : ""
+            }
             <h4>Terlaris hari ini</h4>
             ${r.terlaris.slice(0, 5).map(([nama, q], i) => `<div class="row-between pos-sum"><span><b class="mono">${i + 1}.</b> ${esc(nama)}</span><b>${q} porsi</b></div>`).join("")}
-            <p class="muted small">Penjualan kasir otomatis masuk ke <a href="#/kas" class="link">Kas</a>, digabung per metode bayar per hari.</p>
+            ${isKasir() ? "" : `<p class="muted small">Penjualan kasir otomatis masuk ke <a href="#/kas" class="link">Kas</a>, digabung per metode bayar per hari.</p>`}
           </section>`
         : `<section class="card"><p class="muted">Belum ada penjualan hari ini.</p></section>`
     }
@@ -224,7 +235,7 @@ function rekapView(s) {
               .map(
                 (o) => `<div class="pos-order ${o.status === "batal" ? "batal" : ""}">
                   <button class="pos-order-head" data-action="order" data-id="${o.id}">
-                    <span class="mono">#${o.no}</span><span>${jam(o.waktu)} · ${o.items.reduce((a, i) => a + i.qty, 0)} item · ${metodeNama(o.metode)}</span>
+                    <span class="mono">#${o.no}</span><span>${jam(o.waktu)} · ${o.items.reduce((a, i) => a + i.qty, 0)} item · ${metodeNama(o.metode)}${o.kasir && tim ? ` · ${esc(o.kasir.nama)}` : ""}</span>
                     <b>${o.status === "batal" ? "Batal" : rupiah(o.total)}</b>
                   </button>
                   ${
@@ -232,7 +243,14 @@ function rekapView(s) {
                       ? `<div class="inline-form">
                           ${o.items.map((i) => `<div class="row-between small"><span>${i.qty}× ${esc(i.nama)}</span><span>${rupiah(i.harga * i.qty)}</span></div>`).join("")}
                           ${o.diskon ? `<div class="row-between small muted"><span>Diskon</span><span>−${rupiah(o.diskon)}</span></div>` : ""}
-                          ${o.status !== "batal" ? `<button class="btn danger sm" data-action="batal" data-id="${o.id}">Batalkan order</button>` : ""}
+                          ${o.batalOleh ? `<p class="small muted">Dibatalkan oleh ${esc(o.batalOleh.nama)}</p>` : ""}
+                          ${
+                            o.status === "batal"
+                              ? ""
+                              : bolehBatal(o)
+                                ? `<button class="btn danger sm" data-action="batal" data-id="${o.id}">Batalkan order</button>`
+                                : `<p class="small muted">Order kasir lain hanya bisa dibatalkan pemilik / manajer.</p>`
+                          }
                         </div>`
                       : ""
                   }
@@ -297,7 +315,7 @@ export const kasir = {
     },
     selesai() {
       const s = store.get();
-      const { patch, order, stempelInfo } = buatOrder(s, { cart, ...form, channel });
+      const { patch, order, stempelInfo } = buatOrder(s, { cart, ...form, channel, kasir: pelaku() });
       store.set(patch);
       if (order.stempel) markCards({ ids: [order.pelangganId] });
       last = { order, stempelInfo };
@@ -321,7 +339,8 @@ export const kasir = {
       const s = store.get();
       const o = s.orders.find((x) => x.id === el.dataset.id);
       if (!confirm(`Batalkan order #${o.no} (${rupiah(o.total)})? Kas, stok${o.stempel ? " & stempel" : ""} akan dikembalikan.`)) return;
-      const patch = batalOrder(s, o.id);
+      if (!bolehBatal(o)) return toast("Order ini hanya bisa dibatalkan pemilik / manajer", "err");
+      const patch = batalOrder(s, o.id, pelaku());
       if (!patch) return;
       store.set(patch);
       if (o.stempel) markCards({ ids: [o.pelangganId] });

@@ -643,6 +643,11 @@ body[data-route="kasir"] .toast { bottom: calc(160px + env(safe-area-inset-botto
 }
 .tabbar a.active .ico { stroke-width: 2.2; }
 body[data-route="profil"] .tabbar { display: none; }
+.tabbar a.only-kasir { display: none; }
+body[data-role="kasir"] .tabbar { grid-template-columns: repeat(4, 1fr); }
+body[data-role="kasir"] .tabbar a { display: none; }
+body[data-role="kasir"] .tabbar a[data-tab="kasir"],
+body[data-role="kasir"] .tabbar a.only-kasir { display: flex; }
 
 /* ---------- Toast ---------- */
 .toast {
@@ -658,3 +663,17 @@ body[data-route="profil"] .tabbar { display: none; }
   .stats3 b { font-size: 13px; }
   .hero h1 { font-size: 34px; }
 }
+
+/* ---------- Tim & karyawan ---------- */
+.invite-card { border: 1.5px solid var(--ink); background: var(--yellow-soft, #FFF3C9); }
+.invite-code {
+  font-size: 34px; font-weight: 700; letter-spacing: .14em; text-align: center;
+  padding: 14px 8px; margin: 12px 0; background: var(--card); border: 1.5px dashed var(--ink); border-radius: 8px;
+}
+.invite-input { font-size: 22px !important; letter-spacing: .16em; text-align: center; text-transform: uppercase; }
+.team-row { display: grid; grid-template-columns: auto 1fr auto auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px dashed var(--line, #d8ccae); }
+.team-row:first-of-type { border-top: 0; }
+.team-row > div { min-width: 0; }
+.team-row p { margin: 2px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.team-row select { width: auto; padding: 6px 8px; }
+.invite-mini { font-size: 13px; font-weight: 700; letter-spacing: .08em; padding: 4px 6px; border: 1.5px dashed var(--ink); border-radius: 6px; }

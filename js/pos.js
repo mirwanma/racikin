@@ -114,7 +114,7 @@ function prune(orders) {
  * Buat order baru. cart = [{ resepId|null, nama, harga, qty }].
  * Return { patch, order, stempelInfo }.
  */
-export function buatOrder(s, { cart, diskon = 0, metode = "tunai", bayar = 0, pelangganId = "", channel = "toko" }) {
+export function buatOrder(s, { cart, diskon = 0, metode = "tunai", bayar = 0, pelangganId = "", channel = "toko", kasir = null }) {
   if (isOnline(channel)) metode = channel; // order online dibayar lewat platform
   const tanggal = todayISO();
   const items = cart.filter((i) => i.qty > 0).map((i) => ({ resepId: i.resepId || null, nama: i.nama, harga: Number(i.harga) || 0, qty: Number(i.qty) }));
@@ -139,6 +139,7 @@ export function buatOrder(s, { cart, diskon = 0, metode = "tunai", bayar = 0, pe
     stempel: 0,
     status: "selesai",
   };
+  if (kasir) order.kasir = kasir; // { id, nama } yang mencatat (mode tim)
 
   let st = { ...s };
   // stempel pelanggan
@@ -166,7 +167,7 @@ export function buatOrder(s, { cart, diskon = 0, metode = "tunai", bayar = 0, pe
 }
 
 /** Batalkan order: kas & rekap dihitung ulang, stok dikembalikan, stempel dikurangi. */
-export function batalOrder(s, orderId) {
+export function batalOrder(s, orderId, oleh = null) {
   const o = (s.orders || []).find((x) => x.id === orderId);
   if (!o || o.status === "batal") return null;
   let st = { ...s };
@@ -174,12 +175,42 @@ export function batalOrder(s, orderId) {
   if (o.stempel && o.pelangganId && st.pelanggan.some((p) => p.id === o.pelangganId)) {
     st = { ...st, ...patchStempel(st, o.pelangganId, -o.stempel, "koreksi", `Batal kasir #${o.no}`) };
   }
-  const orders = st.orders.map((x) => (x.id === orderId ? { ...x, status: "batal" } : x));
+  const orders = st.orders.map((x) => (x.id === orderId ? { ...x, status: "batal", ...(oleh ? { batalOleh: oleh } : {}) } : x));
   return pick({ ...st, orders, transactions: kasPatch(st.transactions, orders, o.tanggal), posHarian: rekapPatch(st, o.tanggal, orders) });
 }
 
 const KEYS = ["orders", "transactions", "posHarian", "bahan", "stokLog", "pelanggan", "stempelLog"];
 const pick = (obj) => Object.fromEntries(KEYS.filter((k) => k in obj).map((k) => [k, obj[k]]));
+
+/**
+ * Hitung ulang rekap harian (& transaksi Kas kasir kalau `kas`) dari daftar order.
+ * Dipakai setelah data dari beberapa HP digabung, supaya total selalu cocok dengan order.
+ */
+export function reconcile(s, { kas = true } = {}) {
+  const orders = s.orders || [];
+  const tanggal = [...new Set(orders.map((o) => o.tanggal))];
+  if (!tanggal.length) return s;
+  let posHarian = { ...(s.posHarian || {}) };
+  let transactions = s.transactions || [];
+  for (const t of tanggal) {
+    posHarian = rekapPatch({ posHarian }, t, orders);
+    if (kas) transactions = kasPatch(transactions, orders, t);
+  }
+  return kas ? { ...s, posHarian, transactions } : { ...s, posHarian };
+}
+
+/** Penjualan per orang yang mencatat (mode tim). */
+export function perKasir(list) {
+  const m = new Map();
+  for (const o of list) {
+    const k = o.kasir?.id || "-";
+    const cur = m.get(k) || { nama: o.kasir?.nama || "Tanpa nama", n: 0, total: 0 };
+    cur.n += 1;
+    cur.total += o.total;
+    m.set(k, cur);
+  }
+  return [...m.values()].sort((a, b) => b.total - a.total);
+}
 
 /** Ringkasan hari ini untuk layar rekap. */
 export function rekapHari(s, tanggal = todayISO()) {

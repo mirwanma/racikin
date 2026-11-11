@@ -2,7 +2,7 @@ import { icon } from "../icons.js";
 import { store } from "../store.js";
 import { esc, toast, download } from "../ui.js";
 import { render, go } from "../app.js";
-import { cloud, signOut } from "../cloud.js";
+import { cloud, signOut, isMember } from "../cloud.js";
 
 export const setelan = {
   render(s) {
@@ -34,7 +34,7 @@ export const setelan = {
         <button class="btn primary">Simpan</button>
       </form>
 
-      <section class="card stack">
+      ${isMember() ? `<section class="card"><h2 class="card-title">Data usaha</h2><p class="muted small">Kamu anggota tim, jadi data usaha dikelola pemilik. Backup & hapus data hanya bisa dari akun pemilik.</p><a href="#/tim" class="btn ghost">Info tim</a></section>` : `<section class="card stack">
         <h2 class="card-title">Data kamu</h2>
         <p class="muted small">${cloud.user ? "Data tersimpan di perangkat ini dan di cloud akunmu." : "Data cuma tersimpan di perangkat ini. Login biar aman di cloud, atau rajin backup ya."}</p>
         <div class="row2">
@@ -42,7 +42,7 @@ export const setelan = {
           <label class="btn soft">Pulihkan<input type="file" accept="application/json" data-change="import" hidden></label>
         </div>
         <button class="btn danger" data-action="reset">Hapus data di perangkat ini</button>
-      </section>
+      </section>`}
 
       <p class="muted small center">Racikin v0.2 · dibuat bareng tim TAHGUY</p>`;
   },
