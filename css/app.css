@@ -469,6 +469,58 @@ ul.checks li::before {
 .breakdown { margin-top: 10px; border-top: 1.5px dashed var(--yellow-deep); padding-top: 8px; font-variant-numeric: tabular-nums; }
 .breakdown .row-between { padding: 2px 0; }
 
+/* ---------- Pelanggan setia ---------- */
+.mono { font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
+.program-card h2 { font-stretch: 110%; }
+.cust { padding: 12px 0; border-top: 1px dashed var(--line-2); }
+.cust:first-child { border-top: 0; padding-top: 0; }
+.cust-main { min-width: 0; }
+.cust-main p { margin: 2px 0 0; }
+.cust.ready .cust-main b { text-decoration: underline; text-decoration-color: var(--yellow); text-decoration-thickness: 3px; }
+.stamp-btn { flex: none; }
+.tag.ready { background: var(--leaf); color: var(--card); }
+.stamps { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
+.stamp { width: 24px; height: 24px; border-radius: 50%; border: 1.5px dashed var(--line-2); display: grid; place-items: center; color: var(--on-yellow); }
+.stamp.on { background: var(--yellow); border: 1.5px solid var(--ink); }
+.stamps-bar { height: 10px; border: 1.5px solid var(--ink); border-radius: 3px; overflow: hidden; margin: 10px 0 4px; background: var(--paper); }
+.stamps-bar span { display: block; height: 100%; background: var(--yellow); }
+.cust-search { margin-bottom: 12px; }
+.cust[hidden] { display: none; }
+details.tpl { margin-top: 12px; }
+details.tpl > summary { cursor: pointer; list-style: none; margin-bottom: 8px; }
+
+/* Kartu publik (pelanggan) */
+body[data-route="kartu"] .tabbar { display: none; }
+body[data-route="kartu"] .view { padding-bottom: 40px; }
+.loyal-card {
+  --lc-main: var(--yellow); --lc-accent: var(--ink);
+  background: var(--card); border: 2px solid var(--ink); border-radius: 14px; padding: 20px 18px 18px;
+  box-shadow: 6px 6px 0 var(--shadow-c); position: relative; overflow: hidden; margin-top: 8px;
+}
+.loyal-card::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 10px; background: var(--lc-main); border-bottom: 2px solid var(--ink); }
+.lc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-top: 8px; }
+.lc-top h1 { font-size: 26px; margin: 2px 0 0; overflow-wrap: anywhere; }
+.lc-top small.mono { color: var(--muted); }
+.lc-loc { font-family: var(--mono); font-size: 10.5px; color: var(--muted); text-align: right; max-width: 40%; }
+.lc-hi { margin: 14px 0 12px; font-size: 16px; }
+.lc-stamps { display: grid; grid-template-columns: repeat(var(--cols, 5), 1fr); gap: 10px; padding: 14px; border: 1.5px dashed var(--line-2); border-radius: 10px; }
+.lc-stamp {
+  aspect-ratio: 1; border-radius: 50%; border: 2px dashed var(--line-2); display: grid; place-items: center;
+  color: var(--muted); font-family: var(--mono); font-size: 12px;
+}
+.lc-stamp em { font-style: normal; }
+.lc-stamp.on { background: var(--lc-main); border: 2px solid var(--ink); color: var(--on-yellow); transform: rotate(-8deg); }
+.loyal-card.branded .lc-stamp.on { color: #fff; }
+.lc-stamp.on:nth-child(2n) { transform: rotate(6deg); }
+.lc-reward { margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: var(--paper); display: flex; flex-direction: column; gap: 2px; }
+.lc-reward b { font-size: 17px; font-stretch: 110%; }
+.lc-reward span { color: var(--ink-soft); font-size: 14px; }
+.lc-reward.ready { background: var(--leaf-soft); border: 1.5px solid var(--leaf); }
+.lc-reward.ready b { color: var(--leaf); }
+.lc-foot { margin-top: 6px; }
+.lc-foot .wordmark { font-size: 13px; vertical-align: middle; }
+.lc-foot .wordmark::before { width: 12px; height: 12px; border-width: 1.5px; box-shadow: 1px 1px 0 var(--shadow-c); }
+
 /* ---------- Tab bar ---------- */
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;

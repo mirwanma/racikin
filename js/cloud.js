@@ -6,6 +6,7 @@
 //   Kalau cloud lebih baru dan lokal tidak punya perubahan -> pakai cloud.
 //   Kalau dua-duanya berubah -> user ditanya mau pakai yang mana.
 import { store } from "./store.js";
+import { cardData } from "./loyalty.js";
 
 export const SUPABASE_URL = "https://ujdxslztjcufidhqpmcd.supabase.co";
 // Anon key memang publik; keamanan data dijaga oleh RLS di database.
@@ -149,6 +150,62 @@ export async function pull() {
 
 export const syncNow = () => pull();
 
+// ---------- Kartu stempel publik ----------
+// Salinan kartu tiap pelanggan di tabel stamp_cards supaya bisa dibuka pelanggan lewat link.
+const CARDS_KEY = "racikin:cards";
+let cardTimer = null;
+
+function readCards() {
+  try {
+    return JSON.parse(localStorage.getItem(CARDS_KEY)) || { dirty: [], hapus: [] };
+  } catch {
+    return { dirty: [], hapus: [] };
+  }
+}
+function writeCards(c) {
+  try {
+    localStorage.setItem(CARDS_KEY, JSON.stringify(c));
+  } catch {
+    /* abaikan */
+  }
+}
+
+/** Tandai kartu pelanggan perlu di-upload (ids) dan/atau dihapus (tokens). */
+export function markCards({ ids = [], hapus = [] } = {}) {
+  const c = readCards();
+  c.dirty = [...new Set([...c.dirty, ...ids])];
+  c.hapus = [...new Set([...c.hapus, ...hapus])];
+  writeCards(c);
+  clearTimeout(cardTimer);
+  cardTimer = setTimeout(flushCards, 800);
+}
+
+/** Upload kartu yang ditandai. Return true kalau semua beres. */
+export async function flushCards() {
+  clearTimeout(cardTimer);
+  const c = readCards();
+  if (!cloud.user || !navigator.onLine || (!c.dirty.length && !c.hapus.length)) return !c.dirty.length && !c.hapus.length;
+  const s = store.get();
+  const rows = s.pelanggan
+    .filter((p) => c.dirty.includes(p.id) && p.token)
+    .map((p) => ({ token: p.token, owner_id: cloud.user.id, data: cardData(s, p), updated_at: new Date().toISOString() }));
+  try {
+    if (rows.length) {
+      const { error } = await client.from("stamp_cards").upsert(rows);
+      if (error) throw error;
+    }
+    if (c.hapus.length) {
+      const { error } = await client.from("stamp_cards").delete().in("token", c.hapus);
+      if (error) throw error;
+    }
+    writeCards({ dirty: [], hapus: [] });
+    return true;
+  } catch (err) {
+    console.error("Upload kartu gagal", err);
+    return false;
+  }
+}
+
 // ---------- Auth ----------
 const redirectUrl = () => location.origin + location.pathname;
 
@@ -229,7 +286,11 @@ export function initCloud() {
       setStatus("off");
     } else if (cloud.user.id !== prev) {
       // Jangan panggil API Supabase langsung di dalam callback ini (bisa deadlock).
-      setTimeout(pull, 0);
+      setTimeout(async () => {
+        await pull();
+        // Pastikan semua kartu pelanggan ada di cloud untuk akun ini.
+        markCards({ ids: store.get().pelanggan.map((p) => p.id) });
+      }, 0);
     }
     emit();
     // Bersihkan ?code=... dari URL setelah login lewat link email.
@@ -243,7 +304,7 @@ export function initCloud() {
     schedulePush();
   });
 
-  window.addEventListener("online", () => cloud.user && pull());
+  window.addEventListener("online", () => cloud.user && (pull(), flushCards()));
   window.addEventListener("offline", () => cloud.user && setStatus("offline"));
   document.addEventListener("visibilitychange", () => {
     if (!cloud.user) return;

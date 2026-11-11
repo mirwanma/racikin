@@ -14,22 +14,24 @@ import { setelan } from "./views/setelan.js";
 import { akun } from "./views/akun.js";
 import { stok } from "./views/stok.js";
 import { resep } from "./views/resep.js";
+import { pelanggan } from "./views/pelanggan.js";
+import { kartu } from "./views/kartu.js";
 import { initCloud, onCloudChange } from "./cloud.js";
 
-const routes = { "": home, profil, bisnis, ide, rab, brand, aktivasi, kas, konten, mentor, setelan, akun, stok, resep };
-const tabOf = { "": "", bisnis: "bisnis", ide: "bisnis", rab: "bisnis", brand: "bisnis", aktivasi: "bisnis", kas: "kas", stok: "bisnis", resep: "bisnis", konten: "konten", mentor: "mentor" };
+const routes = { "": home, profil, bisnis, ide, rab, brand, aktivasi, kas, konten, mentor, setelan, akun, stok, resep, pelanggan, kartu };
+const tabOf = { "": "", bisnis: "bisnis", ide: "bisnis", rab: "bisnis", brand: "bisnis", aktivasi: "bisnis", kas: "kas", stok: "bisnis", resep: "bisnis", pelanggan: "bisnis", konten: "konten", mentor: "mentor" };
 
 const view = $("#view");
 let current = home;
 
 function routeName() {
-  return location.hash.replace(/^#\/?/, "").split("?")[0];
+  return location.hash.replace(/^#\/?/, "").split("?")[0].split("/")[0];
 }
 
 export function render() {
   const name = routeName();
   // Wajib isi profil dulu sebelum pakai fitur lain
-  if (!store.get().profile && !["profil", "setelan", "akun"].includes(name)) {
+  if (!store.get().profile && !["profil", "setelan", "akun", "kartu"].includes(name)) {
     location.replace("#/profil");
     return;
   }

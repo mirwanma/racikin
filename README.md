@@ -15,6 +15,7 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - **Mentor AI**: chat dengan konteks bisnis
 - **Setelan**: Mode Demo / AI Online, backup & restore JSON
 - **Stok & Resep** (fase 3): resep per menu → HPP/porsi & margin otomatis, stok bahan (beli, opname, riwayat), catat penjualan per menu (stok berkurang + masuk Kas), resep pakai AI, peringatan stok menipis
+- **Pelanggan Setia** (fase 4): kartu stempel digital (link via WhatsApp, dibuka pelanggan tanpa login), stempel otomatis saat catat penjualan, tukar hadiah, daftar "ajak balik" + pesan WA (bisa ditulis AI)
 - **Akun & Cloud** (fase 2): daftar/masuk pakai email + password, data tersinkron otomatis antar perangkat, AI Online wajib login dengan kuota per user
 
 ## Stok & resep
@@ -25,6 +26,13 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - **Catat penjualan** per menu mengurangi stok semua bahan resep dan (opsional) mencatat pemasukan *Penjualan* di Kas.
 - AI task `generate_recipe` menyusun bahan + takaran + estimasi harga (ditandai "estimasi" sampai diganti harga belanja asli).
 - Rata-rata HPP resep dipakai sebagai default HPP di kalkulator BEP, dan ringkasan menu ikut jadi konteks Mentor AI.
+
+## Pelanggan setia & kartu stempel
+- Halaman `#/pelanggan`: atur program (target stempel, hadiah, min. belanja), tambah pelanggan (nama + no. WA), **+1 Stempel**, **Tukar hadiah**, koreksi, hapus.
+- **Kartu publik** `#/kartu/<token>`: dibuka pelanggan tanpa login & tanpa tab bar, memakai warna brand kit kalau ada. Isinya cuma nama panggilan, stempel, target & hadiah (no. WA tidak pernah dipublikasikan).
+  - Salinan kartu disimpan di tabel `public.stamp_cards` (RLS: hanya pemilik yang bisa menulis/membaca) dan dibaca publik lewat fungsi `get_stamp_card(token)`; token = UUID acak. Kartu di-upload otomatis tiap stempel berubah (antre saat offline). Butuh login.
+- **Catat penjualan** di Stok bisa memilih pelanggan → +1 stempel kalau total ≥ minimal belanja.
+- **Ajak balik**: pelanggan yang ≥ 21 hari belum datang, tombol "Kirim WA" berisi pesan terisi otomatis. Template bisa diedit atau ditulis AI (task `winback_template`). Kode: `{nama} {stempel} {sisa} {target} {hadiah} {bisnis} {hari} {link}`; kode lain dibuang otomatis.
 
 ## Akun & sinkron cloud
 - **Auth**: Supabase Auth (email + password, alur PKCE). Halaman `#/akun`: masuk, daftar, lupa password, keluar.
@@ -95,11 +103,12 @@ js/store.js        data lokal (localStorage)
 js/cloud.js        login Supabase + sinkron data ke cloud
 js/ai.js           klien AI (online pakai token login / demo)
 js/stok-utils.js   hitung HPP, porsi yang bisa dibuat, stok menipis
+js/loyalty.js      program stempel, no. WA, link kartu, template pesan
 js/vendor/         supabase-js (UMD, disimpan lokal supaya jalan offline)
 js/demo.js         generator Mode Demo (shape = schema di tasks.ts)
 js/views/*.js      satu file per halaman
 docs/PRD.md        Product Requirements Document
-supabase/migrations/   tabel user_data, ai_usage, fungsi consume_ai_quota
+supabase/migrations/   user_data, ai_usage + consume_ai_quota, stamp_cards + get_stamp_card
 supabase/functions/racikin-ai/
   index.ts         endpoint (wajib login + kuota) → Gemini API / Claude API
   tasks.ts         prompt + JSON schema tiap task

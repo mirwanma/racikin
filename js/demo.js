@@ -303,6 +303,12 @@ export const demo = {
     };
   },
 
+  winback_template(_p, input) {
+    return {
+      pesan: `Halo {nama}, apa kabar? Udah ${input.hari || 21} hari nih nggak mampir ke ${input.bisnis || "kami"}. Stempel kamu masih {stempel}, tinggal {sisa} lagi buat dapet {hadiah}. Ditunggu mampir minggu ini ya!`,
+    };
+  },
+
   mentor_chat(p, input) {
     const last = (input.messages || []).slice(-1)[0]?.content || "";
     return {

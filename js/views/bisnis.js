@@ -31,6 +31,11 @@ export const bisnis = {
           <div><h3>Stok & Resep</h3><p class="muted small">${s.resep.length ? `${s.resep.length} menu · ${s.bahan.length} bahan` : "HPP otomatis dari resep, stok bahan, catat penjualan"}</p></div>
           <span class="chev">${icon("chevron", 18)}</span>
         </a>
+        <a href="#/pelanggan" class="card module">
+          <span class="module-num">${icon("receipt", 18)}</span>
+          <div><h3>Pelanggan Setia</h3><p class="muted small">${s.loyalty ? `${s.pelanggan.length} pelanggan · kartu stempel digital` : "Kartu stempel digital + ajak pelanggan balik"}</p></div>
+          <span class="chev">${icon("chevron", 18)}</span>
+        </a>
         <a href="#/profil" class="card module">
           <span class="module-num">${icon("user", 18)}</span>
           <div><h3>Profil Bisnis</h3><p class="muted small">Ubah data dasar yang dipakai AI</p></div>

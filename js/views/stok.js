@@ -3,6 +3,8 @@ import { store, uid } from "../store.js";
 import { esc, rupiah, todayISO, fmtDate, toast } from "../ui.js";
 import { render } from "../app.js";
 import { head } from "./_shared.js";
+import { program, patchStempel, siapTukar } from "../loyalty.js";
+import { markCards } from "../cloud.js";
 import { SATUAN, bahanMap, hppOf, bisaDibuat, menipis, belumDiisi, kebutuhan, fmtQty } from "../stok-utils.js";
 
 let tab = "menu"; // menu | bahan
@@ -52,6 +54,14 @@ function menuTab(s) {
                     <label class="field"><span>Harga/porsi</span><input name="harga" type="number" min="0" value="${esc(r.harga)}"></label>
                   </div>
                   <label class="todo"><input type="checkbox" name="kas" checked><span>Catat pemasukan ke Kas</span></label>
+                  ${
+                    s.loyalty && s.pelanggan.length
+                      ? `<label class="field"><span>Pelanggan (dapat stempel)</span><select name="pelanggan"><option value="">Tanpa kartu stempel</option>${[...s.pelanggan]
+                          .sort((a, b) => a.nama.localeCompare(b.nama, "id"))
+                          .map((p) => `<option value="${p.id}">${esc(p.nama)} · ${p.stempel || 0}/${program(s).target}</option>`)
+                          .join("")}</select></label>`
+                      : ""
+                  }
                   <div class="row2"><button type="button" class="btn ghost" data-action="close">Batal</button><button class="btn primary">Simpan</button></div>
                 </form>`
               : `<button class="btn soft block" data-action="open" data-type="jual" data-id="${r.id}">Catat penjualan</button>`
@@ -345,11 +355,26 @@ export const stok = {
       if (fd.get("kas") && harga > 0) {
         patch.transactions = [...s.transactions, { id: uid(), tanggal, jenis: "masuk", kategori: "Penjualan", nominal: Math.round(porsi * harga), catatan: `Jual ${porsi} porsi ${r.nama}` }];
       }
+      // Kartu stempel: +1 stempel kalau memenuhi minimal belanja
+      let stempelInfo = "";
+      const pid = fd.get("pelanggan");
+      if (pid) {
+        const prog = program(s);
+        const p = s.pelanggan.find((x) => x.id === pid);
+        if (porsi * harga >= (prog.minBelanja || 0)) {
+          Object.assign(patch, patchStempel(s, pid, 1, "beli", `${porsi}× ${r.nama}`));
+          const now = patch.pelanggan.find((x) => x.id === pid);
+          stempelInfo = siapTukar(now, prog) ? ` · ${p.nama} dapat hadiah!` : ` · +1 stempel ${p.nama} (${now.stempel}/${prog.target})`;
+          markCards({ ids: [pid] });
+        } else {
+          stempelInfo = ` · belum dapat stempel (min. belanja ${rupiah(prog.minBelanja)})`;
+        }
+      }
       store.set(patch);
       open = null;
       const habis = bahan.filter((b) => pakai[b.id] && b.tracked && (Number(b.stok) || 0) <= (Number(b.min) || 0));
       toast(
-        `${porsi} porsi ${r.nama} tercatat${patch.transactions ? ` · +${rupiah(porsi * harga)}` : ""}` +
+        `${porsi} porsi ${r.nama} tercatat${patch.transactions ? ` · +${rupiah(porsi * harga)}` : ""}${stempelInfo}` +
           (habis.length ? ` · menipis: ${habis.map((b) => b.nama).join(", ")}` : "") +
           (dilewati ? ` · ${dilewati} bahan belum diisi stoknya (tidak dikurangi)` : ""),
       );
