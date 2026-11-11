@@ -66,6 +66,11 @@ export const brand = {
         <h4>Ide kemasan</h4>${list(b.kemasan)}
       </section>
 
+      <a href="#/studio" class="card module studio-cta">
+        <span class="module-num">${icon("palette", 18)}</span>
+        <div><h3>Buka Studio Brand</h3><p class="muted small">Jadikan brand kit ini logo, stiker kemasan, mockup, booth, spanduk, poster & konten sosmed</p></div>
+        <span class="chev">${icon("chevron", 18)}</span>
+      </a>
       <div class="row2">
         <button class="btn ghost" data-action="gen">Racik ulang</button>
         <a href="#/aktivasi" class="btn primary">Lanjut aktivasi</a>

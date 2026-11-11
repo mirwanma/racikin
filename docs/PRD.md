@@ -63,8 +63,12 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Daftar "ajak balik" (≥ 21 hari tidak datang) + pesan WA terisi otomatis, template bisa ditulis AI.
 - Metrik terkait: % pelanggan yang kembali dalam 30 hari (north star game TAHGUY).
 
+### Fase 5: Studio Brand (selesai)
+- Logo 4 gaya + materi visual otomatis dari brand kit: stiker kemasan, mockup kemasan & kantong, mockup booth, spanduk, papan menu, poster, feed & story.
+- Unduh PNG resolusi cetak & SVG (font ter-embed); teks promosi bisa ditulis AI.
+
 ### Di luar MVP (fase berikutnya)
-Mode tim/karyawan, foto produk AI, generator logo (gambar), integrasi WhatsApp, push notification terjadwal, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
+Mode tim/karyawan, foto produk AI (gambar), integrasi WhatsApp, push notification terjadwal, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
 
 ## 6. Arsitektur MVP
 - **Frontend**: PWA statis (HTML + CSS + JS modules, tanpa build) di root repo ini, di-host di GitHub Pages. Data disimpan di `localStorage` (offline-first).

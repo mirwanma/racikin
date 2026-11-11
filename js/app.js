@@ -16,10 +16,11 @@ import { stok } from "./views/stok.js";
 import { resep } from "./views/resep.js";
 import { pelanggan } from "./views/pelanggan.js";
 import { kartu } from "./views/kartu.js";
+import { studio } from "./views/studio.js";
 import { initCloud, onCloudChange } from "./cloud.js";
 
-const routes = { "": home, profil, bisnis, ide, rab, brand, aktivasi, kas, konten, mentor, setelan, akun, stok, resep, pelanggan, kartu };
-const tabOf = { "": "", bisnis: "bisnis", ide: "bisnis", rab: "bisnis", brand: "bisnis", aktivasi: "bisnis", kas: "kas", stok: "bisnis", resep: "bisnis", pelanggan: "bisnis", konten: "konten", mentor: "mentor" };
+const routes = { "": home, profil, bisnis, ide, rab, brand, aktivasi, kas, konten, mentor, setelan, akun, stok, resep, pelanggan, kartu, studio };
+const tabOf = { "": "", bisnis: "bisnis", ide: "bisnis", rab: "bisnis", brand: "bisnis", aktivasi: "bisnis", kas: "kas", stok: "bisnis", resep: "bisnis", pelanggan: "bisnis", studio: "bisnis", konten: "konten", mentor: "mentor" };
 
 const view = $("#view");
 let current = home;

@@ -15,6 +15,7 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - **Mentor AI**: chat dengan konteks bisnis
 - **Setelan**: Mode Demo / AI Online, backup & restore JSON
 - **Stok & Resep** (fase 3): resep per menu → HPP/porsi & margin otomatis, stok bahan (beli, opname, riwayat), catat penjualan per menu (stok berkurang + masuk Kas), resep pakai AI, peringatan stok menipis
+- **Studio Brand** (fase 5): logo (4 gaya), stiker kemasan, mockup cup/bowl & kantong, mockup booth, spanduk 3×1 m, papan menu, poster A4, feed & story IG — otomatis dari brand kit, unduh PNG/SVG siap cetak, teks promosi bisa ditulis AI
 - **Pelanggan Setia** (fase 4): kartu stempel digital (link via WhatsApp, dibuka pelanggan tanpa login), stempel otomatis saat catat penjualan, tukar hadiah, daftar "ajak balik" + pesan WA (bisa ditulis AI)
 - **Akun & Cloud** (fase 2): daftar/masuk pakai email + password, data tersinkron otomatis antar perangkat, AI Online wajib login dengan kuota per user
 
@@ -26,6 +27,13 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - **Catat penjualan** per menu mengurangi stok semua bahan resep dan (opsional) mencatat pemasukan *Penjualan* di Kas.
 - AI task `generate_recipe` menyusun bahan + takaran + estimasi harga (ditandai "estimasi" sampai diganti harga belanja asli).
 - Rata-rata HPP resep dipakai sebagai default HPP di kalkulator BEP, dan ringkasan menu ikut jadi konteks Mentor AI.
+
+## Studio brand
+- Halaman `#/studio` (dari Brand Kit atau hub Bisnis). Semua desain digambar sebagai **SVG dari kode** (`js/studio/art.js`) memakai nama, tagline, palet, font (Google Fonts dari brand kit), menu & harga (dari resep, atau ide menu).
+- Aset: logo (lencana / wordmark / stempel / monogram), stiker bulat Ø5 cm, mockup cup atau paper bowl (sesuai jenis usaha), mockup kantong, mockup booth/gerobak, spanduk 300×100 cm (6000×2000 px), papan menu A4 landscape, poster A4 300 dpi, feed IG 1080², story 1080×1920.
+- Ekspor: PNG (dirender ke canvas pada resolusi cetak) & SVG; font brand di-embed ke file (subset latin) supaya tampil sama di percetakan.
+- Warna diambil dari peran palet (utama/aksen/latar/teks); warna teks di atas warna utama dipilih otomatis berdasarkan kontras.
+- Teks promosi (headline, sub, promo, CTA, tagline pendek, WA, IG, jam, alamat) bisa diisi manual atau lewat AI (`marketing_copy`); tata letak menyesuaikan panjang teks (ukuran huruf mengecil / pindah baris / dipotong rapi dengan "…").
 
 ## Pelanggan setia & kartu stempel
 - Halaman `#/pelanggan`: atur program (target stempel, hadiah, min. belanja), tambah pelanggan (nama + no. WA), **+1 Stempel**, **Tukar hadiah**, koreksi, hapus.
@@ -104,6 +112,7 @@ js/cloud.js        login Supabase + sinkron data ke cloud
 js/ai.js           klien AI (online pakai token login / demo)
 js/stok-utils.js   hitung HPP, porsi yang bisa dibuat, stok menipis
 js/loyalty.js      program stempel, no. WA, link kartu, template pesan
+js/studio/         theme.js (warna/font/ekspor PNG-SVG) + art.js (logo, mockup, spanduk, poster, dst.)
 js/vendor/         supabase-js (UMD, disimpan lokal supaya jalan offline)
 js/demo.js         generator Mode Demo (shape = schema di tasks.ts)
 js/views/*.js      satu file per halaman

@@ -25,6 +25,11 @@ export const bisnis = {
           </a>`,
           )
           .join("")}
+        <a href="#/studio" class="card module">
+          <span class="module-num">${icon("palette", 18)}</span>
+          <div><h3>Studio Brand</h3><p class="muted small">Logo, stiker kemasan, mockup, booth, spanduk, poster, menu & konten sosmed siap cetak</p></div>
+          <span class="chev">${icon("chevron", 18)}</span>
+        </a>
         <h4>Operasional harian</h4>
         <a href="#/stok" class="card module">
           <span class="module-num">${icon("box", 18)}</span>

@@ -174,6 +174,18 @@ Gaya: hangat, santai, personal, seperti pemilik warung ngechat langsung. Maks 3 
     schema: obj({ pesan: str() }),
   },
 
+  marketing_copy: {
+    effort: "low",
+    instruction: `Tulis teks promosi singkat untuk materi cetak & sosmed brand input.brand (tagline: input.tagline, tone: input.tone, menu: input.menu). Teks ini akan dicetak di poster A4, spanduk, feed & story Instagram, jadi HARUS pendek & kuat.
+- headline: maks 22 karakter, bikin lapar/penasaran, boleh sebut menu andalan.
+- sub: maks 55 karakter, jelaskan keunggulan (rasa, porsi, harga).
+- promo: maks 26 karakter, promo yang masuk akal untuk usaha kecil (mis. "Beli 2 gratis 1", "Diskon 20% pelajar"). Kalau input.promo_sekarang ada, rapikan saja.
+- cta: maks 20 karakter, ajakan bertindak (mis. "Pesan via WA").
+- tagline_pendek: maks 26 karakter untuk stiker kemasan.
+Tanpa emoji, tanpa tanda kutip.`,
+    schema: obj({ headline: str(), sub: str(), promo: str(), cta: str(), tagline_pendek: str() }),
+  },
+
   mentor_chat: {
     effort: "medium",
     instruction: `Kamu sedang ngobrol sebagai mentor bisnis. input.messages berisi riwayat obrolan (role user/assistant). Jawab pesan terakhir user dengan ringkas (maks ~150 kata), praktis, pakai konteks bisnis & data yang ada. Boleh pakai poin-poin.`,
