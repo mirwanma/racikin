@@ -2,6 +2,8 @@ import { esc, rupiah, todayISO, addDays, fmtDate } from "../ui.js";
 import { monthStats } from "./_shared.js";
 import { store } from "../store.js";
 import { render } from "../app.js";
+import { syncBadge } from "./akun.js";
+import { cloud } from "../cloud.js";
 
 export function journey(s) {
   const steps = [
@@ -39,7 +41,10 @@ export const home = {
           <h1>${esc(s.brand?.terpilih?.nama || p.nama || "Bisnismu")}</h1>
           <p class="muted small">${esc(p.jenis)} · ${esc([p.area, p.kota].filter(Boolean).join(", "))}</p>
         </div>
-        <a href="#/setelan" class="icon-btn" aria-label="Setelan">⚙️</a>
+        <div class="greet-actions">
+          ${cloud.user ? syncBadge() : `<a href="#/akun" class="pill">☁️ Masuk</a>`}
+          <a href="#/setelan" class="icon-btn" aria-label="Setelan">⚙️</a>
+        </div>
       </section>
 
       <section class="card journey">

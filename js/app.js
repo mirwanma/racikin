@@ -11,8 +11,10 @@ import { kas } from "./views/kas.js";
 import { konten } from "./views/konten.js";
 import { mentor } from "./views/mentor.js";
 import { setelan } from "./views/setelan.js";
+import { akun } from "./views/akun.js";
+import { initCloud, onCloudChange } from "./cloud.js";
 
-const routes = { "": home, profil, bisnis, ide, rab, brand, aktivasi, kas, konten, mentor, setelan };
+const routes = { "": home, profil, bisnis, ide, rab, brand, aktivasi, kas, konten, mentor, setelan, akun };
 const tabOf = { "": "", bisnis: "bisnis", ide: "bisnis", rab: "bisnis", brand: "bisnis", aktivasi: "bisnis", kas: "kas", konten: "konten", mentor: "mentor" };
 
 const view = $("#view");
@@ -25,7 +27,7 @@ function routeName() {
 export function render() {
   const name = routeName();
   // Wajib isi profil dulu sebelum pakai fitur lain
-  if (!store.get().profile && name !== "profil" && name !== "setelan") {
+  if (!store.get().profile && !["profil", "setelan", "akun"].includes(name)) {
     location.replace("#/profil");
     return;
   }
@@ -71,6 +73,29 @@ view.addEventListener("submit", (ev) => {
 window.addEventListener("hashchange", () => {
   render();
   window.scrollTo(0, 0);
+});
+
+// Render ulang saat status akun/sinkron berubah atau data cloud masuk,
+// tapi jangan saat user sedang mengetik (biar input tidak hilang).
+const typing = () => ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName);
+let pending = false;
+function softRender() {
+  if (typing()) {
+    if (!pending) {
+      pending = true;
+      document.addEventListener("focusout", () => setTimeout(() => ((pending = false), !typing() && render()), 50), { once: true });
+    }
+    return;
+  }
+  render();
+}
+initCloud();
+onCloudChange(softRender);
+store.subscribe((s, source) => {
+  if (source !== "cloud") return;
+  // Login di perangkat baru saat masih di onboarding: data cloud masuk -> langsung ke Beranda.
+  if (s.profile && routeName() === "profil" && document.querySelector(".hero")) location.hash = "#/";
+  else softRender();
 });
 render();
 

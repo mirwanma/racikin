@@ -41,24 +41,42 @@ export const store = {
   set(patch) {
     state = { ...state, ...(typeof patch === "function" ? patch(state) : patch) };
     save();
-    listeners.forEach((fn) => fn(state));
+    listeners.forEach((fn) => fn(state, "local"));
   },
   subscribe(fn) {
     listeners.add(fn);
     return () => listeners.delete(fn);
   },
   exportJSON: () => JSON.stringify(state, null, 2),
+  /** Data yang disinkron ke cloud: semua kecuali setelan per-perangkat. */
+  cloudData() {
+    const { settings: _settings, ...rest } = state;
+    return rest;
+  },
+  /** Ganti data dengan versi cloud (setelan perangkat tetap). Tidak memicu upload ulang. */
+  applyCloud(data) {
+    const { settings: _ignored, ...rest } = data || {};
+    state = { ...structuredClone(DEFAULT), ...rest, settings: state.settings };
+    save();
+    listeners.forEach((fn) => fn(state, "cloud"));
+  },
+  /** Hapus data bisnis di perangkat ini (setelan tetap). */
+  clearLocal() {
+    state = { ...structuredClone(DEFAULT), settings: state.settings };
+    save();
+    listeners.forEach((fn) => fn(state, "cloud"));
+  },
   importJSON(text) {
     const data = JSON.parse(text);
     if (typeof data !== "object" || data === null) throw new Error("Format tidak valid");
     state = { ...structuredClone(DEFAULT), ...data };
     save();
-    listeners.forEach((fn) => fn(state));
+    listeners.forEach((fn) => fn(state, "local"));
   },
   reset() {
     state = structuredClone(DEFAULT);
     save();
-    listeners.forEach((fn) => fn(state));
+    listeners.forEach((fn) => fn(state, "local"));
   },
 };
 

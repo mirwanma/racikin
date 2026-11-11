@@ -4,7 +4,11 @@
 // Provider AI dipilih dari secret yang tersedia:
 //   1. GEMINI_API_KEY (atau GOOGLE_API_KEY)  -> Google Gemini   (utama)
 //   2. ANTHROPIC_API_KEY                      -> Claude          (cadangan)
-// Secret opsional: GEMINI_MODEL, RACIKIN_MODEL (Claude), RACIKIN_ALLOWED_ORIGIN
+// Secret opsional: GEMINI_MODEL, RACIKIN_MODEL (Claude), RACIKIN_ALLOWED_ORIGIN,
+//                  RACIKIN_LIMIT_MINUTE (default 6), RACIKIN_LIMIT_DAY (default 60)
+//
+// Wajib login: request harus membawa access token user Supabase (bukan anon key).
+// Kuota per user dicatat lewat fungsi SQL consume_ai_quota (hanya service role).
 import Anthropic from "npm:@anthropic-ai/sdk@0.137.0";
 import { BASE_SYSTEM, TASKS, type TaskDef } from "./tasks.ts";
 
@@ -161,6 +165,45 @@ async function callClaude(apiKey: string, def: TaskDef, userText: string): Promi
   }
 }
 
+// ---------- Auth & kuota ----------
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const LIMIT_MINUTE = Number(Deno.env.get("RACIKIN_LIMIT_MINUTE") ?? 6);
+const LIMIT_DAY = Number(Deno.env.get("RACIKIN_LIMIT_DAY") ?? 60);
+
+/** Kembalikan user id dari access token, atau null kalau bukan user yang login. */
+async function getUserId(req: Request): Promise<string | null> {
+  const auth = req.headers.get("Authorization") ?? "";
+  if (!auth.startsWith("Bearer ")) return null;
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { Authorization: auth, apikey: ANON_KEY } });
+  if (!res.ok) return null; // anon key / token kedaluwarsa -> 401/403
+  const user = await res.json().catch(() => null);
+  return typeof user?.id === "string" ? user.id : null;
+}
+
+async function consumeQuota(userId: string, task: string) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/consume_ai_quota`, {
+    method: "POST",
+    headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ p_user: userId, p_task: task, p_per_minute: LIMIT_MINUTE, p_per_day: LIMIT_DAY }),
+  });
+  if (!res.ok) {
+    console.error("Quota RPC error", res.status, await res.text());
+    throw new UserError("Gagal cek kuota AI. Coba lagi ya.", 500);
+  }
+  const q = await res.json();
+  if (!q.ok) {
+    throw new UserError(
+      q.reason === "per_minute"
+        ? `Pelan-pelan ya, maksimal ${q.limit} permintaan AI per menit. Tunggu sebentar.`
+        : `Kuota AI harian kamu (${q.limit}x) sudah habis. Besok bisa lagi ya!`,
+      429,
+    );
+  }
+  return q as { used_today: number; limit_day: number };
+}
+
 // ---------- Handler ----------
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -183,13 +226,17 @@ Deno.serve(async (req) => {
   const def = body.task ? TASKS[body.task] : undefined;
   if (!def) return json({ error: `Task tidak dikenal: ${body.task}` }, 400);
 
+  const userId = await getUserId(req);
+  if (!userId) return json({ error: "Login dulu buat pakai AI Online ya.", code: "auth_required" }, 401);
+
   const context = JSON.stringify({ profil_bisnis: body.profile ?? {}, input: body.input ?? {} });
   if (context.length > MAX_INPUT_CHARS) return json({ error: "Input terlalu panjang" }, 413);
   const userText = `Data user (JSON):\n${context}\n\nKerjakan tugasnya dan jawab sesuai schema.`;
 
   try {
+    const quota = await consumeQuota(userId, body.task!);
     const data = geminiKey ? await callGemini(geminiKey, def, userText) : await callClaude(claudeKey!, def, userText);
-    return json({ data });
+    return json({ data, quota });
   } catch (err) {
     if (err instanceof UserError) return json({ error: err.message }, err.status);
     if (err instanceof SyntaxError) {

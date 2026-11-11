@@ -70,7 +70,8 @@ export const profil = {
         </div>
 
         <button class="btn primary block lg">${first ? "Gas, mulai racik! 🚀" : "Simpan profil"}</button>
-        ${first ? `<button type="button" class="btn ghost block" data-action="sample">Isi contoh (TAHGUY)</button>` : ""}
+        ${first ? `<button type="button" class="btn ghost block" data-action="sample">Isi contoh (TAHGUY)</button>
+        <a href="#/akun" class="btn ghost block">Sudah punya akun? Masuk ☁️</a>` : ""}
       </form>`;
   },
 

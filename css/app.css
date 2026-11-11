@@ -314,6 +314,17 @@ ul.checks li::before { content: "✓"; position: absolute; left: 0; top: 0; widt
 .chat-input { position: sticky; bottom: calc(76px + env(safe-area-inset-bottom)); display: flex; gap: 8px; background: var(--bg); padding: 8px 0; }
 .chat-input .btn { flex: none; width: 48px; }
 
+/* Akun & sinkron */
+.greet-actions { display: flex; align-items: center; gap: 8px; }
+.pill.sync.synced { background: rgba(31, 157, 85, 0.12); color: var(--good); }
+.pill.sync.error { background: rgba(214, 69, 69, 0.1); color: var(--bad); }
+.pill.sync.offline, .pill.sync.syncing { background: var(--accent); color: var(--warn); }
+.avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--primary); color: var(--primary-ink); display: grid; place-items: center; font-weight: 800; font-size: 18px; flex: none; }
+.sync-box { display: flex; gap: 12px; align-items: flex-start; background: var(--bg); border-radius: 12px; padding: 10px 12px; }
+.sync-box > span { font-size: 20px; }
+.sync-box p { margin: 2px 0 0; }
+.sync-box.error { background: rgba(214, 69, 69, 0.08); }
+
 /* Tab bar */
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
