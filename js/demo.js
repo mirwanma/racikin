@@ -309,6 +309,17 @@ export const demo = {
     };
   },
 
+  marketing_copy(p, input) {
+    const menu = input.menu?.[0]?.nama || input.brand || "Menu andalan";
+    return {
+      headline: menu.length > 22 ? "Hangat, Pedas, Nagih" : menu,
+      sub: "Diracik fresh tiap hari, porsi kenyang harga bersahabat",
+      promo: input.promo_sekarang || "Beli 2 gratis 1",
+      cta: "Pesan via WA",
+      tagline_pendek: "Sekali coba, pasti balik",
+    };
+  },
+
   mentor_chat(p, input) {
     const last = (input.messages || []).slice(-1)[0]?.content || "";
     return {

@@ -521,6 +521,32 @@ body[data-route="kartu"] .view { padding-bottom: 40px; }
 .lc-foot .wordmark { font-size: 13px; vertical-align: middle; }
 .lc-foot .wordmark::before { width: 12px; height: 12px; border-width: 1.5px; box-shadow: 1px 1px 0 var(--shadow-c); }
 
+/* ---------- Studio brand ---------- */
+.art svg { display: block; width: 100%; height: auto; }
+.logo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.logo-opt {
+  display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 10px;
+  background: var(--card); border: 1.5px solid var(--line-2); border-radius: 8px; cursor: pointer;
+}
+.logo-opt .art { width: 100%; height: 110px; display: grid; place-items: center; }
+.logo-opt .art svg { max-height: 110px; width: auto; max-width: 100%; }
+.logo-opt small { font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.logo-opt:hover { border-color: var(--ink); }
+.logo-opt.on { border-color: var(--ink); background: var(--yellow-tint); box-shadow: 3px 3px 0 var(--shadow-c); }
+.logo-opt.on small { color: var(--ink); }
+.studio-filter { gap: 6px; }
+.chip-btn.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.asset h3 { margin: 0; }
+.asset .mono { margin: 2px 0 0; font-size: 10.5px; }
+.asset-art { margin: 12px 0; border: 1.5px solid var(--line); border-radius: 8px; overflow: hidden; background: #fff; }
+.asset-art.checker {
+  background-color: #fff;
+  background-image: linear-gradient(45deg, #eee 25%, transparent 25%), linear-gradient(-45deg, #eee 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #eee 75%), linear-gradient(-45deg, transparent 75%, #eee 75%);
+  background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0; padding: 16px;
+}
+.studio-cta { border-color: var(--ink); background: var(--yellow-tint); }
+
 /* ---------- Tab bar ---------- */
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
