@@ -46,8 +46,13 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 | + | Beranda | Progres journey 6 langkah, ringkasan kas, tugas konten hari ini, aksi cepat | — |
 | + | Setelan | Mode AI (Demo / Online), export/import data JSON, reset | — |
 
+### Fase 2 (selesai)
+- Login email + password (Supabase Auth), halaman Akun, lupa password.
+- Sinkron data ke cloud antar perangkat (dokumen JSON per user, RLS), tetap offline-first, dialog saat konflik.
+- AI Online wajib login + kuota per user (default 6/menit, 60/hari).
+
 ### Di luar MVP (fase berikutnya)
-Login & sync cloud multi-device, mode tim/karyawan, stok & resep, CRM/kartu stempel digital, foto produk AI, generator logo (gambar), integrasi WhatsApp, push notification terjadwal, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
+Mode tim/karyawan, stok & resep, CRM/kartu stempel digital, foto produk AI, generator logo (gambar), integrasi WhatsApp, push notification terjadwal, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
 
 ## 6. Arsitektur MVP
 - **Frontend**: PWA statis (HTML + CSS + JS modules, tanpa build) di root repo ini, di-host di GitHub Pages. Data disimpan di `localStorage` (offline-first).
@@ -64,7 +69,9 @@ Login & sync cloud multi-device, mode tim/karyawan, stok & resep, CRM/kartu stem
 - ≥ 40% item konten terjadwal ditandai selesai.
 
 ## 8. Risiko & Catatan
-- Biaya API AI → batasi per task (max tokens, effort), nanti tambah kuota per user.
-- Endpoint AI publik bisa disalahgunakan → MVP: task whitelist di server; fase 2: login + rate limit.
-- Data di `localStorage` bisa hilang kalau browser dibersihkan → sediakan export/import; fase 2: sync cloud.
+- Biaya API AI → batasi per task (max tokens, effort) + kuota per user (fase 2 ✅).
+- Endpoint AI publik bisa disalahgunakan → task whitelist di server + wajib login & rate limit per user (fase 2 ✅).
+- Data di `localStorage` bisa hilang kalau browser dibersihkan → export/import + sync cloud untuk user yang login (fase 2 ✅).
+- Sinkron per dokumen: kalau dua perangkat mengubah data saat offline, salah satu versi harus dipilih (belum merge per item).
+- Email konfirmasi/reset butuh Custom SMTP untuk user umum (batas server email bawaan Supabase).
 - Angka estimasi AI (harga, RAB) bukan nasihat keuangan → tampilkan disclaimer.

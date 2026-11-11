@@ -1,6 +1,6 @@
 import { render } from "../app.js";
 import { toast, esc } from "../ui.js";
-import { isDemo } from "../ai.js";
+import { isDemo, AuthRequiredError } from "../ai.js";
 
 // Status loading per-kunci, dipakai semua view AI.
 export const busy = {};
@@ -12,8 +12,9 @@ export async function runAI(key, fn) {
   try {
     await fn();
   } catch (err) {
-    console.error(err);
+    if (!(err instanceof AuthRequiredError)) console.error(err);
     toast(err.message || "AI gagal, coba lagi ya", "err");
+    if (err instanceof AuthRequiredError) location.hash = "#/akun";
   } finally {
     busy[key] = false;
     render();

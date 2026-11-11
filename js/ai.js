@@ -1,14 +1,12 @@
-// Klien AI: mode "online" memanggil Supabase Edge Function racikin-ai,
-// mode "demo" memakai generator lokal (tanpa internet / tanpa API key).
+// Klien AI: mode "online" memanggil Supabase Edge Function racikin-ai (wajib login),
+// mode "demo" memakai generator lokal (tanpa internet / tanpa akun).
 import { store } from "./store.js";
 import { demo } from "./demo.js";
+import { SUPABASE_URL, SUPABASE_ANON_KEY, accessToken, cloud } from "./cloud.js";
 
-// Server AI default (Supabase project "racikin"). Anon key memang publik.
-export const DEFAULT_ENDPOINT = "https://ujdxslztjcufidhqpmcd.supabase.co/functions/v1/racikin-ai";
-export const DEFAULT_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVqZHhzbHp0amN1ZmlkaHFwbWNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQzNjAzNjksImV4cCI6MjEwOTkzNjM2OX0.L14cm7bGefoezyhIy0Dbuk2yoF789XnWauEKLgkSlUI";
+export const DEFAULT_ENDPOINT = `${SUPABASE_URL}/functions/v1/racikin-ai`;
 
-const endpointOf = (s) => (s.endpoint ? { url: s.endpoint, key: s.anonKey } : { url: DEFAULT_ENDPOINT, key: DEFAULT_ANON_KEY });
+export class AuthRequiredError extends Error {}
 
 export async function ai(task, input = {}) {
   const { profile, settings } = store.get();
@@ -19,24 +17,25 @@ export async function ai(task, input = {}) {
     return fn(profile || {}, input, store.get());
   }
 
-  const { url, key } = endpointOf(settings);
-  const headers = { "Content-Type": "application/json" };
-  if (key) {
-    headers.Authorization = "Bearer " + key;
-    headers.apikey = key;
-  }
+  const token = await accessToken();
+  if (!token) throw new AuthRequiredError("Login dulu buat pakai AI Online ya (menu Akun).");
+
+  const url = settings.endpoint || DEFAULT_ENDPOINT;
+  const apikey = settings.endpoint ? settings.anonKey : SUPABASE_ANON_KEY;
   let res;
   try {
     res = await fetch(url, {
       method: "POST",
-      headers,
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token, ...(apikey ? { apikey } : {}) },
       body: JSON.stringify({ task, profile, input }),
     });
   } catch {
-    throw new Error("Nggak bisa nyambung ke server AI. Cek internet atau URL endpoint.");
+    throw new Error("Nggak bisa nyambung ke server AI. Cek internet kamu.");
   }
   const body = await res.json().catch(() => ({}));
+  if (res.status === 401) throw new AuthRequiredError(body.error || "Sesi login habis. Masuk lagi ya.");
   if (!res.ok) throw new Error(body.error || `Server AI error (${res.status})`);
+  if (body.quota) cloud.quota = body.quota;
   return body.data;
 }
 
