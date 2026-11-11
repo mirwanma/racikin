@@ -78,6 +78,12 @@ export const akun = {
           <span class="chev">${icon("chevron", 18)}</span>
         </a>
 
+        <a href="#/notif" class="card module">
+          <span class="module-num">${icon("bell", 18)}</span>
+          <div><h3>Pengingat</h3><p class="muted small">Notifikasi ${isMember() && cloud.team.role === "kasir" ? "stok menipis & rekap tutup kasir" : "jadwal posting, stok menipis, pelanggan & rekap kasir"}</p></div>
+          <span class="chev">${icon("chevron", 18)}</span>
+        </a>
+
         <section class="card">
           <h2 class="card-title">AI Online</h2>
           <p class="small">${store.get().settings.aiMode === "online" ? "Aktif" : `Masih Mode Demo. <a href="#/setelan" class="link">Aktifkan di Setelan</a>`}</p>

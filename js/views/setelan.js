@@ -10,6 +10,11 @@ export const setelan = {
     return `
       <header class="page-head"><a href="#/" class="back" aria-label="Kembali">${icon("back", 18)}</a><h1>Setelan</h1></header>
 
+      <a href="#/notif" class="card module">
+        <span class="module-num">${icon("bell", 18)}</span>
+        <div><h3>Pengingat</h3><p class="muted small">Notifikasi jadwal posting, stok menipis, pelanggan & rekap kasir</p></div>
+        <span class="chev">${icon("chevron", 18)}</span>
+      </a>
       <a href="#/akun" class="card module">
         <span class="module-num">${icon("cloud", 18)}</span>
         <div><h3>Akun & Cloud</h3><p class="muted small">${cloud.user ? esc(cloud.user.email) + " · data tersinkron" : "Belum login: data cuma ada di perangkat ini"}</p></div>

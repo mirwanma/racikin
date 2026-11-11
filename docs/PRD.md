@@ -82,8 +82,13 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Sinkron diganti jadi penggabungan otomatis per item + versi dokumen, jadi beberapa HP bisa jualan bersamaan tanpa data hilang.
 - Order mencatat nama kasir; rekap harian per kasir.
 
+### Fase 9: Pengingat & notifikasi (selesai)
+- Push notification ke HP (Web Push): jadwal posting hari ini, bahan menipis, pelanggan perlu diajak balik (mingguan), rekap tutup kasir.
+- Preferensi per perangkat (jenis & jam), mengikuti zona waktu perangkat; kasir hanya menerima stok & rekap.
+- Dijadwalkan pg_cron tiap 15 menit; tanpa layanan pihak ketiga & tanpa secret tambahan.
+
 ### Di luar MVP (fase berikutnya)
-Foto produk AI (gambar), integrasi WhatsApp, push notification terjadwal, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
+Foto produk AI (gambar), integrasi WhatsApp, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
 
 ## 6. Arsitektur MVP
 - **Frontend**: PWA statis (HTML + CSS + JS modules, tanpa build) di root repo ini, di-host di GitHub Pages. Data disimpan di `localStorage` (offline-first).
