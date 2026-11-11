@@ -2,7 +2,7 @@ import { store, uid } from "../store.js";
 import { esc, rupiah, todayISO, fmtDate, toast } from "../ui.js";
 import { render } from "../app.js";
 import { head } from "./_shared.js";
-import { SATUAN, bahanMap, hppOf, bisaDibuat, menipis, kebutuhan, fmtQty } from "../stok-utils.js";
+import { SATUAN, bahanMap, hppOf, bisaDibuat, menipis, belumDiisi, kebutuhan, fmtQty } from "../stok-utils.js";
 
 let tab = "menu"; // menu | bahan
 let open = null; // { type: beli|opname|edit|jual, id }
@@ -35,9 +35,13 @@ function menuTab(s) {
           </div>
           ${h.kurangHarga ? `<p class="warn-box small">${h.kurangHarga} bahan belum ada harganya, HPP belum akurat.</p>` : ""}
           <p class="small muted">${
-            bd.porsi === null
+            !r.items.length
               ? "Belum ada bahan di resep."
-              : `Stok cukup untuk <b>${bd.porsi} porsi</b>${bd.pembatas ? ` · habis duluan: ${esc(bd.pembatas.nama)}` : ""}`
+              : bd.porsi === null
+                ? `Stok bahannya belum diisi. <a href="#/stok?tab=bahan&isi=1" class="link">Isi stok</a> biar kelihatan bisa bikin berapa porsi.`
+                : `Stok cukup untuk <b>${bd.porsi} porsi</b>${bd.pembatas ? ` · habis duluan: ${esc(bd.pembatas.nama)}` : ""}${
+                    bd.belumDiisi ? ` · <a href="#/stok?tab=bahan&isi=1" class="link">${bd.belumDiisi} bahan belum diisi stoknya</a>` : ""
+                  }`
           }</p>
           ${
             isOpen("jual", r.id)
@@ -58,7 +62,7 @@ function menuTab(s) {
 }
 
 function bahanRow(b) {
-  const low = (Number(b.stok) || 0) <= (Number(b.min) || 0);
+  const low = b.tracked && (Number(b.stok) || 0) <= (Number(b.min) || 0);
   const forms = {
     beli: `<form class="inline-form stack" data-form="beli" data-id="${b.id}">
         <div class="row2">
@@ -69,7 +73,7 @@ function bahanRow(b) {
         <div class="row2"><button type="button" class="btn ghost" data-action="close">Batal</button><button class="btn primary">Tambah stok</button></div>
       </form>`,
     opname: `<form class="inline-form stack" data-form="opname" data-id="${b.id}">
-        <label class="field"><span>Stok sebenarnya sekarang (${esc(b.satuan)})</span><input name="stok" type="number" min="0" step="any" value="${esc(fmtQty(Number(b.stok) || 0).replace(",", "."))}" required autofocus></label>
+        <label class="field"><span>${b.tracked ? "Stok sebenarnya sekarang" : "Stok yang kamu punya sekarang"} (${esc(b.satuan)})</span><input name="stok" type="number" min="0" step="any" value="${b.tracked ? esc(fmtQty(Number(b.stok) || 0).replace(",", ".")) : ""}" placeholder="0" required autofocus></label>
         <div class="row2"><button type="button" class="btn ghost" data-action="close">Batal</button><button class="btn primary">Simpan</button></div>
       </form>`,
     edit: `<form class="inline-form stack" data-form="edit" data-id="${b.id}">
@@ -88,26 +92,60 @@ function bahanRow(b) {
     <div class="row-between">
       <div><b>${esc(b.nama)}</b>${b.estimasi ? ` <span class="tag sedang" title="Harga dari estimasi AI">estimasi</span>` : ""}
         <p class="small muted">${rupiah(b.harga)}/${esc(b.satuan)}</p></div>
-      <div class="stok-num ${low ? "neg" : ""}"><b>${fmtQty(Number(b.stok) || 0)}</b><small>${esc(b.satuan)}</small></div>
+      ${
+        b.tracked
+          ? `<div class="stok-num ${low ? "neg" : ""}"><b>${fmtQty(Number(b.stok) || 0)}</b><small>${esc(b.satuan)}</small></div>`
+          : `<div class="stok-num"><span class="tag opsional">stok belum diisi</span></div>`
+      }
     </div>
     ${
       formOpen
         ? forms[formOpen]
         : `<div class="bahan-actions">
-            <button class="btn soft sm" data-action="open" data-type="beli" data-id="${b.id}">+ Beli</button>
-            <button class="btn ghost sm" data-action="open" data-type="opname" data-id="${b.id}">Opname</button>
+            ${
+              b.tracked
+                ? `<button class="btn soft sm" data-action="open" data-type="beli" data-id="${b.id}">+ Beli</button>
+            <button class="btn ghost sm" data-action="open" data-type="opname" data-id="${b.id}">Opname</button>`
+                : `<button class="btn soft sm" data-action="open" data-type="opname" data-id="${b.id}">Isi stok</button>
+            <button class="btn ghost sm" data-action="open" data-type="beli" data-id="${b.id}">+ Beli</button>`
+            }
             <button class="btn ghost sm" data-action="open" data-type="edit" data-id="${b.id}">Edit</button>
           </div>`
     }
   </div>`;
 }
 
+function bulkForm(list) {
+  return `<form class="card stack" data-form="bulk">
+    <h2 class="card-title">📋 Isi stok awal</h2>
+    <p class="muted small">Hitung stok yang ada sekarang. Kosongkan kalau belum tahu, bisa diisi nanti.</p>
+    ${list
+      .map(
+        (b) => `<label class="bulk-row"><span>${esc(b.nama)}</span>
+          <input name="${b.id}" type="number" min="0" step="any" inputmode="decimal" placeholder="0">
+          <small>${esc(b.satuan)}</small></label>`,
+      )
+      .join("")}
+    <div class="row2"><button type="button" class="btn ghost" data-action="close">Nanti saja</button><button class="btn primary">Simpan stok</button></div>
+  </form>`;
+}
+
 function bahanTab(s) {
   const low = menipis(s.bahan);
+  const kosong = belumDiisi(s.bahan);
+  if (isOpen("bulk", "all") && kosong.length) return bulkForm(kosong);
   const sorted = [...s.bahan].sort((a, b) => a.nama.localeCompare(b.nama, "id"));
   const map = bahanMap(s.bahan);
   const log = [...s.stokLog].slice(-15).reverse();
   return `
+    ${
+      kosong.length
+        ? `<section class="card info-card">
+            <p><b>📋 ${kosong.length} bahan belum diisi stoknya.</b> Bahan ini belum dihitung di stok & tidak dikurangi saat penjualan.</p>
+            <button class="btn primary block" data-action="open" data-type="bulk" data-id="all">Isi stok awal sekaligus</button>
+          </section>`
+        : ""
+    }
     ${low.length ? `<section class="card warn-card"><b>⚠️ ${low.length} bahan menipis:</b> ${low.map((b) => esc(b.nama)).join(", ")}</section>` : ""}
     <section class="card">
       ${sorted.length ? sorted.map(bahanRow).join("") : `<p class="muted">Belum ada bahan. Tambah di bawah, atau bikin resep pakai AI biar bahannya terisi otomatis.</p>`}
@@ -145,6 +183,10 @@ function bahanTab(s) {
 export const stok = {
   render(s) {
     if (location.hash.includes("tab=bahan")) tab = "bahan";
+    if (location.hash.includes("isi=1")) {
+      open = { type: "bulk", id: "all" };
+      history.replaceState(null, "", "#/stok?tab=bahan");
+    }
     return `
       ${head("Stok & Resep", "#/")}
       <div class="seg">
@@ -202,7 +244,9 @@ export const stok = {
       const harga = total > 0 ? total / qty : b.harga;
       const tanggal = todayISO();
       const patch = {
-        bahan: s.bahan.map((x) => (x.id === id ? { ...x, stok: (Number(x.stok) || 0) + qty, harga, estimasi: total > 0 ? false : x.estimasi } : x)),
+        bahan: s.bahan.map((x) =>
+          x.id === id ? { ...x, stok: (x.tracked ? Number(x.stok) || 0 : 0) + qty, tracked: true, harga, estimasi: total > 0 ? false : x.estimasi } : x,
+        ),
         stokLog: [...s.stokLog, { id: uid(), tanggal, bahanId: id, delta: qty, alasan: "beli", catatan: total ? rupiah(total) : "" }],
       };
       if (fd.get("kas") && total > 0) {
@@ -218,13 +262,14 @@ export const stok = {
       const nyata = Number(new FormData(form).get("stok")) || 0;
       const s = store.get();
       const b = s.bahan.find((x) => x.id === id);
-      const delta = nyata - (Number(b.stok) || 0);
+      const awal = !b.tracked;
+      const delta = nyata - (awal ? 0 : Number(b.stok) || 0);
       store.set({
-        bahan: s.bahan.map((x) => (x.id === id ? { ...x, stok: nyata } : x)),
-        stokLog: delta ? [...s.stokLog, { id: uid(), tanggal: todayISO(), bahanId: id, delta, alasan: "opname", catatan: "" }] : s.stokLog,
+        bahan: s.bahan.map((x) => (x.id === id ? { ...x, stok: nyata, tracked: true } : x)),
+        stokLog: delta || awal ? [...s.stokLog, { id: uid(), tanggal: todayISO(), bahanId: id, delta, alasan: "opname", catatan: awal ? "stok awal" : "" }] : s.stokLog,
       });
       open = null;
-      toast(delta ? `Stok disesuaikan (${delta > 0 ? "+" : ""}${fmtQty(delta)} ${b.satuan})` : "Stok sudah pas 👍");
+      toast(awal ? `Stok ${b.nama} diisi: ${fmtQty(nyata)} ${b.satuan}` : delta ? `Stok disesuaikan (${delta > 0 ? "+" : ""}${fmtQty(delta)} ${b.satuan})` : "Stok sudah pas 👍");
       render();
     },
     edit(form) {
@@ -241,16 +286,38 @@ export const stok = {
       toast("Bahan disimpan");
       render();
     },
+    bulk(form) {
+      const fd = new FormData(form);
+      const s = store.get();
+      const tanggal = todayISO();
+      const isi = {};
+      for (const b of s.bahan) {
+        if (b.tracked) continue;
+        const v = fd.get(b.id);
+        if (v !== null && v !== "") isi[b.id] = Math.max(0, Number(v) || 0);
+      }
+      const n = Object.keys(isi).length;
+      if (!n) return toast("Isi minimal satu stok dulu ya", "err");
+      store.set({
+        bahan: s.bahan.map((b) => (b.id in isi ? { ...b, stok: isi[b.id], tracked: true } : b)),
+        stokLog: [...s.stokLog, ...Object.entries(isi).map(([bahanId, q]) => ({ id: uid(), tanggal, bahanId, delta: q, alasan: "opname", catatan: "stok awal" }))],
+      });
+      open = null;
+      const sisa = s.bahan.filter((b) => !b.tracked).length - n;
+      toast(`Stok ${n} bahan disimpan${sisa ? ` · ${sisa} masih kosong` : " ✅"}`);
+      render();
+    },
     addBahan(form) {
       const fd = new FormData(form);
       const nama = fd.get("nama").trim();
       const s = store.get();
       if (s.bahan.some((b) => b.nama.toLowerCase() === nama.toLowerCase())) return toast("Bahan dengan nama itu sudah ada", "err");
+      const diisi = fd.get("stok") !== "";
       const stokAwal = Number(fd.get("stok")) || 0;
-      const b = { id: uid(), nama, satuan: fd.get("satuan"), harga: Number(fd.get("harga")) || 0, stok: stokAwal, min: Number(fd.get("min")) || 0, estimasi: false };
+      const b = { id: uid(), nama, satuan: fd.get("satuan"), harga: Number(fd.get("harga")) || 0, stok: stokAwal, min: Number(fd.get("min")) || 0, estimasi: false, tracked: diisi };
       store.set({
         bahan: [...s.bahan, b],
-        stokLog: stokAwal ? [...s.stokLog, { id: uid(), tanggal: todayISO(), bahanId: b.id, delta: stokAwal, alasan: "opname", catatan: "stok awal" }] : s.stokLog,
+        stokLog: diisi ? [...s.stokLog, { id: uid(), tanggal: todayISO(), bahanId: b.id, delta: stokAwal, alasan: "opname", catatan: "stok awal" }] : s.stokLog,
       });
       toast(`${nama} ditambahkan`);
       render();
@@ -263,7 +330,10 @@ export const stok = {
       const s = store.get();
       const r = s.resep.find((x) => x.id === id);
       const harga = Number(fd.get("harga")) || 0;
-      const butuh = kebutuhan(r, porsi);
+      const tracked = new Set(s.bahan.filter((b) => b.tracked).map((b) => b.id));
+      const semua = kebutuhan(r, porsi);
+      const butuh = semua.filter((k) => tracked.has(k.bahanId)); // bahan yang stoknya belum diisi tidak dikurangi
+      const dilewati = semua.filter((k) => k.qty && !tracked.has(k.bahanId)).length;
       const tanggal = todayISO();
       const pakai = Object.fromEntries(butuh.map((k) => [k.bahanId, k.qty]));
       const bahan = s.bahan.map((b) => (pakai[b.id] ? { ...b, stok: (Number(b.stok) || 0) - pakai[b.id] } : b));
@@ -276,8 +346,12 @@ export const stok = {
       }
       store.set(patch);
       open = null;
-      const habis = bahan.filter((b) => pakai[b.id] && (Number(b.stok) || 0) <= (Number(b.min) || 0));
-      toast(`${porsi} porsi ${r.nama} tercatat${patch.transactions ? ` · +${rupiah(porsi * harga)}` : ""}${habis.length ? ` · ⚠️ menipis: ${habis.map((b) => b.nama).join(", ")}` : ""}`);
+      const habis = bahan.filter((b) => pakai[b.id] && b.tracked && (Number(b.stok) || 0) <= (Number(b.min) || 0));
+      toast(
+        `${porsi} porsi ${r.nama} tercatat${patch.transactions ? ` · +${rupiah(porsi * harga)}` : ""}` +
+          (habis.length ? ` · ⚠️ menipis: ${habis.map((b) => b.nama).join(", ")}` : "") +
+          (dilewati ? ` · ${dilewati} bahan belum diisi stoknya (tidak dikurangi)` : ""),
+      );
       render();
     },
   },

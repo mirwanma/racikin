@@ -327,6 +327,13 @@ ul.checks li::before { content: "✓"; position: absolute; left: 0; top: 0; widt
 
 /* Stok & resep */
 .warn-card { border-color: var(--accent-line); background: var(--accent); }
+.info-card { border-color: rgba(59, 130, 246, 0.35); background: rgba(59, 130, 246, 0.07); }
+.info-card p { font-size: 14px; }
+.bulk-row { display: grid; grid-template-columns: 1fr 110px 54px; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); }
+.bulk-row:first-of-type { border-top: 0; }
+.bulk-row span { font-weight: 600; font-size: 14px; }
+.bulk-row input { padding: 8px 10px !important; }
+.bulk-row small { color: var(--muted); font-size: 12px; }
 .resep-card h3 { margin: 0; }
 .inline-form { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
 .bahan { padding: 10px 0; border-top: 1px solid var(--line); }

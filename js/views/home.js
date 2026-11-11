@@ -4,7 +4,7 @@ import { store } from "../store.js";
 import { render } from "../app.js";
 import { syncBadge } from "./akun.js";
 import { cloud } from "../cloud.js";
-import { menipis, bahanMap, bisaDibuat, fmtQty } from "../stok-utils.js";
+import { menipis, belumDiisi, bahanMap, bisaDibuat, fmtQty } from "../stok-utils.js";
 
 export function journey(s) {
   const steps = [
@@ -27,11 +27,24 @@ export function todayContent(s) {
 function stokCard(s) {
   if (!s.bahan.length && !s.resep.length) return "";
   const low = menipis(s.bahan);
+  const kosong = belumDiisi(s.bahan);
+  const adaTracked = s.bahan.some((b) => b.tracked);
   const map = bahanMap(s.bahan);
   const menu = s.resep.map((r) => ({ r, bd: bisaDibuat(r, map) })).filter((x) => x.bd.porsi !== null);
   return `<section class="card ${low.length ? "warn-card" : ""}">
     <div class="row-between"><h2 class="card-title">📦 Stok</h2><a href="#/stok?tab=bahan" class="link">Kelola →</a></div>
-    ${low.length ? `<p><b>⚠️ Menipis:</b> ${low.map((b) => `${esc(b.nama)} (${fmtQty(Number(b.stok) || 0)} ${esc(b.satuan)})`).join(", ")}</p>` : `<p class="muted small">Semua bahan aman 👍</p>`}
+    ${
+      low.length
+        ? `<p><b>⚠️ Menipis:</b> ${low.map((b) => `${esc(b.nama)} (${fmtQty(Number(b.stok) || 0)} ${esc(b.satuan)})`).join(", ")}</p>`
+        : adaTracked
+          ? `<p class="muted small">Semua bahan yang dicatat aman 👍</p>`
+          : ""
+    }
+    ${
+      kosong.length
+        ? `<p class="small">📋 ${kosong.length} bahan belum diisi stoknya. <a href="#/stok?tab=bahan&isi=1" class="link">Isi stok awal →</a></p>`
+        : ""
+    }
     ${menu.length ? `<p class="small muted">Bisa dibuat: ${menu.map((x) => `${esc(x.r.nama)} <b>${x.bd.porsi}</b> porsi`).join(" · ")}</p>` : ""}
   </section>`;
 }
