@@ -15,6 +15,8 @@ const DEFAULT = {
   bahan: [],              // { id, nama, satuan, harga (per satuan), stok, min, estimasi, tracked }
   resep: [],              // { id, nama, harga (jual), hasil (porsi), items:[{ bahanId, qty }] }
   stokLog: [],            // { id, tanggal, bahanId, delta, alasan: beli|jual|opname, catatan }
+  orders: [],             // order kasir (detail 30 hari terakhir)
+  posHarian: {},          // rekap kasir per tanggal { order, omzet, items }
   studio: null,           // { logo, headline, sub, promo, cta, short, wa, ig, jam, alamat }
   loyalty: null,          // { nama, target, hadiah, minBelanja, pesanAjak }
   pelanggan: [],          // { id, nama, wa, stempel, kunjungan, hadiahDiambil, terakhir, dibuat, token }

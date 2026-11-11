@@ -113,7 +113,10 @@ export const home = {
           <div><small>Keluar</small><b class="neg">${rupiah(st.keluar)}</b></div>
           <div><small>Laba</small><b class="${st.laba >= 0 ? "pos" : "neg"}">${rupiah(st.laba)}</b></div>
         </div>
-        <a href="#/kas?add=1" class="btn soft block">+ Catat transaksi</a>
+        <div class="row2">
+          <a href="#/kasir" class="btn primary">${icon("register", 16)} Buka kasir</a>
+          <a href="#/kas?add=1" class="btn soft">+ Catat manual</a>
+        </div>
       </section>
 
       ${stokCard(s)}
