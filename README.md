@@ -16,7 +16,7 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - **Setelan**: Mode Demo / AI Online, backup & restore JSON
 - **Stok & Resep** (fase 3): resep per menu → HPP/porsi & margin otomatis, stok bahan (beli, opname, riwayat), catat penjualan per menu (stok berkurang + masuk Kas), resep pakai AI, peringatan stok menipis
 - **Harga Online** (fase 7): harga & komisi GoFood/GrabFood/ShopeeFood (markup otomatis atau manual per menu, saran markup supaya untung sama dengan di toko), dipakai di Kasir; komisi tercatat di Kas
-- **Kasir / POS** (fase 6): jual dari daftar menu (resep), keranjang, diskon, pelanggan (stempel), bayar Tunai/QRIS/Transfer/Ojol + kembalian, struk via WA, rekap hari ini, batal order — otomatis ke Kas, stok & kartu stempel
+- **Kasir / POS** (fase 6): jual dari daftar menu (resep), keranjang, diskon, pelanggan (stempel), bayar Tunai/QRIS/Transfer + kembalian, pesanan GoFood/GrabFood/ShopeeFood, struk via WA, rekap hari ini, batal order — otomatis ke Kas, stok & kartu stempel
 - **Studio Brand** (fase 5): logo (4 gaya), stiker kemasan, mockup cup/bowl & kantong, mockup booth, spanduk 3×1 m, papan menu, poster A4, feed & story IG — otomatis dari brand kit, unduh PNG/SVG siap cetak, teks promosi bisa ditulis AI
 - **Pelanggan Setia** (fase 4): kartu stempel digital (link via WhatsApp, dibuka pelanggan tanpa login), stempel otomatis saat catat penjualan, tukar hadiah, daftar "ajak balik" + pesan WA (bisa ditulis AI)
 - **Akun & Cloud** (fase 2): daftar/masuk pakai email + password, data tersinkron otomatis antar perangkat, AI Online wajib login dengan kuota per user
@@ -32,7 +32,7 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 
 ## Kasir (POS)
 - Tab **Kasir** (`#/kasir`). Menu = daftar resep (harga dari resep, sisa porsi dari stok). Item di luar menu bisa ditambah manual.
-- Bayar: diskon (Rp), pelanggan kartu stempel (opsional), metode Tunai (uang diterima + tombol cepat + kembalian) / QRIS / Transfer / Ojol. Setelah bayar muncul struk + tombol kirim struk via WhatsApp.
+- Bayar: diskon (Rp), pelanggan kartu stempel (opsional), metode Tunai (uang diterima + tombol cepat + kembalian) / QRIS / Transfer, atau pesanan order online. Setelah bayar muncul struk + tombol kirim struk via WhatsApp.
 - Setiap order otomatis:
   - **Kas**: masuk sebagai pemasukan *Penjualan* yang **digabung per hari per metode bayar** (`ref: "pos"`, id `pos-<tanggal>-<metode>`), dihitung ulang dari daftar order. Di halaman Kas ditandai "Kasir" dan tidak bisa dihapus manual.
   - **Stok**: bahan resep (yang stoknya sudah diisi) berkurang; riwayat stok digabung per hari per bahan.
@@ -45,7 +45,7 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - **Saran markup** = markup yang membuat untung per porsi sama dengan jual di toko: `1/(1 − komisi) − 1` (komisi 20% → 25%).
 - Tabel per menu: harga, uang yang diterima setelah komisi, dan untung per porsi (dari HPP resep) — hijau/kuning/merah dibanding jual di toko.
 - **Kasir**: pilih saluran (Toko / GoFood / GrabFood / ShopeeFood) di atas menu; harga ikut saluran (keranjang dihitung ulang kalau saluran diganti). Order online tidak memakai pembayaran tunai; layar bayar & struk menampilkan komisi dan "kamu terima".
-- **Kas**: penjualan online masuk sebagai *Penjualan* (harga ke pembeli), dan komisinya sebagai pengeluaran **Komisi Ojol** (digabung per hari per saluran). Rekap Kasir menampilkan komisi, bersih, dan porsi penjualan online.
+- **Kas**: penjualan online masuk sebagai *Penjualan* (harga ke pembeli), dan komisinya sebagai pengeluaran **Komisi Order Online** (digabung per hari per saluran). Rekap Kasir menampilkan komisi, bersih, dan porsi penjualan online.
 - Logika di `js/online.js`.
 
 ## Studio brand
@@ -101,7 +101,7 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 
 ## Data contoh (demo)
 - Onboarding: **Coba demo lengkap (data 2 bulan)**; atau Setelan > Data kamu > **Isi data contoh TAHGUY (2 bulan)**.
-- Isi (`js/dummy.js`, acak tapi tetap/seeded): 15 menu + resep & HPP, 25 bahan dengan riwayat belanja & pemakaian, ±2.000 order kasir 60 hari (toko + GoFood/GrabFood/ShopeeFood, detail order 30 hari terakhir), Kas lengkap (penjualan, komisi ojol, belanja bahan & kemasan, sewa, gas, gaji, iklan, pesanan katering), 35 pelanggan setia + stempel, RAB + realisasi, brand kit, checklist aktivasi, kalender konten.
+- Isi (`js/dummy.js`, acak tapi tetap/seeded): 15 menu + resep & HPP, 25 bahan dengan riwayat belanja & pemakaian, ±2.000 order kasir 60 hari (toko + GoFood/GrabFood/ShopeeFood, detail order 30 hari terakhir), Kas lengkap (penjualan, komisi order online, belanja bahan & kemasan, sewa, gas, gaji, iklan, pesanan katering), 35 pelanggan setia + stempel, RAB + realisasi, brand kit, checklist aktivasi, kalender konten.
 - Semua angka saling cocok: Kas = rekap kasir per hari, stok = total riwayat stok, stempel = total log stempel. Beberapa bahan sengaja menipis & beberapa pelanggan "perlu diajak balik" supaya fitur pengingat kelihatan.
 - Mengganti data bisnis di perangkat (dan di cloud kalau sedang login); setelan perangkat tetap.
 

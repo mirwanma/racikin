@@ -59,7 +59,7 @@ function kasPatch(transactions, orders, tanggal) {
         id: `pos-${tanggal}-${m.id}-komisi`,
         tanggal,
         jenis: "keluar",
-        kategori: "Komisi Ojol",
+        kategori: "Komisi Order Online",
         nominal: komisi,
         catatan: `Komisi ${m.nama} · ${list.length} order`,
         ref: "pos",

@@ -72,14 +72,14 @@ export const online = {
   render(s) {
     const all = CHANNELS.map((c) => channelCfg(s, c.id));
     return `${head("Harga Online", "#/kasir")}
-      <p class="muted small">Platform ojol memotong komisi dari tiap pesanan, jadi harga online biasanya dibuat lebih tinggi supaya untungmu nggak tergerus. Harga ini dipakai otomatis saat kamu pilih saluran online di Kasir.</p>
+      <p class="muted small">Platform order online memotong komisi dari tiap pesanan, jadi harga online biasanya dibuat lebih tinggi supaya untungmu nggak tergerus. Harga ini dipakai otomatis saat kamu pilih saluran online di Kasir.</p>
       ${all.map((c) => channelCard(s, c)).join("")}
       ${menuTable(s)}
       <section class="card info-card">
         <h2 class="card-title">Catatan</h2>
         <ul class="checks small">
           <li>Besar komisi beda-beda tiap merchant (umumnya 20–30%, bisa + PPN). Cek angka pastinya di aplikasi merchant kamu.</li>
-          <li>Di Kas, penjualan online dicatat penuh sebagai Penjualan, dan komisinya sebagai pengeluaran "Komisi Ojol".</li>
+          <li>Di Kas, penjualan online dicatat penuh sebagai Penjualan, dan komisinya sebagai pengeluaran "Komisi Order Online".</li>
           <li>Promo yang kamu biayai sendiri di platform bisa diinput sebagai diskon di Kasir.</li>
         </ul>
       </section>`;

@@ -207,7 +207,7 @@ function rekapView(s) {
       <div><small>Order</small><b>${r.n}</b></div>
       <div><small>Rata-rata</small><b>${rupiah(r.rata)}</b></div>
     </div>
-    ${r.komisi ? `<div class="stats3"><div><small>Komisi ojol</small><b class="neg">−${rupiah(r.komisi)}</b></div><div><small>Bersih</small><b class="pos">${rupiah(r.bersih)}</b></div><div><small>Porsi online</small><b>${Math.round((r.aktif.filter((o) => isOnline(o.channel)).reduce((a, o) => a + o.total, 0) / (r.omzet || 1)) * 100)}%</b></div></div>` : ""}
+    ${r.komisi ? `<div class="stats3"><div><small>Komisi online</small><b class="neg">−${rupiah(r.komisi)}</b></div><div><small>Bersih</small><b class="pos">${rupiah(r.bersih)}</b></div><div><small>Porsi online</small><b>${Math.round((r.aktif.filter((o) => isOnline(o.channel)).reduce((a, o) => a + o.total, 0) / (r.omzet || 1)) * 100)}%</b></div></div>` : ""}
     ${
       r.n
         ? `<section class="card">

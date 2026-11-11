@@ -1,5 +1,5 @@
 // Data dummy lengkap TAHGUY: 15 menu + resep, 25 bahan, penjualan kasir 60 hari terakhir
-// (toko & ojol), belanja bahan, biaya operasional, pelanggan & stempel, plus RAB, brand,
+// (toko & order online), belanja bahan, biaya operasional, pelanggan & stempel, plus RAB, brand,
 // aktivasi & kalender konten. Dipakai untuk demo / uji coba. Hasilnya acak tapi konsisten
 // (seed tetap), dan semua angka saling cocok: Kas = rekap kasir, stok = belanja - pemakaian.
 import { uid } from "./store.js";

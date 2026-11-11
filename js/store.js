@@ -34,6 +34,10 @@ save(); // simpan hasil migrasi data lama (kalau ada)
  * Bahan yang belum tracked tidak dihitung menipis dan tidak dikurangi saat penjualan.
  */
 function migrate(st) {
+  // Kategori lama "Komisi Ojol" -> "Komisi Order Online"
+  if (st.transactions?.some((t) => t.kategori === "Komisi Ojol")) {
+    st.transactions = st.transactions.map((t) => (t.kategori === "Komisi Ojol" ? { ...t, kategori: "Komisi Order Online" } : t));
+  }
   if (st.bahan?.some((b) => b.tracked === undefined)) {
     const diisi = new Set((st.stokLog || []).filter((l) => l.alasan !== "jual").map((l) => l.bahanId));
     st.bahan = st.bahan.map((b) => (b.tracked === undefined ? { ...b, tracked: diisi.has(b.id) } : b));
