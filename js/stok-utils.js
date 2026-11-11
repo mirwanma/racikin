@@ -24,25 +24,37 @@ export function hppOf(resep, map) {
   return { hpp, rows, kurangHarga, margin: harga ? ((harga - hpp) / harga) * 100 : 0, untung: harga - hpp };
 }
 
-/** Berapa porsi yang bisa dibuat dari stok sekarang + bahan pembatasnya. */
+/**
+ * Berapa porsi yang bisa dibuat dari stok sekarang + bahan pembatasnya.
+ * Hanya bahan yang stoknya sudah diisi (tracked) yang dihitung.
+ */
 export function bisaDibuat(resep, map) {
   const hasil = Math.max(1, Number(resep.hasil) || 1);
   let min = Infinity;
   let pembatas = null;
+  let belumDiisi = 0;
   for (const it of resep.items || []) {
     const b = map[it.bahanId];
     const perPorsi = (Number(it.qty) || 0) / hasil;
     if (!b || perPorsi <= 0) continue;
+    if (!b.tracked) {
+      belumDiisi++;
+      continue;
+    }
     const n = Math.floor(Math.max(0, b.stok || 0) / perPorsi);
     if (n < min) {
       min = n;
       pembatas = b;
     }
   }
-  return { porsi: min === Infinity ? null : min, pembatas };
+  return { porsi: min === Infinity ? null : min, pembatas, belumDiisi };
 }
 
-export const menipis = (bahan) => (bahan || []).filter((b) => (Number(b.stok) || 0) <= (Number(b.min) || 0));
+/** Bahan yang stoknya sudah diisi & sudah di bawah/sama dengan batas minimum. */
+export const menipis = (bahan) => (bahan || []).filter((b) => b.tracked && (Number(b.stok) || 0) <= (Number(b.min) || 0));
+
+/** Bahan yang stoknya belum pernah diisi. */
+export const belumDiisi = (bahan) => (bahan || []).filter((b) => !b.tracked);
 
 /** Rata-rata HPP semua resep (dipakai default kalkulator BEP). */
 export function rataHpp(state) {

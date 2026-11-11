@@ -12,7 +12,7 @@ const DEFAULT = {
   transactions: [],       // { id, tanggal, jenis, kategori, nominal, catatan }
   insight: null,
   chat: [],               // { role, content }
-  bahan: [],              // { id, nama, satuan, harga (per satuan), stok, min, estimasi }
+  bahan: [],              // { id, nama, satuan, harga (per satuan), stok, min, estimasi, tracked }
   resep: [],              // { id, nama, harga (jual), hasil (porsi), items:[{ bahanId, qty }] }
   stokLog: [],            // { id, tanggal, bahanId, delta, alasan: beli|jual|opname, catatan }
   settings: { aiMode: "demo", endpoint: "", anonKey: "" },
@@ -20,11 +20,24 @@ const DEFAULT = {
 
 let state = load();
 const listeners = new Set();
+save(); // simpan hasil migrasi data lama (kalau ada)
+
+/**
+ * Lengkapi data versi lama. `tracked` = stok bahan sudah pernah diisi (beli/opname).
+ * Bahan yang belum tracked tidak dihitung menipis dan tidak dikurangi saat penjualan.
+ */
+function migrate(st) {
+  if (st.bahan?.some((b) => b.tracked === undefined)) {
+    const diisi = new Set((st.stokLog || []).filter((l) => l.alasan !== "jual").map((l) => l.bahanId));
+    st.bahan = st.bahan.map((b) => (b.tracked === undefined ? { ...b, tracked: diisi.has(b.id) } : b));
+  }
+  return st;
+}
 
 function load() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return { ...structuredClone(DEFAULT), ...JSON.parse(raw) };
+    if (raw) return migrate({ ...structuredClone(DEFAULT), ...JSON.parse(raw) });
   } catch (e) {
     console.warn("Gagal baca data lokal", e);
   }
@@ -59,7 +72,7 @@ export const store = {
   /** Ganti data dengan versi cloud (setelan perangkat tetap). Tidak memicu upload ulang. */
   applyCloud(data) {
     const { settings: _ignored, ...rest } = data || {};
-    state = { ...structuredClone(DEFAULT), ...rest, settings: state.settings };
+    state = migrate({ ...structuredClone(DEFAULT), ...rest, settings: state.settings });
     save();
     listeners.forEach((fn) => fn(state, "cloud"));
   },
@@ -72,7 +85,7 @@ export const store = {
   importJSON(text) {
     const data = JSON.parse(text);
     if (typeof data !== "object" || data === null) throw new Error("Format tidak valid");
-    state = { ...structuredClone(DEFAULT), ...data };
+    state = migrate({ ...structuredClone(DEFAULT), ...data });
     save();
     listeners.forEach((fn) => fn(state, "local"));
   },

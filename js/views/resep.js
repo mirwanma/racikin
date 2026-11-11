@@ -87,7 +87,7 @@ function rowHtml(row, i) {
       row.nama && !b
         ? `<label class="new-price"><span>Bahan baru · harga per ${esc(row.satuan)}</span><input type="number" min="0" step="any" placeholder="Rp" value="${esc(row.harga)}" data-change="row" data-f="harga" data-i="${i}"></label>`
         : b
-          ? `<small class="muted row-hint">${rupiah(b.harga)}/${esc(b.satuan)} · stok ${fmtQty(Number(b.stok) || 0)}</small>`
+          ? `<small class="muted row-hint">${rupiah(b.harga)}/${esc(b.satuan)} · ${b.tracked ? `stok ${fmtQty(Number(b.stok) || 0)}` : "stok belum diisi"}</small>`
           : ""
     }
   </div>`;
@@ -185,7 +185,7 @@ export const resep = {
       for (const row of rows) {
         let b = bahan.find((x) => key(x.nama) === key(row.nama));
         if (!b) {
-          b = { id: uid(), nama: String(row.nama).trim(), satuan: row.satuan, harga: Number(row.harga) || 0, stok: 0, min: 0, estimasi: !!row.estimasi };
+          b = { id: uid(), nama: String(row.nama).trim(), satuan: row.satuan, harga: Number(row.harga) || 0, stok: 0, min: 0, estimasi: !!row.estimasi, tracked: false };
           bahan.push(b);
         } else if (!b.harga && Number(row.harga)) {
           // Bahan lama belum punya harga: pakai harga dari baris ini (mis. estimasi AI).
@@ -203,6 +203,11 @@ export const resep = {
       toast(`Resep ${nama} disimpan${baru ? ` · ${baru} bahan baru ditambahkan` : ""}`);
       draft = null;
       loadedFor = null;
+      // Ada bahan yang stoknya belum diisi? Langsung tawarkan isi stok awal.
+      if (bahan.some((b) => !b.tracked) && confirm("Resep tersimpan! Mau isi stok bahannya sekarang? (bisa juga nanti)")) {
+        location.hash = "#/stok?tab=bahan&isi=1";
+        return;
+      }
       go("stok");
     },
     del() {
