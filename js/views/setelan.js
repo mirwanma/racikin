@@ -3,6 +3,7 @@ import { store } from "../store.js";
 import { esc, toast, download } from "../ui.js";
 import { render, go } from "../app.js";
 import { cloud, signOut, isMember } from "../cloud.js";
+import { muatDummy } from "./_dummy.js";
 
 export const setelan = {
   render(s) {
@@ -46,6 +47,7 @@ export const setelan = {
           <button class="btn soft" data-action="export">${icon("download", 16)} Backup</button>
           <label class="btn soft">Pulihkan<input type="file" accept="application/json" data-change="import" hidden></label>
         </div>
+        <button class="btn ghost" data-action="dummy">Isi data contoh TAHGUY (2 bulan)</button>
         <button class="btn danger" data-action="reset">Hapus data di perangkat ini</button>
       </section>`}
 
@@ -64,6 +66,7 @@ export const setelan = {
     export() {
       download(`racikin-backup-${new Date().toISOString().slice(0, 10)}.json`, store.exportJSON(), "application/json");
     },
+    dummy: () => muatDummy(),
     async reset() {
       if (cloud.user) {
         if (!confirm("Kamu sedang login. Ini akan KELUAR dari akun dan menghapus data di perangkat ini.\nData di cloud tetap aman. Lanjut?")) return;

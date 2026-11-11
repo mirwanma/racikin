@@ -99,6 +99,12 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - **Bentuk**: garis tinta tegas, sudut kecil, tanpa bayangan blur; tombol utama kuning dengan bayangan padat.
 - **Ikon**: set ikon garis sendiri di `js/icons.js` (tanpa emoji di UI). Token warna ada di atas `css/app.css`.
 
+## Data contoh (demo)
+- Onboarding: **Coba demo lengkap (data 2 bulan)**; atau Setelan > Data kamu > **Isi data contoh TAHGUY (2 bulan)**.
+- Isi (`js/dummy.js`, acak tapi tetap/seeded): 15 menu + resep & HPP, 25 bahan dengan riwayat belanja & pemakaian, ±2.000 order kasir 60 hari (toko + GoFood/GrabFood/ShopeeFood, detail order 30 hari terakhir), Kas lengkap (penjualan, komisi ojol, belanja bahan & kemasan, sewa, gas, gaji, iklan, pesanan katering), 35 pelanggan setia + stempel, RAB + realisasi, brand kit, checklist aktivasi, kalender konten.
+- Semua angka saling cocok: Kas = rekap kasir per hari, stok = total riwayat stok, stempel = total log stempel. Beberapa bahan sengaja menipis & beberapa pelanggan "perlu diajak balik" supaya fitur pengingat kelihatan.
+- Mengganti data bisnis di perangkat (dan di cloud kalau sedang login); setelan perangkat tetap.
+
 ## Jalanin lokal
 Tanpa build. Dari root repo:
 

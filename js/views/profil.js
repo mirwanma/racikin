@@ -2,6 +2,7 @@ import { icon } from "../icons.js";
 import { store } from "../store.js";
 import { esc, toast } from "../ui.js";
 import { go } from "../app.js";
+import { muatDummy } from "./_dummy.js";
 
 export const JENIS = ["Makanan berat", "Jajanan / snack", "Minuman / kopi", "Dessert", "Frozen food", "Katering"];
 export const KONSEP = ["Gerobak / booth", "Kios / ruko", "Online / dari rumah", "Cloud kitchen"];
@@ -72,6 +73,7 @@ export const profil = {
 
         <button class="btn primary block lg">${first ? "Gas, mulai racik!" : "Simpan profil"}</button>
         ${first ? `<button type="button" class="btn ghost block" data-action="sample">Isi contoh (TAHGUY)</button>
+        <button type="button" class="btn soft block" data-action="dummy">Coba demo lengkap (data 2 bulan)</button>
         <a href="#/akun" class="btn ghost block">Sudah punya akun? Masuk</a>` : ""}
       </form>`;
   },
@@ -102,6 +104,7 @@ export const profil = {
   },
 
   actions: {
+    dummy: () => muatDummy(),
     sample() {
       store.set({
         profile: {

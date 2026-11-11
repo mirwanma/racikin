@@ -89,6 +89,13 @@ export const store = {
     save();
     listeners.forEach((fn) => fn(state, "cloud"));
   },
+  /** Ganti seluruh data bisnis (setelan perangkat tetap). Dianggap perubahan lokal (ikut disinkron). */
+  replaceAll(data) {
+    const { settings: _ignored, ...rest } = data || {};
+    state = migrate({ ...structuredClone(DEFAULT), ...rest, settings: state.settings });
+    save();
+    listeners.forEach((fn) => fn(state, "local"));
+  },
   importJSON(text) {
     const data = JSON.parse(text);
     if (typeof data !== "object" || data === null) throw new Error("Format tidak valid");
