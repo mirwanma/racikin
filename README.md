@@ -15,6 +15,7 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - **Mentor AI**: chat dengan konteks bisnis
 - **Setelan**: Mode Demo / AI Online, backup & restore JSON
 - **Stok & Resep** (fase 3): resep per menu → HPP/porsi & margin otomatis, stok bahan (beli, opname, riwayat), catat penjualan per menu (stok berkurang + masuk Kas), resep pakai AI, peringatan stok menipis
+- **Harga Online** (fase 7): harga & komisi GoFood/GrabFood/ShopeeFood (markup otomatis atau manual per menu, saran markup supaya untung sama dengan di toko), dipakai di Kasir; komisi tercatat di Kas
 - **Kasir / POS** (fase 6): jual dari daftar menu (resep), keranjang, diskon, pelanggan (stempel), bayar Tunai/QRIS/Transfer/Ojol + kembalian, struk via WA, rekap hari ini, batal order — otomatis ke Kas, stok & kartu stempel
 - **Studio Brand** (fase 5): logo (4 gaya), stiker kemasan, mockup cup/bowl & kantong, mockup booth, spanduk 3×1 m, papan menu, poster A4, feed & story IG — otomatis dari brand kit, unduh PNG/SVG siap cetak, teks promosi bisa ditulis AI
 - **Pelanggan Setia** (fase 4): kartu stempel digital (link via WhatsApp, dibuka pelanggan tanpa login), stempel otomatis saat catat penjualan, tukar hadiah, daftar "ajak balik" + pesan WA (bisa ditulis AI)
@@ -38,6 +39,14 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
   - **Stempel**: +1 untuk pelanggan kalau total ≥ minimal belanja program.
 - Tab **Hari ini**: omzet, jumlah order, rata-rata, per metode bayar, menu terlaris, daftar order. **Batalkan order** mengembalikan kas, stok & stempel.
 - Data: `orders` (detail order, disimpan 30 hari) + `posHarian` (rekap harian permanen) — supaya dokumen cloud tetap kecil walau ratusan order per hari. Logika di `js/pos.js`.
+
+## Harga online (GoFood, GrabFood, ShopeeFood)
+- Halaman `#/online` (dari Kasir atau hub Bisnis). Per saluran: aktif, **komisi %**, **markup %**, pembulatan (Rp100/500/1.000). Harga online = harga toko × (1 + markup), dibulatkan ke atas; bisa diisi manual per menu.
+- **Saran markup** = markup yang membuat untung per porsi sama dengan jual di toko: `1/(1 − komisi) − 1` (komisi 20% → 25%).
+- Tabel per menu: harga, uang yang diterima setelah komisi, dan untung per porsi (dari HPP resep) — hijau/kuning/merah dibanding jual di toko.
+- **Kasir**: pilih saluran (Toko / GoFood / GrabFood / ShopeeFood) di atas menu; harga ikut saluran (keranjang dihitung ulang kalau saluran diganti). Order online tidak memakai pembayaran tunai; layar bayar & struk menampilkan komisi dan "kamu terima".
+- **Kas**: penjualan online masuk sebagai *Penjualan* (harga ke pembeli), dan komisinya sebagai pengeluaran **Komisi Ojol** (digabung per hari per saluran). Rekap Kasir menampilkan komisi, bersih, dan porsi penjualan online.
+- Logika di `js/online.js`.
 
 ## Studio brand
 - Halaman `#/studio` (dari Brand Kit atau hub Bisnis). Semua desain digambar sebagai **SVG dari kode** (`js/studio/art.js`) memakai nama, tagline, palet, font (Google Fonts dari brand kit), menu & harga (dari resep, atau ide menu).
@@ -124,6 +133,7 @@ js/ai.js           klien AI (online pakai token login / demo)
 js/stok-utils.js   hitung HPP, porsi yang bisa dibuat, stok menipis
 js/loyalty.js      program stempel, no. WA, link kartu, template pesan
 js/pos.js          kasir: order -> kas harian gabungan, stok, stempel, batal, rekap, struk
+js/online.js       harga & komisi per saluran online, saran markup, untung per porsi
 js/studio/         theme.js (warna/font/ekspor PNG-SVG) + art.js (logo, mockup, spanduk, poster, dst.)
 js/vendor/         supabase-js (UMD, disimpan lokal supaya jalan offline)
 js/demo.js         generator Mode Demo (shape = schema di tasks.ts)

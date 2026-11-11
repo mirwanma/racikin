@@ -9,14 +9,17 @@ import { uid } from "./store.js";
 import { todayISO } from "./ui.js";
 import { kebutuhan } from "./stok-utils.js";
 import { program, patchStempel } from "./loyalty.js";
+import { CHANNELS, isOnline, channelNama, komisiRp } from "./online.js";
 
+// Metode bayar untuk order di toko. Order online memakai id saluran (gofood, grabfood, shopeefood) sebagai metode.
 export const METODE = [
   { id: "tunai", nama: "Tunai" },
   { id: "qris", nama: "QRIS" },
   { id: "transfer", nama: "Transfer" },
-  { id: "ojol", nama: "Ojol" },
 ];
-export const metodeNama = (id) => METODE.find((m) => m.id === id)?.nama || id;
+// Semua "metode" yang mungkin muncul di order (termasuk data lama "ojol").
+const SEMUA_METODE = [...METODE, ...CHANNELS.map((c) => ({ id: c.id, nama: c.nama })), { id: "ojol", nama: "Ojol" }];
+export const metodeNama = (id) => SEMUA_METODE.find((m) => m.id === id)?.nama || channelNama(id);
 export const SIMPAN_HARI = 30;
 
 const sum = (arr, f) => arr.reduce((a, x) => a + f(x), 0);
@@ -38,7 +41,7 @@ export const nextNo = (s, tanggal) => Math.max(0, ...ordersOn(s, tanggal).map((o
 function kasPatch(transactions, orders, tanggal) {
   const aktif = orders.filter((o) => o.tanggal === tanggal && o.status !== "batal");
   let tx = transactions.filter((t) => !(t.ref === "pos" && t.tanggal === tanggal));
-  for (const m of METODE) {
+  for (const m of SEMUA_METODE) {
     const list = aktif.filter((o) => o.metode === m.id);
     if (!list.length) continue;
     tx.push({
@@ -50,6 +53,18 @@ function kasPatch(transactions, orders, tanggal) {
       catatan: `Kasir · ${m.nama} · ${list.length} order`,
       ref: "pos",
     });
+    const komisi = Math.round(sum(list, (o) => o.komisi || 0));
+    if (komisi) {
+      tx.push({
+        id: `pos-${tanggal}-${m.id}-komisi`,
+        tanggal,
+        jenis: "keluar",
+        kategori: "Komisi Ojol",
+        nominal: komisi,
+        catatan: `Komisi ${m.nama} · ${list.length} order`,
+        ref: "pos",
+      });
+    }
   }
   return tx;
 }
@@ -99,7 +114,8 @@ function prune(orders) {
  * Buat order baru. cart = [{ resepId|null, nama, harga, qty }].
  * Return { patch, order, stempelInfo }.
  */
-export function buatOrder(s, { cart, diskon = 0, metode = "tunai", bayar = 0, pelangganId = "" }) {
+export function buatOrder(s, { cart, diskon = 0, metode = "tunai", bayar = 0, pelangganId = "", channel = "toko" }) {
+  if (isOnline(channel)) metode = channel; // order online dibayar lewat platform
   const tanggal = todayISO();
   const items = cart.filter((i) => i.qty > 0).map((i) => ({ resepId: i.resepId || null, nama: i.nama, harga: Number(i.harga) || 0, qty: Number(i.qty) }));
   const sub = subtotal(items);
@@ -114,6 +130,8 @@ export function buatOrder(s, { cart, diskon = 0, metode = "tunai", bayar = 0, pe
     subtotal: sub,
     diskon: disk,
     total,
+    channel: isOnline(channel) ? channel : "toko",
+    komisi: komisiRp(s, channel, total),
     metode,
     bayar: metode === "tunai" ? Math.max(Number(bayar) || 0, total) : total,
     kembali: metode === "tunai" ? Math.max(0, (Number(bayar) || 0) - total) : 0,
@@ -168,11 +186,15 @@ export function rekapHari(s, tanggal = todayISO()) {
   const semua = ordersOn(s, tanggal);
   const aktif = semua.filter((o) => o.status !== "batal");
   const omzet = sum(aktif, (o) => o.total);
-  const perMetode = METODE.map((m) => ({ ...m, total: sum(aktif.filter((o) => o.metode === m.id), (o) => o.total), n: aktif.filter((o) => o.metode === m.id).length })).filter((m) => m.n);
+  const perMetode = SEMUA_METODE.map((m) => {
+    const list = aktif.filter((o) => o.metode === m.id);
+    return { ...m, total: sum(list, (o) => o.total), komisi: sum(list, (o) => o.komisi || 0), n: list.length };
+  }).filter((m) => m.n);
+  const komisi = sum(aktif, (o) => o.komisi || 0);
   const items = {};
   for (const o of aktif) for (const it of o.items) items[it.nama] = (items[it.nama] || 0) + it.qty;
   const terlaris = Object.entries(items).sort((a, b) => b[1] - a[1]);
-  return { semua, aktif, omzet, n: aktif.length, rata: aktif.length ? omzet / aktif.length : 0, perMetode, terlaris, batal: semua.length - aktif.length };
+  return { semua, aktif, omzet, komisi, bersih: omzet - komisi, n: aktif.length, rata: aktif.length ? omzet / aktif.length : 0, perMetode, terlaris, batal: semua.length - aktif.length };
 }
 
 /** Teks struk untuk WhatsApp. */
@@ -185,7 +207,7 @@ export function struk(o, bisnis, rp) {
     "",
     o.diskon ? `Subtotal ${rp(o.subtotal)}\nDiskon -${rp(o.diskon)}` : null,
     `*Total ${rp(o.total)}*`,
-    `Bayar ${metodeNama(o.metode)}${o.metode === "tunai" ? ` ${rp(o.bayar)} · Kembali ${rp(o.kembali)}` : ""}`,
+    isOnline(o.channel) ? `Pesanan ${channelNama(o.channel)}` : `Bayar ${metodeNama(o.metode)}${o.metode === "tunai" ? ` ${rp(o.bayar)} · Kembali ${rp(o.kembali)}` : ""}`,
     "",
     "Terima kasih, ditunggu lagi ya!",
   ];

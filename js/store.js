@@ -15,6 +15,7 @@ const DEFAULT = {
   bahan: [],              // { id, nama, satuan, harga (per satuan), stok, min, estimasi, tracked }
   resep: [],              // { id, nama, harga (jual), hasil (porsi), items:[{ bahanId, qty }] }
   stokLog: [],            // { id, tanggal, bahanId, delta, alasan: beli|jual|opname, catatan }
+  online: null,           // { channels: { gofood: { aktif, komisi, markup, bulat } }, harga: { resepId: { gofood } } }
   orders: [],             // order kasir (detail 30 hari terakhir)
   posHarian: {},          // rekap kasir per tanggal { order, omzet, items }
   studio: null,           // { logo, headline, sub, promo, cta, short, wa, ig, jam, alamat }
