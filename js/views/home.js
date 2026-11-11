@@ -1,3 +1,4 @@
+import { icon } from "../icons.js";
 import { esc, rupiah, todayISO, addDays, fmtDate } from "../ui.js";
 import { monthStats } from "./_shared.js";
 import { store } from "../store.js";
@@ -8,12 +9,12 @@ import { menipis, belumDiisi, bahanMap, bisaDibuat, fmtQty } from "../stok-utils
 
 export function journey(s) {
   const steps = [
-    { key: "ide", icon: "💡", label: "Analisa ide", done: !!s.idea, href: "#/ide" },
-    { key: "rab", icon: "🧮", label: "RAB & modal", done: !!s.rab, href: "#/rab" },
-    { key: "brand", icon: "🎨", label: "Brand kit", done: !!s.brand?.terpilih, href: "#/brand" },
-    { key: "aktivasi", icon: "🚀", label: "Aktivasi jualan", done: !!s.activation, href: "#/aktivasi" },
-    { key: "kas", icon: "📒", label: "Mulai nyatet kas", done: s.transactions.length > 0, href: "#/kas" },
-    { key: "konten", icon: "📅", label: "Jadwal konten", done: !!s.calendar, href: "#/konten" },
+    { key: "ide", label: "Analisa ide", done: !!s.idea, href: "#/ide" },
+    { key: "rab", label: "RAB & modal", done: !!s.rab, href: "#/rab" },
+    { key: "brand", label: "Brand kit", done: !!s.brand?.terpilih, href: "#/brand" },
+    { key: "aktivasi", label: "Aktivasi jualan", done: !!s.activation, href: "#/aktivasi" },
+    { key: "kas", label: "Mulai nyatet kas", done: s.transactions.length > 0, href: "#/kas" },
+    { key: "konten", label: "Jadwal konten", done: !!s.calendar, href: "#/konten" },
   ];
   return steps;
 }
@@ -32,17 +33,17 @@ function stokCard(s) {
   const map = bahanMap(s.bahan);
   const menu = s.resep.map((r) => ({ r, bd: bisaDibuat(r, map) })).filter((x) => x.bd.porsi !== null);
   return `<section class="card ${low.length ? "warn-card" : ""}">
-    <div class="row-between"><h2 class="card-title">📦 Stok</h2><a href="#/stok?tab=bahan" class="link">Kelola →</a></div>
+    <div class="row-between"><h2 class="card-title">Stok</h2><a href="#/stok?tab=bahan" class="link">Kelola</a></div>
     ${
       low.length
-        ? `<p><b>⚠️ Menipis:</b> ${low.map((b) => `${esc(b.nama)} (${fmtQty(Number(b.stok) || 0)} ${esc(b.satuan)})`).join(", ")}</p>`
+        ? `<p><b class="neg">Menipis:</b> ${low.map((b) => `${esc(b.nama)} (${fmtQty(Number(b.stok) || 0)} ${esc(b.satuan)})`).join(", ")}</p>`
         : adaTracked
-          ? `<p class="muted small">Semua bahan yang dicatat aman 👍</p>`
+          ? `<p class="muted small">Semua bahan yang dicatat aman</p>`
           : ""
     }
     ${
       kosong.length
-        ? `<p class="small">📋 ${kosong.length} bahan belum diisi stoknya. <a href="#/stok?tab=bahan&isi=1" class="link">Isi stok awal →</a></p>`
+        ? `<p class="small">${kosong.length} bahan belum diisi stoknya. <a href="#/stok?tab=bahan&isi=1" class="link">Isi stok awal</a></p>`
         : ""
     }
     ${menu.length ? `<p class="small muted">Bisa dibuat: ${menu.map((x) => `${esc(x.r.nama)} <b>${x.bd.porsi}</b> porsi`).join(" · ")}</p>` : ""}
@@ -63,13 +64,13 @@ export const home = {
     return `
       <section class="greet">
         <div>
-          <p class="muted">${sapa}, ${esc(p.owner)} 👋</p>
+          <p class="eyebrow">${sapa}, ${esc(p.owner)}</p>
           <h1>${esc(s.brand?.terpilih?.nama || p.nama || "Bisnismu")}</h1>
           <p class="muted small">${esc(p.jenis)} · ${esc([p.area, p.kota].filter(Boolean).join(", "))}</p>
         </div>
         <div class="greet-actions">
-          ${cloud.user ? syncBadge() : `<a href="#/akun" class="pill">☁️ Masuk</a>`}
-          <a href="#/setelan" class="icon-btn" aria-label="Setelan">⚙️</a>
+          ${cloud.user ? syncBadge() : `<a href="#/akun" class="pill">${icon("cloud", 13)} Masuk</a>`}
+          <a href="#/setelan" class="icon-btn" aria-label="Setelan">${icon("gear", 20)}</a>
         </div>
       </section>
 
@@ -80,15 +81,15 @@ export const home = {
         </div>
         <div class="progress"><span style="width:${(done / steps.length) * 100}%"></span></div>
         <div class="steps">
-          ${steps.map((x) => `<a href="${x.href}" class="step ${x.done ? "done" : ""} ${x === next ? "next" : ""}"><span class="step-icon">${x.done ? "✓" : x.icon}</span><span>${x.label}</span></a>`).join("")}
+          ${steps.map((x, i) => `<a href="${x.href}" class="step ${x.done ? "done" : ""} ${x === next ? "next" : ""}"><span class="step-icon">${x.done ? icon("check", 15) : i + 1}</span><span>${x.label}</span></a>`).join("")}
         </div>
-        ${next ? `<a href="${next.href}" class="btn primary block">Lanjut: ${next.label} →</a>` : `<p class="center">Semua langkah awal beres! Sekarang konsisten nyatet & posting ya 💪</p>`}
+        ${next ? `<a href="${next.href}" class="btn primary block">Lanjut: ${next.label}</a>` : `<p class="center">Semua langkah awal beres! Sekarang konsisten nyatet & posting ya</p>`}
       </section>
 
       <section class="card">
         <div class="row-between">
-          <h2 class="card-title">📒 Kas bulan ini</h2>
-          <a href="#/kas" class="link">Detail →</a>
+          <h2 class="card-title">Kas bulan ini</h2>
+          <a href="#/kas" class="link">Detail</a>
         </div>
         <div class="stats3">
           <div><small>Masuk</small><b class="pos">${rupiah(st.masuk)}</b></div>
@@ -102,8 +103,8 @@ export const home = {
 
       <section class="card">
         <div class="row-between">
-          <h2 class="card-title">📅 Konten hari ini</h2>
-          <a href="#/konten" class="link">Kalender →</a>
+          <h2 class="card-title">Konten hari ini</h2>
+          <a href="#/konten" class="link">Kalender</a>
         </div>
         ${
           !s.calendar
@@ -111,17 +112,17 @@ export const home = {
             : today.length
               ? today.map((j) => `
                 <div class="task ${j.done ? "done" : ""}">
-                  <button class="check" data-action="toggle" data-hari="${j.hari_ke}" aria-label="Tandai selesai">${j.done ? "✓" : ""}</button>
+                  <button class="check" data-action="toggle" data-hari="${j.hari_ke}" aria-label="Tandai selesai">${j.done ? icon("check", 15) : ""}</button>
                   <div><b>${esc(j.ide)}</b><p class="muted small">${esc(j.platform)} · ${esc(j.format)} · ${esc(j.jam)}</p><p class="small">“${esc(j.hook)}”</p></div>
                 </div>`).join("")
-              : `<p class="muted">Hari ini libur posting (${fmtDate(todayISO())}). Istirahat juga penting 😌</p>`
+              : `<p class="muted">Hari ini libur posting (${fmtDate(todayISO())}). Istirahat juga penting</p>`
         }
       </section>
 
       <section class="quick">
-        <a href="#/mentor" class="quick-item">🤖<span>Tanya Mentor</span></a>
-        <a href="#/stok" class="quick-item">📦<span>Stok & resep</span></a>
-        <a href="#/profil" class="quick-item">🧾<span>Edit profil</span></a>
+        <a href="#/mentor" class="quick-item">${icon("chat", 22)}<span>Tanya Mentor</span></a>
+        <a href="#/stok" class="quick-item">${icon("box", 22)}<span>Stok & resep</span></a>
+        <a href="#/profil" class="quick-item">${icon("user", 22)}<span>Edit profil</span></a>
       </section>`;
   },
   actions: {

@@ -1,3 +1,4 @@
+import { icon } from "../icons.js";
 import { store } from "../store.js";
 import { esc, todayISO } from "../ui.js";
 import { ai } from "../ai.js";
@@ -25,14 +26,14 @@ export const mentor = {
     return `
       ${head("Mentor AI", "#/")}
       <div class="chat">
-        <div class="bubble ai">Halo ${esc(s.profile.owner)}! Aku mentor bisnismu. Tanya apa aja soal ${esc(s.brand?.terpilih?.nama || s.profile.nama || "usahamu")}: harga, menu, promo, pembukuan, konten. Gas! 🚀</div>
+        <div class="bubble ai">Halo ${esc(s.profile.owner)}! Aku mentor bisnismu. Tanya apa aja soal ${esc(s.brand?.terpilih?.nama || s.profile.nama || "usahamu")}: harga, menu, promo, pembukuan, konten. Gas!</div>
         ${chat.map((m) => `<div class="bubble ${m.role === "user" ? "me" : "ai"}">${fmt(m.content)}</div>`).join("")}
         ${busy.chat ? `<div class="bubble ai typing"><span></span><span></span><span></span></div>` : ""}
       </div>
       ${chat.length ? "" : `<div class="chips suggest">${SARAN.map((q) => `<button class="chip-btn" data-action="ask" data-q="${esc(q)}">${esc(q)}</button>`).join("")}</div>`}
       <form data-form="send" class="chat-input">
         <input name="q" placeholder="Tulis pertanyaanmu…" autocomplete="off" required ${busy.chat ? "disabled" : ""}>
-        <button class="btn primary" ${busy.chat ? "disabled" : ""} aria-label="Kirim">➤</button>
+        <button class="btn primary" ${busy.chat ? "disabled" : ""} aria-label="Kirim">${icon("chevron", 20)}</button>
       </form>
       ${chat.length ? `<button class="btn ghost sm block" data-action="clear">Hapus obrolan</button>` : ""}`;
   },

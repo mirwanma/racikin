@@ -1,3 +1,4 @@
+import { icon } from "../icons.js";
 import { store, uid } from "../store.js";
 import { esc, rupiah, todayISO, fmtDate, toast } from "../ui.js";
 import { render } from "../app.js";
@@ -14,7 +15,7 @@ function menuTab(s) {
   const map = bahanMap(s.bahan);
   if (!s.resep.length) {
     return `<section class="card empty">
-      <div class="empty-icon">🍜</div>
+      <div class="empty-icon">${icon("bowl", 30)}</div>
       <h3>Belum ada resep</h3>
       <p>Masukkan komposisi bahan tiap menu, nanti HPP per porsi & margin dihitung otomatis dari harga bahan.</p>
       <a href="#/resep?id=new" class="btn primary">+ Bikin resep pertama</a>
@@ -53,7 +54,7 @@ function menuTab(s) {
                   <label class="todo"><input type="checkbox" name="kas" checked><span>Catat pemasukan ke Kas</span></label>
                   <div class="row2"><button type="button" class="btn ghost" data-action="close">Batal</button><button class="btn primary">Simpan</button></div>
                 </form>`
-              : `<button class="btn soft block" data-action="open" data-type="jual" data-id="${r.id}">🧾 Catat penjualan</button>`
+              : `<button class="btn soft block" data-action="open" data-type="jual" data-id="${r.id}">Catat penjualan</button>`
           }
         </section>`;
       })
@@ -117,7 +118,7 @@ function bahanRow(b) {
 
 function bulkForm(list) {
   return `<form class="card stack" data-form="bulk">
-    <h2 class="card-title">📋 Isi stok awal</h2>
+    <h2 class="card-title">Isi stok awal</h2>
     <p class="muted small">Hitung stok yang ada sekarang. Kosongkan kalau belum tahu, bisa diisi nanti.</p>
     ${list
       .map(
@@ -141,18 +142,18 @@ function bahanTab(s) {
     ${
       kosong.length
         ? `<section class="card info-card">
-            <p><b>📋 ${kosong.length} bahan belum diisi stoknya.</b> Bahan ini belum dihitung di stok & tidak dikurangi saat penjualan.</p>
+            <p><b>${kosong.length} bahan belum diisi stoknya.</b> Bahan ini belum dihitung di stok & tidak dikurangi saat penjualan.</p>
             <button class="btn primary block" data-action="open" data-type="bulk" data-id="all">Isi stok awal sekaligus</button>
           </section>`
         : ""
     }
-    ${low.length ? `<section class="card warn-card"><b>⚠️ ${low.length} bahan menipis:</b> ${low.map((b) => esc(b.nama)).join(", ")}</section>` : ""}
+    ${low.length ? `<section class="card warn-card"><b class="neg">${low.length} bahan menipis:</b> ${low.map((b) => esc(b.nama)).join(", ")}</section>` : ""}
     <section class="card">
       ${sorted.length ? sorted.map(bahanRow).join("") : `<p class="muted">Belum ada bahan. Tambah di bawah, atau bikin resep pakai AI biar bahannya terisi otomatis.</p>`}
     </section>
 
     <details class="card">
-      <summary><b>+ Tambah bahan</b></summary>
+      <summary><b>Tambah bahan</b></summary>
       <form class="stack" data-form="addBahan">
         <input name="nama" placeholder="Nama bahan, cth: Tahu putih" required>
         <div class="row2">
@@ -169,7 +170,7 @@ function bahanTab(s) {
 
     ${
       log.length
-        ? `<section class="card"><h2 class="card-title">🕑 Riwayat stok</h2>
+        ? `<section class="card"><h2 class="card-title">Riwayat stok</h2>
           ${log
             .map((l) => {
               const b = map[l.bahanId];
@@ -190,8 +191,8 @@ export const stok = {
     return `
       ${head("Stok & Resep", "#/")}
       <div class="seg">
-        <label><input type="radio" name="tab" value="menu" data-change="tab" ${tab === "menu" ? "checked" : ""}><span>🍜 Menu & Resep</span></label>
-        <label><input type="radio" name="tab" value="bahan" data-change="tab" ${tab === "bahan" ? "checked" : ""}><span>📦 Bahan & Stok</span></label>
+        <label><input type="radio" name="tab" value="menu" data-change="tab" ${tab === "menu" ? "checked" : ""}><span>Menu & Resep</span></label>
+        <label><input type="radio" name="tab" value="bahan" data-change="tab" ${tab === "bahan" ? "checked" : ""}><span>Bahan & Stok</span></label>
       </div>
       ${tab === "menu" ? menuTab(s) : bahanTab(s)}`;
   },
@@ -269,7 +270,7 @@ export const stok = {
         stokLog: delta || awal ? [...s.stokLog, { id: uid(), tanggal: todayISO(), bahanId: id, delta, alasan: "opname", catatan: awal ? "stok awal" : "" }] : s.stokLog,
       });
       open = null;
-      toast(awal ? `Stok ${b.nama} diisi: ${fmtQty(nyata)} ${b.satuan}` : delta ? `Stok disesuaikan (${delta > 0 ? "+" : ""}${fmtQty(delta)} ${b.satuan})` : "Stok sudah pas 👍");
+      toast(awal ? `Stok ${b.nama} diisi: ${fmtQty(nyata)} ${b.satuan}` : delta ? `Stok disesuaikan (${delta > 0 ? "+" : ""}${fmtQty(delta)} ${b.satuan})` : "Stok sudah pas");
       render();
     },
     edit(form) {
@@ -304,7 +305,7 @@ export const stok = {
       });
       open = null;
       const sisa = s.bahan.filter((b) => !b.tracked).length - n;
-      toast(`Stok ${n} bahan disimpan${sisa ? ` · ${sisa} masih kosong` : " ✅"}`);
+      toast(`Stok ${n} bahan disimpan${sisa ? ` · ${sisa} masih kosong` : ""}`);
       render();
     },
     addBahan(form) {
@@ -349,7 +350,7 @@ export const stok = {
       const habis = bahan.filter((b) => pakai[b.id] && b.tracked && (Number(b.stok) || 0) <= (Number(b.min) || 0));
       toast(
         `${porsi} porsi ${r.nama} tercatat${patch.transactions ? ` · +${rupiah(porsi * harga)}` : ""}` +
-          (habis.length ? ` · ⚠️ menipis: ${habis.map((b) => b.nama).join(", ")}` : "") +
+          (habis.length ? ` · menipis: ${habis.map((b) => b.nama).join(", ")}` : "") +
           (dilewati ? ` · ${dilewati} bahan belum diisi stoknya (tidak dikurangi)` : ""),
       );
       render();

@@ -1,3 +1,4 @@
+import { icon } from "../icons.js";
 import { store } from "../store.js";
 import { esc, list, loading, empty, copy } from "../ui.js";
 import { ai } from "../ai.js";
@@ -12,7 +13,7 @@ export const aktivasi = {
     if (!a)
       return (
         head("Aktivasi Jualan") +
-        empty({ icon: "🚀", title: "Siap launching?", text: "Checklist setup Instagram, TikTok, Google Maps, WhatsApp, GoFood, GrabFood, ShopeeFood + rencana 4 minggu.", action: "gen", label: "Bikin rencana aktivasi" })
+        empty({ icon: "megaphone", title: "Siap launching?", text: "Checklist setup Instagram, TikTok, Google Maps, WhatsApp, GoFood, GrabFood, ShopeeFood + rencana 4 minggu.", action: "gen", label: "Bikin rencana aktivasi" })
       );
     const checked = a.checked || {};
     const all = a.channels.flatMap((c) => c.langkah.map((_, i) => `${c.channel}#${i}`));
@@ -37,26 +38,26 @@ export const aktivasi = {
               return `<label class="todo"><input type="checkbox" data-change="check" data-key="${esc(k)}" ${checked[k] ? "checked" : ""}><span>${esc(l)}</span></label>`;
             })
             .join("")}
-          <p class="tip">💡 ${esc(c.tips)}</p>
+          <p class="tip">${esc(c.tips)}</p>
         </details>`;
         })
         .join("")}
 
       <section class="card">
-        <h2 class="card-title">🗓️ Rencana launching 4 minggu</h2>
+        <h2 class="card-title">Rencana launching 4 minggu</h2>
         <div class="timeline">
           ${a.launching.map((w) => `<div class="tl-item"><span class="tl-dot">${esc(w.minggu)}</span><div><b>${esc(w.fokus)}</b>${list(w.aktivitas)}</div></div>`).join("")}
         </div>
       </section>
 
       <section class="card">
-        <h2 class="card-title">🛵 Deskripsi menu buat ojol</h2>
+        <h2 class="card-title">Deskripsi menu buat ojol</h2>
         ${a.deskripsi_menu.map((m) => `<div class="copy-block"><b>${esc(m.menu)}</b><p>${esc(m.deskripsi)}</p><button class="btn ghost sm" data-action="copy" data-text="${esc(m.deskripsi)}">Salin</button></div>`).join("")}
       </section>
 
       <div class="row2">
-        <button class="btn ghost" data-action="gen">↻ Bikin ulang</button>
-        <a href="#/konten" class="btn primary">Jadwal konten →</a>
+        <button class="btn ghost" data-action="gen">Bikin ulang</button>
+        <a href="#/konten" class="btn primary">Jadwal konten</a>
       </div>`;
   },
   actions: {

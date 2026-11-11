@@ -1,3 +1,4 @@
+import { icon } from "./icons.js";
 // Helper kecil untuk render & format.
 export const $ = (sel, root = document) => root.querySelector(sel);
 
@@ -51,9 +52,9 @@ export function loading(label = "AI lagi meracik…") {
   return `<div class="loading"><div class="pot"><span></span><span></span><span></span></div><p>${esc(label)}</p></div>`;
 }
 
-export function empty({ icon = "✨", title, text, action, label }) {
+export function empty({ icon: name = "spark", title, text, action, label }) {
   return `<div class="empty card">
-    <div class="empty-icon">${icon}</div>
+    <div class="empty-icon">${icon(name, 30)}</div>
     <h3>${esc(title)}</h3>
     <p>${esc(text)}</p>
     ${action ? `<button class="btn primary" data-action="${action}">${esc(label)}</button>` : ""}
@@ -72,7 +73,7 @@ export function download(filename, content, type = "text/plain") {
 export async function copy(text) {
   try {
     await navigator.clipboard.writeText(text);
-    toast("Disalin ke clipboard 📋");
+    toast("Disalin ke clipboard");
   } catch {
     toast("Gagal menyalin", "err");
   }

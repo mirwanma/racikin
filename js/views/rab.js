@@ -1,3 +1,4 @@
+import { icon } from "../icons.js";
 import { store, uid } from "../store.js";
 import { esc, rupiah, list, loading, empty, download, toast } from "../ui.js";
 import { ai } from "../ai.js";
@@ -31,13 +32,13 @@ export const rab = {
       return (
         head("RAB & Modal") +
         empty({
-          icon: "🧮",
+          icon: "calc",
           title: "Butuh modal berapa sih?",
           text: `AI susun RAB sesuai konsep ${s.profile.konsep} dan modalmu ${rupiah(s.profile.modal)}.`,
           action: "gen",
           label: "Bikin RAB",
         }) +
-        `<button class="btn ghost block" data-action="gen" data-mode="hemat">Bikin versi hemat 🤏</button>`
+        `<button class="btn ghost block" data-action="gen" data-mode="hemat">Bikin versi hemat</button>`
       );
 
     const modal = s.profile.modal;
@@ -76,7 +77,7 @@ export const rab = {
               <div class="rab-top">
                 <div><b>${esc(i.item)}</b> <span class="tag ${i.prioritas}">${i.prioritas}</span>
                   <p class="muted small">${esc(i.qty)} ${esc(i.satuan)} × ${rupiah(i.harga)} = <b>${rupiah(sub(i))}</b>${i.catatan ? ` · ${esc(i.catatan)}` : ""}</p></div>
-                <button class="icon-btn sm" data-action="del" data-idx="${i.idx}" aria-label="Hapus">✕</button>
+                <button class="icon-btn sm" data-action="del" data-idx="${i.idx}" aria-label="Hapus">${icon("x", 14)}</button>
               </div>
               <label class="real-input"><span>Realisasi</span>
                 <input type="number" inputmode="numeric" min="0" placeholder="0" value="${i.realisasi ?? ""}" data-change="real" data-idx="${i.idx}"></label>
@@ -102,13 +103,13 @@ export const rab = {
       </form>
 
       <section class="card">
-        <h2 class="card-title">📆 Biaya bulanan</h2>
+        <h2 class="card-title">Biaya bulanan</h2>
         ${r.biaya_bulanan.map((x) => `<div class="row-between"><span>${esc(x.item)}</span><b>${rupiah(x.nominal)}</b></div>`).join("")}
         <div class="row-between total"><span>Total/bulan</span><b>${rupiah(totalOf(r.biaya_bulanan, (x) => x.nominal))}</b></div>
       </section>
 
       <section class="card accent">
-        <h2 class="card-title">🎯 Kalkulator BEP</h2>
+        <h2 class="card-title">Kalkulator BEP</h2>
         <div class="row2">
           <label class="field"><span>Harga jual</span><input type="number" data-change="bep" name="harga" value="${b.harga}"></label>
           <label class="field"><span>HPP/porsi</span><input type="number" data-change="bep" name="hpp" value="${b.hpp}"></label>
@@ -123,13 +124,13 @@ export const rab = {
         <p class="muted small">Hitungan: ${b.hari} hari jualan/bulan, untung kotor ${rupiah(b.untungPorsi)}/porsi, modal wajib ${rupiah(b.modal)}.</p>
       </section>
 
-      <section class="card"><h2 class="card-title">💡 Tips hemat</h2>${list(r.tips_hemat, "checks")}</section>
+      <section class="card"><h2 class="card-title">Tips hemat</h2>${list(r.tips_hemat, "checks")}</section>
 
       <div class="row2">
-        <button class="btn ghost" data-action="gen" data-mode="${r.mode === "hemat" ? "normal" : "hemat"}">↻ Versi ${r.mode === "hemat" ? "normal" : "hemat"}</button>
-        <button class="btn ghost" data-action="csv">⬇ Export CSV</button>
+        <button class="btn ghost" data-action="gen" data-mode="${r.mode === "hemat" ? "normal" : "hemat"}">Versi ${r.mode === "hemat" ? "normal" : "hemat"}</button>
+        <button class="btn ghost" data-action="csv">${icon("download", 16)} Export CSV</button>
       </div>
-      <a href="#/brand" class="btn primary block">Lanjut ke Brand Kit →</a>
+      <a href="#/brand" class="btn primary block">Lanjut ke Brand Kit</a>
       ${disclaimer}`;
   },
 

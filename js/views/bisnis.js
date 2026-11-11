@@ -1,3 +1,4 @@
+import { icon } from "../icons.js";
 import { journey } from "./home.js";
 
 const desc = {
@@ -18,22 +19,22 @@ export const bisnis = {
           .map(
             (x, i) => `
           <a href="${x.href}" class="card module ${x.done ? "done" : ""}">
-            <span class="module-num">${x.done ? "✓" : i + 1}</span>
-            <div><h3>${x.icon} ${x.label}</h3><p class="muted small">${desc[x.key]}</p></div>
-            <span class="chev">›</span>
+            <span class="module-num">${x.done ? icon("check", 16) : i + 1}</span>
+            <div><h3>${x.label}</h3><p class="muted small">${desc[x.key]}</p></div>
+            <span class="chev">${icon("chevron", 18)}</span>
           </a>`,
           )
           .join("")}
         <h4>Operasional harian</h4>
         <a href="#/stok" class="card module">
-          <span class="module-num">📦</span>
-          <div><h3>🍜 Stok & Resep</h3><p class="muted small">${s.resep.length ? `${s.resep.length} menu · ${s.bahan.length} bahan` : "HPP otomatis dari resep, stok bahan, catat penjualan"}</p></div>
-          <span class="chev">›</span>
+          <span class="module-num">${icon("box", 18)}</span>
+          <div><h3>Stok & Resep</h3><p class="muted small">${s.resep.length ? `${s.resep.length} menu · ${s.bahan.length} bahan` : "HPP otomatis dari resep, stok bahan, catat penjualan"}</p></div>
+          <span class="chev">${icon("chevron", 18)}</span>
         </a>
         <a href="#/profil" class="card module">
-          <span class="module-num">⚙</span>
-          <div><h3>🧾 Profil Bisnis</h3><p class="muted small">Ubah data dasar yang dipakai AI</p></div>
-          <span class="chev">›</span>
+          <span class="module-num">${icon("user", 18)}</span>
+          <div><h3>Profil Bisnis</h3><p class="muted small">Ubah data dasar yang dipakai AI</p></div>
+          <span class="chev">${icon("chevron", 18)}</span>
         </a>
       </div>`;
   },

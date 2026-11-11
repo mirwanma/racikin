@@ -1,3 +1,4 @@
+import { icon } from "../icons.js";
 import { store, uid } from "../store.js";
 import { esc, rupiah, short, todayISO, fmtDate, list, download, toast } from "../ui.js";
 import { ai } from "../ai.js";
@@ -75,16 +76,16 @@ export const kas = {
       </section>
 
       <section class="card accent">
-        <h2 class="card-title">⚡ Catat cepat</h2>
+        <h2 class="card-title">Catat cepat</h2>
         <p class="muted small">Ketik bebas kayak chat, AI yang rapihin.</p>
         <form data-form="parse" class="stack">
           <textarea name="text" rows="2" placeholder="cth: jual 25 porsi @12rb, beli tahu 50rb, gas 22rb" required></textarea>
-          <button class="btn primary" ${busy.parse ? "disabled" : ""}>${busy.parse ? "Lagi dibaca…" : "Rapihin ✨"}</button>
+          <button class="btn primary" ${busy.parse ? "disabled" : ""}>${busy.parse ? "Lagi dibaca…" : "Rapihin"}</button>
         </form>
         ${
           draft
             ? `<div class="draft">
-            ${draft.map((t, i) => `<div class="tx ${t.jenis}"><div><b>${esc(t.kategori)}</b><p class="muted small">${esc(t.catatan)}</p></div><b>${t.jenis === "masuk" ? "+" : "−"}${rupiah(t.nominal)}</b><button class="icon-btn sm" data-action="dropDraft" data-i="${i}">✕</button></div>`).join("") || `<p class="muted small">Nggak ada nominal yang kebaca. Coba tulis angkanya, cth "50rb".</p>`}
+            ${draft.map((t, i) => `<div class="tx ${t.jenis}"><div><b>${esc(t.kategori)}</b><p class="muted small">${esc(t.catatan)}</p></div><b>${t.jenis === "masuk" ? "+" : "−"}${rupiah(t.nominal)}</b><button class="icon-btn sm" data-action="dropDraft" data-i="${i}" aria-label="Buang">${icon("x", 14)}</button></div>`).join("") || `<p class="muted small">Nggak ada nominal yang kebaca. Coba tulis angkanya, cth "50rb".</p>`}
             <div class="row2"><button class="btn ghost" data-action="cancelDraft">Batal</button><button class="btn primary" data-action="saveDraft" ${draft.length ? "" : "disabled"}>Simpan ${draft.length} transaksi</button></div>
           </div>`
             : ""
@@ -92,7 +93,7 @@ export const kas = {
       </section>
 
       <details class="card" ${openAdd ? "open" : ""}>
-        <summary><b>+ Input manual</b></summary>
+        <summary><b>Input manual</b></summary>
         <form data-form="add" class="stack">
           <div class="seg">
             <label><input type="radio" name="jenis" value="masuk" data-change="jenis" ${jenisForm === "masuk" ? "checked" : ""}><span>Pemasukan</span></label>
@@ -111,7 +112,7 @@ export const kas = {
       </details>
 
       <section class="card">
-        <h2 class="card-title">🔍 Insight AI</h2>
+        <h2 class="card-title">Insight AI</h2>
         ${
           busy.insight
             ? `<p class="muted">AI lagi baca pembukuanmu…</p>`
@@ -123,19 +124,19 @@ export const kas = {
       </section>
 
       <section class="card">
-        <h2 class="card-title">📊 Per kategori</h2>
+        <h2 class="card-title">Per kategori</h2>
         <h4>Pengeluaran</h4>${catBars(st.kategori_keluar, "out")}
         <h4>Pemasukan</h4>${catBars(st.kategori_masuk, "in")}
       </section>
 
       <section class="card">
-        <div class="row-between"><h2 class="card-title">🧾 Transaksi (${st.tx.length})</h2>${st.tx.length ? `<button class="btn ghost sm" data-action="csv">⬇ CSV</button>` : ""}</div>
+        <div class="row-between"><h2 class="card-title">Transaksi (${st.tx.length})</h2>${st.tx.length ? `<button class="btn ghost sm" data-action="csv">${icon("download", 14)} CSV</button>` : ""}</div>
         ${
           Object.keys(byDate).length
             ? Object.entries(byDate)
                 .map(
                   ([d, txs]) => `<h4 class="date-h">${fmtDate(d, { weekday: "long", day: "numeric", month: "short" })}</h4>
-              ${txs.map((t) => `<div class="tx ${t.jenis}"><div><b>${esc(t.kategori)}</b>${t.catatan ? `<p class="muted small">${esc(t.catatan)}</p>` : ""}</div><b>${t.jenis === "masuk" ? "+" : "−"}${rupiah(t.nominal)}</b><button class="icon-btn sm" data-action="del" data-id="${t.id}" aria-label="Hapus">✕</button></div>`).join("")}`,
+              ${txs.map((t) => `<div class="tx ${t.jenis}"><div><b>${esc(t.kategori)}</b>${t.catatan ? `<p class="muted small">${esc(t.catatan)}</p>` : ""}</div><b>${t.jenis === "masuk" ? "+" : "−"}${rupiah(t.nominal)}</b><button class="icon-btn sm" data-action="del" data-id="${t.id}" aria-label="Hapus">${icon("x", 14)}</button></div>`).join("")}`,
                 )
                 .join("")
             : `<p class="muted">Belum ada transaksi bulan ini.</p>`
@@ -152,7 +153,7 @@ export const kas = {
       const tanggal = ym === todayISO().slice(0, 7) ? todayISO() : `${ym}-01`;
       const add = draft.map((t) => ({ id: uid(), tanggal, jenis: t.jenis, kategori: t.kategori, nominal: Math.round(t.nominal), catatan: t.catatan }));
       store.set((s) => ({ transactions: [...s.transactions, ...add] }));
-      toast(`${add.length} transaksi disimpan 💾`);
+      toast(`${add.length} transaksi disimpan`);
       draft = null;
       render();
     },
@@ -207,7 +208,7 @@ export const kas = {
       const t = { id: uid(), tanggal: fd.get("tanggal"), jenis: fd.get("jenis"), kategori: fd.get("kategori"), nominal: Number(fd.get("nominal")), catatan: fd.get("catatan").trim() };
       store.set((s) => ({ transactions: [...s.transactions, t] }));
       ym = t.tanggal.slice(0, 7);
-      toast("Tersimpan 💾");
+      toast("Tersimpan");
       render();
     },
   },
