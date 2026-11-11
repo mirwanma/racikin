@@ -136,7 +136,11 @@ export const kas = {
             ? Object.entries(byDate)
                 .map(
                   ([d, txs]) => `<h4 class="date-h">${fmtDate(d, { weekday: "long", day: "numeric", month: "short" })}</h4>
-              ${txs.map((t) => `<div class="tx ${t.jenis}"><div><b>${esc(t.kategori)}</b>${t.catatan ? `<p class="muted small">${esc(t.catatan)}</p>` : ""}</div><b>${t.jenis === "masuk" ? "+" : "−"}${rupiah(t.nominal)}</b><button class="icon-btn sm" data-action="del" data-id="${t.id}" aria-label="Hapus">${icon("x", 14)}</button></div>`).join("")}`,
+              ${txs.map((t) => `<div class="tx ${t.jenis}"><div><b>${esc(t.kategori)}</b>${t.catatan ? `<p class="muted small">${esc(t.catatan)}</p>` : ""}</div><b>${t.jenis === "masuk" ? "+" : "−"}${rupiah(t.nominal)}</b>${
+                t.ref === "pos"
+                  ? `<a href="#/kasir?tab=rekap" class="tag" title="Otomatis dari Kasir">Kasir</a>`
+                  : `<button class="icon-btn sm" data-action="del" data-id="${t.id}" aria-label="Hapus">${icon("x", 14)}</button>`
+              }</div>`).join("")}`,
                 )
                 .join("")
             : `<p class="muted">Belum ada transaksi bulan ini.</p>`

@@ -15,6 +15,7 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - **Mentor AI**: chat dengan konteks bisnis
 - **Setelan**: Mode Demo / AI Online, backup & restore JSON
 - **Stok & Resep** (fase 3): resep per menu → HPP/porsi & margin otomatis, stok bahan (beli, opname, riwayat), catat penjualan per menu (stok berkurang + masuk Kas), resep pakai AI, peringatan stok menipis
+- **Kasir / POS** (fase 6): jual dari daftar menu (resep), keranjang, diskon, pelanggan (stempel), bayar Tunai/QRIS/Transfer/Ojol + kembalian, struk via WA, rekap hari ini, batal order — otomatis ke Kas, stok & kartu stempel
 - **Studio Brand** (fase 5): logo (4 gaya), stiker kemasan, mockup cup/bowl & kantong, mockup booth, spanduk 3×1 m, papan menu, poster A4, feed & story IG — otomatis dari brand kit, unduh PNG/SVG siap cetak, teks promosi bisa ditulis AI
 - **Pelanggan Setia** (fase 4): kartu stempel digital (link via WhatsApp, dibuka pelanggan tanpa login), stempel otomatis saat catat penjualan, tukar hadiah, daftar "ajak balik" + pesan WA (bisa ditulis AI)
 - **Akun & Cloud** (fase 2): daftar/masuk pakai email + password, data tersinkron otomatis antar perangkat, AI Online wajib login dengan kuota per user
@@ -27,6 +28,16 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - **Catat penjualan** per menu mengurangi stok semua bahan resep dan (opsional) mencatat pemasukan *Penjualan* di Kas.
 - AI task `generate_recipe` menyusun bahan + takaran + estimasi harga (ditandai "estimasi" sampai diganti harga belanja asli).
 - Rata-rata HPP resep dipakai sebagai default HPP di kalkulator BEP, dan ringkasan menu ikut jadi konteks Mentor AI.
+
+## Kasir (POS)
+- Tab **Kasir** (`#/kasir`). Menu = daftar resep (harga dari resep, sisa porsi dari stok). Item di luar menu bisa ditambah manual.
+- Bayar: diskon (Rp), pelanggan kartu stempel (opsional), metode Tunai (uang diterima + tombol cepat + kembalian) / QRIS / Transfer / Ojol. Setelah bayar muncul struk + tombol kirim struk via WhatsApp.
+- Setiap order otomatis:
+  - **Kas**: masuk sebagai pemasukan *Penjualan* yang **digabung per hari per metode bayar** (`ref: "pos"`, id `pos-<tanggal>-<metode>`), dihitung ulang dari daftar order. Di halaman Kas ditandai "Kasir" dan tidak bisa dihapus manual.
+  - **Stok**: bahan resep (yang stoknya sudah diisi) berkurang; riwayat stok digabung per hari per bahan.
+  - **Stempel**: +1 untuk pelanggan kalau total ≥ minimal belanja program.
+- Tab **Hari ini**: omzet, jumlah order, rata-rata, per metode bayar, menu terlaris, daftar order. **Batalkan order** mengembalikan kas, stok & stempel.
+- Data: `orders` (detail order, disimpan 30 hari) + `posHarian` (rekap harian permanen) — supaya dokumen cloud tetap kecil walau ratusan order per hari. Logika di `js/pos.js`.
 
 ## Studio brand
 - Halaman `#/studio` (dari Brand Kit atau hub Bisnis). Semua desain digambar sebagai **SVG dari kode** (`js/studio/art.js`) memakai nama, tagline, palet, font (Google Fonts dari brand kit), menu & harga (dari resep, atau ide menu).
@@ -112,6 +123,7 @@ js/cloud.js        login Supabase + sinkron data ke cloud
 js/ai.js           klien AI (online pakai token login / demo)
 js/stok-utils.js   hitung HPP, porsi yang bisa dibuat, stok menipis
 js/loyalty.js      program stempel, no. WA, link kartu, template pesan
+js/pos.js          kasir: order -> kas harian gabungan, stok, stempel, batal, rekap, struk
 js/studio/         theme.js (warna/font/ekspor PNG-SVG) + art.js (logo, mockup, spanduk, poster, dst.)
 js/vendor/         supabase-js (UMD, disimpan lokal supaya jalan offline)
 js/demo.js         generator Mode Demo (shape = schema di tasks.ts)

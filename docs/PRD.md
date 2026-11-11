@@ -67,6 +67,11 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Logo 4 gaya + materi visual otomatis dari brand kit: stiker kemasan, mockup kemasan & kantong, mockup booth, spanduk, papan menu, poster, feed & story.
 - Unduh PNG resolusi cetak & SVG (font ter-embed); teks promosi bisa ditulis AI.
 
+### Fase 6: Kasir / POS (selesai)
+- Jual langsung dari daftar menu (resep): keranjang, diskon, pelanggan, metode bayar, kembalian, struk WA.
+- Otomatis tersambung ke Kas (gabungan harian per metode), stok bahan, dan kartu stempel; batal order mengembalikan semuanya.
+- Rekap harian: omzet, jumlah & rata-rata order, per metode, menu terlaris.
+
 ### Di luar MVP (fase berikutnya)
 Mode tim/karyawan, foto produk AI (gambar), integrasi WhatsApp, push notification terjadwal, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
 

@@ -547,6 +547,67 @@ body[data-route="kartu"] .view { padding-bottom: 40px; }
 }
 .studio-cta { border-color: var(--ink); background: var(--yellow-tint); }
 
+/* ---------- Kasir (POS) ---------- */
+body[data-route="kasir"] .view { padding-bottom: calc(170px + env(safe-area-inset-bottom)); }
+body[data-route="kasir"] .toast { bottom: calc(160px + env(safe-area-inset-bottom)); }
+.pos-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.pos-item {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left;
+  min-height: 104px; padding: 12px; background: var(--card); border: 1.5px solid var(--line-2); border-radius: 10px; cursor: pointer;
+}
+.pos-item b { font-size: 15px; line-height: 1.2; }
+.pos-item .pos-price { font-weight: 800; font-variant-numeric: tabular-nums; margin-top: auto; }
+.pos-item small { color: var(--muted); font-size: 10px; }
+.pos-item:active { transform: translateY(1px); }
+.pos-item.in { border-color: var(--ink); background: var(--yellow-tint); box-shadow: 3px 3px 0 var(--shadow-c); }
+.pos-item.habis { opacity: 0.6; }
+.pos-item.habis small { color: var(--bad); }
+.pos-qty {
+  position: absolute; top: -8px; right: -8px; min-width: 28px; height: 28px; padding: 0 6px; border-radius: 14px;
+  background: var(--ink); color: var(--paper); display: grid; place-items: center; font-weight: 800; font-size: 14px; border: 2px solid var(--card);
+}
+.pos-custom { grid-template-columns: 1fr 100px auto; }
+.pos-bar {
+  position: fixed; left: 12px; right: 12px; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 9;
+  max-width: 536px; margin: 0 auto; display: flex; align-items: center; gap: 12px;
+  background: var(--card); border: 1.5px solid var(--ink); border-radius: 12px; padding: 10px 10px 10px 12px; box-shadow: 4px 4px 0 var(--shadow-c);
+}
+.pos-bar > div { flex: 1; display: flex; flex-direction: column; line-height: 1.15; }
+.pos-bar b { font-size: 19px; font-variant-numeric: tabular-nums; }
+.pos-bar .mono { color: var(--muted); }
+.pos-line { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px dashed var(--line-2); }
+.pos-line:first-of-type { border-top: 0; }
+.pos-line p { margin: 0; }
+.stepper { display: flex; align-items: center; gap: 8px; }
+.stepper .icon-btn { width: 32px; height: 32px; font-size: 18px; color: var(--ink); }
+.stepper b { min-width: 18px; text-align: center; }
+.pos-line-total { min-width: 76px; text-align: right; font-variant-numeric: tabular-nums; }
+.pos-sum { padding: 6px 0; font-variant-numeric: tabular-nums; }
+.pos-diskon { max-width: 130px; text-align: right; padding: 7px 10px !important; }
+.pos-total { border-top: 1.5px solid var(--ink); margin-top: 4px; padding-top: 10px; font-size: 18px; }
+.pos-total b { font-size: 22px; font-variant-numeric: tabular-nums; }
+.struk {
+  background: #fffdf7; color: #1b1916; font-family: var(--mono); font-size: 13px; padding: 20px 18px 16px;
+  border: 1.5px solid var(--ink); border-radius: 4px; box-shadow: 4px 4px 0 var(--shadow-c);
+  -webkit-mask: radial-gradient(circle 6px at 50% 100%, transparent 98%, #000) 0 0 / 16px 100%;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.struk-head { display: flex; flex-direction: column; align-items: center; padding-bottom: 10px; margin-bottom: 4px; border-bottom: 1.5px dashed #c9bb98; }
+.struk-head b { font-family: var(--font); font-size: 20px; font-stretch: 115%; }
+.struk-total { border-top: 1.5px dashed #c9bb98; margin-top: 6px; padding-top: 8px; font-size: 16px; }
+.struk-kembali b { font-size: 16px; }
+.struk-note { text-align: center; margin: 8px 0 0; color: #2d6e42; }
+.struk-note.small { color: #72695a; margin: 2px 0 6px; }
+.pos-order { border-top: 1px dashed var(--line-2); }
+.pos-order:first-of-type { border-top: 0; }
+.pos-order-head {
+  width: 100%; display: grid; grid-template-columns: 44px 1fr auto; gap: 8px; align-items: center; text-align: left;
+  background: none; border: 0; padding: 10px 0; cursor: pointer; font-size: 14px;
+}
+.pos-order-head b { font-variant-numeric: tabular-nums; }
+.pos-order.batal .pos-order-head { opacity: 0.5; text-decoration: line-through; }
+.pos-order .inline-form { margin-top: 0; padding-bottom: 10px; }
+
 /* ---------- Tab bar ---------- */
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;

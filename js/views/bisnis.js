@@ -31,6 +31,11 @@ export const bisnis = {
           <span class="chev">${icon("chevron", 18)}</span>
         </a>
         <h4>Operasional harian</h4>
+        <a href="#/kasir" class="card module">
+          <span class="module-num">${icon("register", 18)}</span>
+          <div><h3>Kasir (POS)</h3><p class="muted small">Jual dari daftar menu, langsung masuk Kas, stok & stempel</p></div>
+          <span class="chev">${icon("chevron", 18)}</span>
+        </a>
         <a href="#/stok" class="card module">
           <span class="module-num">${icon("box", 18)}</span>
           <div><h3>Stok & Resep</h3><p class="muted small">${s.resep.length ? `${s.resep.length} menu · ${s.bahan.length} bahan` : "HPP otomatis dari resep, stok bahan, catat penjualan"}</p></div>
@@ -39,6 +44,11 @@ export const bisnis = {
         <a href="#/pelanggan" class="card module">
           <span class="module-num">${icon("receipt", 18)}</span>
           <div><h3>Pelanggan Setia</h3><p class="muted small">${s.loyalty ? `${s.pelanggan.length} pelanggan · kartu stempel digital` : "Kartu stempel digital + ajak pelanggan balik"}</p></div>
+          <span class="chev">${icon("chevron", 18)}</span>
+        </a>
+        <a href="#/mentor" class="card module">
+          <span class="module-num">${icon("chat", 18)}</span>
+          <div><h3>Mentor AI</h3><p class="muted small">Tanya apa saja soal bisnismu</p></div>
           <span class="chev">${icon("chevron", 18)}</span>
         </a>
         <a href="#/profil" class="card module">

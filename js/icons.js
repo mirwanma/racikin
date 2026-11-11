@@ -25,6 +25,7 @@ const P = {
   megaphone: '<path d="M4 10v4h3l8 4.5v-13L7 10z"/><path d="M7 14l1.5 5h2.5l-1.3-4.3M18.5 9.5a3.5 3.5 0 0 1 0 5"/>',
   wallet: '<path d="M4 7h14.5a1.5 1.5 0 0 1 1.5 1.5v10a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 18.5V7l11-3v3"/><path d="M16 13.5h.01"/>',
   lock: '<rect x="5" y="10.5" width="14" height="10" rx="1.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>',
+  register: '<rect x="3.5" y="11" width="17" height="9.5" rx="1.5"/><path d="M7 11V5h10v6M9.5 8h5M7.5 15h2M11 15h2M14.5 15h2"/>',
   x: '<path d="M6 6l12 12M18 6 6 18"/>',
   logout: '<path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"/>',
 };
