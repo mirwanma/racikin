@@ -12,6 +12,9 @@ const DEFAULT = {
   transactions: [],       // { id, tanggal, jenis, kategori, nominal, catatan }
   insight: null,
   chat: [],               // { role, content }
+  bahan: [],              // { id, nama, satuan, harga (per satuan), stok, min, estimasi }
+  resep: [],              // { id, nama, harga (jual), hasil (porsi), items:[{ bahanId, qty }] }
+  stokLog: [],            // { id, tanggal, bahanId, delta, alasan: beli|jual|opname, catatan }
   settings: { aiMode: "demo", endpoint: "", anonKey: "" },
 };
 

@@ -24,6 +24,12 @@ export const bisnis = {
           </a>`,
           )
           .join("")}
+        <h4>Operasional harian</h4>
+        <a href="#/stok" class="card module">
+          <span class="module-num">📦</span>
+          <div><h3>🍜 Stok & Resep</h3><p class="muted small">${s.resep.length ? `${s.resep.length} menu · ${s.bahan.length} bahan` : "HPP otomatis dari resep, stok bahan, catat penjualan"}</p></div>
+          <span class="chev">›</span>
+        </a>
         <a href="#/profil" class="card module">
           <span class="module-num">⚙</span>
           <div><h3>🧾 Profil Bisnis</h3><p class="muted small">Ubah data dasar yang dipakai AI</p></div>

@@ -146,6 +146,25 @@ PENTING: field "harga" adalah harga SATUAN (untuk 1 satuan), aplikasi akan mengh
     schema: obj({ headline: str(), insight: strs(), saran: strs() }),
   },
 
+  generate_recipe: {
+    effort: "medium",
+    instruction: `Susun resep standar (SOP takaran) untuk menu input.menu (keterangan: input.keterangan) yang menghasilkan input.porsi porsi, sesuai konsep bisnis user. Masukkan semua bahan yang menambah biaya, termasuk bumbu utama, minyak/gas kalau signifikan, dan KEMASAN per porsi (mangkuk, sendok, plastik, stiker).
+Aturan satuan: pakai salah satu dari gram, ml, pcs, butir, lembar, bungkus, ikat, sdm. qty = jumlah untuk SELURUH input.porsi porsi (bukan per porsi kalau porsi > 1).
+harga_per_satuan = estimasi harga beli untuk 1 satuan tsb di pasar Indonesia (contoh: tahu 500/pcs, cabai rawit 80/gram, paper bowl 900/pcs, minyak 18/ml). Jangan pakai harga total.
+Kalau ada bahan yang sama dengan daftar input.bahan_ada, pakai nama & satuan yang PERSIS sama.
+Beri juga 2-3 tips menjaga rasa konsisten / hemat HPP.`,
+    schema: obj({
+      porsi_hasil: num(),
+      bahan: arr(obj({
+        nama: str(),
+        qty: num("jumlah untuk seluruh porsi_hasil"),
+        satuan: en(["gram", "ml", "pcs", "butir", "lembar", "bungkus", "ikat", "sdm"]),
+        harga_per_satuan: num("harga beli untuk 1 satuan, BUKAN total"),
+      })),
+      tips: strs(),
+    }),
+  },
+
   mentor_chat: {
     effort: "medium",
     instruction: `Kamu sedang ngobrol sebagai mentor bisnis. input.messages berisi riwayat obrolan (role user/assistant). Jawab pesan terakhir user dengan ringkas (maks ~150 kata), praktis, pakai konteks bisnis & data yang ada. Boleh pakai poin-poin.`,

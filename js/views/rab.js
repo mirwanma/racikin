@@ -3,6 +3,7 @@ import { esc, rupiah, list, loading, empty, download, toast } from "../ui.js";
 import { ai } from "../ai.js";
 import { render } from "../app.js";
 import { busy, runAI, head, disclaimer } from "./_shared.js";
+import { rataHpp } from "../stok-utils.js";
 
 const totalOf = (items, f) => items.reduce((a, i) => a + f(i), 0);
 const sub = (i) => (Number(i.qty) || 0) * (Number(i.harga) || 0);
@@ -10,7 +11,7 @@ const sub = (i) => (Number(i.qty) || 0) * (Number(i.harga) || 0);
 function bepCalc(s) {
   const b = s.bep || {};
   const harga = Number(b.harga ?? s.idea?.harga.harga_jual ?? s.profile.harga) || 0;
-  const hpp = Number(b.hpp ?? s.idea?.harga.hpp ?? Math.round(harga * 0.4)) || 0;
+  const hpp = Number(b.hpp ?? rataHpp(s) ?? s.idea?.harga.hpp ?? Math.round(harga * 0.4)) || 0;
   const tetap = Number(b.tetap ?? totalOf(s.rab?.biaya_bulanan || [], (x) => x.nominal)) || 0;
   const porsi = Number(b.porsi ?? 40) || 0;
   const hari = Number(b.hari ?? 26) || 0;

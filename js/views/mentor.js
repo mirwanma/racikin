@@ -3,6 +3,7 @@ import { esc, todayISO } from "../ui.js";
 import { ai } from "../ai.js";
 import { render } from "../app.js";
 import { busy, runAI, head, monthStats } from "./_shared.js";
+import { bahanMap, hppOf, menipis } from "../stok-utils.js";
 
 const SARAN = [
   "Gimana cara dapet 100 pelanggan pertama?",
@@ -67,6 +68,11 @@ function send(q) {
         skor_ide: s.idea?.skor ?? null,
         harga: s.idea?.harga || null,
         kas_bulan_ini: { masuk: st.masuk, keluar: st.keluar, laba: st.laba },
+        menu: s.resep.map((r) => {
+          const h = hppOf(r, bahanMap(s.bahan));
+          return { nama: r.nama, harga: r.harga, hpp: Math.round(h.hpp), margin_persen: Math.round(h.margin) };
+        }),
+        stok_menipis: menipis(s.bahan).map((b) => `${b.nama} (${b.stok} ${b.satuan})`),
       },
     });
     store.set((s2) => ({ chat: [...s2.chat, { role: "assistant", content: r.balasan }] }));

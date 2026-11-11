@@ -12,10 +12,12 @@ import { konten } from "./views/konten.js";
 import { mentor } from "./views/mentor.js";
 import { setelan } from "./views/setelan.js";
 import { akun } from "./views/akun.js";
+import { stok } from "./views/stok.js";
+import { resep } from "./views/resep.js";
 import { initCloud, onCloudChange } from "./cloud.js";
 
-const routes = { "": home, profil, bisnis, ide, rab, brand, aktivasi, kas, konten, mentor, setelan, akun };
-const tabOf = { "": "", bisnis: "bisnis", ide: "bisnis", rab: "bisnis", brand: "bisnis", aktivasi: "bisnis", kas: "kas", konten: "konten", mentor: "mentor" };
+const routes = { "": home, profil, bisnis, ide, rab, brand, aktivasi, kas, konten, mentor, setelan, akun, stok, resep };
+const tabOf = { "": "", bisnis: "bisnis", ide: "bisnis", rab: "bisnis", brand: "bisnis", aktivasi: "bisnis", kas: "kas", stok: "bisnis", resep: "bisnis", konten: "konten", mentor: "mentor" };
 
 const view = $("#view");
 let current = home;

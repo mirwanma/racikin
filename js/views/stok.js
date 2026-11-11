@@ -1,0 +1,284 @@
+import { store, uid } from "../store.js";
+import { esc, rupiah, todayISO, fmtDate, toast } from "../ui.js";
+import { render } from "../app.js";
+import { head } from "./_shared.js";
+import { SATUAN, bahanMap, hppOf, bisaDibuat, menipis, kebutuhan, fmtQty } from "../stok-utils.js";
+
+let tab = "menu"; // menu | bahan
+let open = null; // { type: beli|opname|edit|jual, id }
+
+const isOpen = (type, id) => open && open.type === type && open.id === id;
+const satuanOpts = (cur) => SATUAN.map((s) => `<option ${s === cur ? "selected" : ""}>${s}</option>`).join("");
+
+function menuTab(s) {
+  const map = bahanMap(s.bahan);
+  if (!s.resep.length) {
+    return `<section class="card empty">
+      <div class="empty-icon">🍜</div>
+      <h3>Belum ada resep</h3>
+      <p>Masukkan komposisi bahan tiap menu, nanti HPP per porsi & margin dihitung otomatis dari harga bahan.</p>
+      <a href="#/resep?id=new" class="btn primary">+ Bikin resep pertama</a>
+    </section>`;
+  }
+  return `
+    ${s.resep
+      .map((r) => {
+        const h = hppOf(r, map);
+        const bd = bisaDibuat(r, map);
+        const marginCls = h.margin >= 50 ? "pos" : h.margin >= 30 ? "" : "neg";
+        return `<section class="card resep-card">
+          <div class="row-between"><h3>${esc(r.nama)}</h3><a href="#/resep?id=${r.id}" class="btn ghost sm">Edit</a></div>
+          <div class="stats3">
+            <div><small>Harga jual</small><b>${rupiah(r.harga)}</b></div>
+            <div><small>HPP/porsi</small><b>${rupiah(h.hpp)}</b></div>
+            <div><small>Margin</small><b class="${marginCls}">${Math.round(h.margin)}%</b></div>
+          </div>
+          ${h.kurangHarga ? `<p class="warn-box small">${h.kurangHarga} bahan belum ada harganya, HPP belum akurat.</p>` : ""}
+          <p class="small muted">${
+            bd.porsi === null
+              ? "Belum ada bahan di resep."
+              : `Stok cukup untuk <b>${bd.porsi} porsi</b>${bd.pembatas ? ` · habis duluan: ${esc(bd.pembatas.nama)}` : ""}`
+          }</p>
+          ${
+            isOpen("jual", r.id)
+              ? `<form class="inline-form stack" data-form="jual" data-id="${r.id}">
+                  <div class="row2">
+                    <label class="field"><span>Porsi terjual</span><input name="porsi" type="number" min="1" step="1" required autofocus></label>
+                    <label class="field"><span>Harga/porsi</span><input name="harga" type="number" min="0" value="${esc(r.harga)}"></label>
+                  </div>
+                  <label class="todo"><input type="checkbox" name="kas" checked><span>Catat pemasukan ke Kas</span></label>
+                  <div class="row2"><button type="button" class="btn ghost" data-action="close">Batal</button><button class="btn primary">Simpan</button></div>
+                </form>`
+              : `<button class="btn soft block" data-action="open" data-type="jual" data-id="${r.id}">🧾 Catat penjualan</button>`
+          }
+        </section>`;
+      })
+      .join("")}
+    <a href="#/resep?id=new" class="btn primary block">+ Menu / resep baru</a>`;
+}
+
+function bahanRow(b) {
+  const low = (Number(b.stok) || 0) <= (Number(b.min) || 0);
+  const forms = {
+    beli: `<form class="inline-form stack" data-form="beli" data-id="${b.id}">
+        <div class="row2">
+          <label class="field"><span>Jumlah beli (${esc(b.satuan)})</span><input name="qty" type="number" min="0" step="any" required autofocus></label>
+          <label class="field"><span>Total bayar (Rp)</span><input name="total" type="number" min="0" placeholder="opsional"></label>
+        </div>
+        <label class="todo"><input type="checkbox" name="kas" checked><span>Catat pengeluaran ke Kas</span></label>
+        <div class="row2"><button type="button" class="btn ghost" data-action="close">Batal</button><button class="btn primary">Tambah stok</button></div>
+      </form>`,
+    opname: `<form class="inline-form stack" data-form="opname" data-id="${b.id}">
+        <label class="field"><span>Stok sebenarnya sekarang (${esc(b.satuan)})</span><input name="stok" type="number" min="0" step="any" value="${esc(fmtQty(Number(b.stok) || 0).replace(",", "."))}" required autofocus></label>
+        <div class="row2"><button type="button" class="btn ghost" data-action="close">Batal</button><button class="btn primary">Simpan</button></div>
+      </form>`,
+    edit: `<form class="inline-form stack" data-form="edit" data-id="${b.id}">
+        <label class="field"><span>Nama</span><input name="nama" value="${esc(b.nama)}" required></label>
+        <div class="row2">
+          <label class="field"><span>Satuan</span><select name="satuan">${satuanOpts(b.satuan)}</select></label>
+          <label class="field"><span>Harga per ${esc(b.satuan)}</span><input name="harga" type="number" min="0" step="any" value="${esc(b.harga)}"></label>
+        </div>
+        <label class="field"><span>Ingatkan kalau stok ≤</span><input name="min" type="number" min="0" step="any" value="${esc(b.min)}"></label>
+        <div class="row2"><button type="button" class="btn danger" data-action="delBahan" data-id="${b.id}">Hapus</button><button class="btn primary">Simpan</button></div>
+        <button type="button" class="btn ghost" data-action="close">Batal</button>
+      </form>`,
+  };
+  const formOpen = ["beli", "opname", "edit"].find((t) => isOpen(t, b.id));
+  return `<div class="bahan ${low ? "low" : ""}">
+    <div class="row-between">
+      <div><b>${esc(b.nama)}</b>${b.estimasi ? ` <span class="tag sedang" title="Harga dari estimasi AI">estimasi</span>` : ""}
+        <p class="small muted">${rupiah(b.harga)}/${esc(b.satuan)}</p></div>
+      <div class="stok-num ${low ? "neg" : ""}"><b>${fmtQty(Number(b.stok) || 0)}</b><small>${esc(b.satuan)}</small></div>
+    </div>
+    ${
+      formOpen
+        ? forms[formOpen]
+        : `<div class="bahan-actions">
+            <button class="btn soft sm" data-action="open" data-type="beli" data-id="${b.id}">+ Beli</button>
+            <button class="btn ghost sm" data-action="open" data-type="opname" data-id="${b.id}">Opname</button>
+            <button class="btn ghost sm" data-action="open" data-type="edit" data-id="${b.id}">Edit</button>
+          </div>`
+    }
+  </div>`;
+}
+
+function bahanTab(s) {
+  const low = menipis(s.bahan);
+  const sorted = [...s.bahan].sort((a, b) => a.nama.localeCompare(b.nama, "id"));
+  const map = bahanMap(s.bahan);
+  const log = [...s.stokLog].slice(-15).reverse();
+  return `
+    ${low.length ? `<section class="card warn-card"><b>⚠️ ${low.length} bahan menipis:</b> ${low.map((b) => esc(b.nama)).join(", ")}</section>` : ""}
+    <section class="card">
+      ${sorted.length ? sorted.map(bahanRow).join("") : `<p class="muted">Belum ada bahan. Tambah di bawah, atau bikin resep pakai AI biar bahannya terisi otomatis.</p>`}
+    </section>
+
+    <details class="card">
+      <summary><b>+ Tambah bahan</b></summary>
+      <form class="stack" data-form="addBahan">
+        <input name="nama" placeholder="Nama bahan, cth: Tahu putih" required>
+        <div class="row2">
+          <select name="satuan">${satuanOpts("pcs")}</select>
+          <input name="harga" type="number" min="0" step="any" placeholder="Harga per satuan">
+        </div>
+        <div class="row2">
+          <input name="stok" type="number" min="0" step="any" placeholder="Stok awal">
+          <input name="min" type="number" min="0" step="any" placeholder="Ingatkan kalau ≤">
+        </div>
+        <button class="btn primary">Simpan bahan</button>
+      </form>
+    </details>
+
+    ${
+      log.length
+        ? `<section class="card"><h2 class="card-title">🕑 Riwayat stok</h2>
+          ${log
+            .map((l) => {
+              const b = map[l.bahanId];
+              return `<div class="tx ${l.delta >= 0 ? "masuk" : "keluar"}"><div><b>${esc(b?.nama || "(bahan dihapus)")}</b><p class="muted small">${fmtDate(l.tanggal)} · ${esc(l.alasan)}${l.catatan ? " · " + esc(l.catatan) : ""}</p></div><b>${l.delta >= 0 ? "+" : ""}${fmtQty(l.delta)} ${esc(b?.satuan || "")}</b></div>`;
+            })
+            .join("")}</section>`
+        : ""
+    }`;
+}
+
+export const stok = {
+  render(s) {
+    if (location.hash.includes("tab=bahan")) tab = "bahan";
+    return `
+      ${head("Stok & Resep", "#/")}
+      <div class="seg">
+        <label><input type="radio" name="tab" value="menu" data-change="tab" ${tab === "menu" ? "checked" : ""}><span>🍜 Menu & Resep</span></label>
+        <label><input type="radio" name="tab" value="bahan" data-change="tab" ${tab === "bahan" ? "checked" : ""}><span>📦 Bahan & Stok</span></label>
+      </div>
+      ${tab === "menu" ? menuTab(s) : bahanTab(s)}`;
+  },
+  after(root) {
+    root.querySelector("[autofocus]")?.focus();
+  },
+
+  changes: {
+    tab(el) {
+      tab = el.value;
+      open = null;
+      history.replaceState(null, "", "#/stok");
+      render();
+    },
+  },
+
+  actions: {
+    open(el) {
+      open = { type: el.dataset.type, id: el.dataset.id };
+      render();
+    },
+    close() {
+      open = null;
+      render();
+    },
+    delBahan(el) {
+      const id = el.dataset.id;
+      const s = store.get();
+      const dipakai = s.resep.filter((r) => r.items.some((it) => it.bahanId === id));
+      const b = s.bahan.find((x) => x.id === id);
+      if (!confirm(`Hapus bahan "${b.nama}"?${dipakai.length ? `\nBahan ini juga akan dihapus dari resep: ${dipakai.map((r) => r.nama).join(", ")}` : ""}`)) return;
+      store.set({
+        bahan: s.bahan.filter((x) => x.id !== id),
+        resep: s.resep.map((r) => ({ ...r, items: r.items.filter((it) => it.bahanId !== id) })),
+      });
+      open = null;
+      render();
+    },
+  },
+
+  forms: {
+    beli(form) {
+      const fd = new FormData(form);
+      const id = form.dataset.id;
+      const qty = Number(fd.get("qty")) || 0;
+      const total = Number(fd.get("total")) || 0;
+      if (qty <= 0) return toast("Isi jumlah beli dulu", "err");
+      const s = store.get();
+      const b = s.bahan.find((x) => x.id === id);
+      const harga = total > 0 ? total / qty : b.harga;
+      const tanggal = todayISO();
+      const patch = {
+        bahan: s.bahan.map((x) => (x.id === id ? { ...x, stok: (Number(x.stok) || 0) + qty, harga, estimasi: total > 0 ? false : x.estimasi } : x)),
+        stokLog: [...s.stokLog, { id: uid(), tanggal, bahanId: id, delta: qty, alasan: "beli", catatan: total ? rupiah(total) : "" }],
+      };
+      if (fd.get("kas") && total > 0) {
+        patch.transactions = [...s.transactions, { id: uid(), tanggal, jenis: "keluar", kategori: "Bahan Baku", nominal: Math.round(total), catatan: `Beli ${fmtQty(qty)} ${b.satuan} ${b.nama}` }];
+      }
+      store.set(patch);
+      open = null;
+      toast(`Stok ${b.nama} +${fmtQty(qty)} ${b.satuan}${patch.transactions ? " · tercatat di Kas" : ""}`);
+      render();
+    },
+    opname(form) {
+      const id = form.dataset.id;
+      const nyata = Number(new FormData(form).get("stok")) || 0;
+      const s = store.get();
+      const b = s.bahan.find((x) => x.id === id);
+      const delta = nyata - (Number(b.stok) || 0);
+      store.set({
+        bahan: s.bahan.map((x) => (x.id === id ? { ...x, stok: nyata } : x)),
+        stokLog: delta ? [...s.stokLog, { id: uid(), tanggal: todayISO(), bahanId: id, delta, alasan: "opname", catatan: "" }] : s.stokLog,
+      });
+      open = null;
+      toast(delta ? `Stok disesuaikan (${delta > 0 ? "+" : ""}${fmtQty(delta)} ${b.satuan})` : "Stok sudah pas 👍");
+      render();
+    },
+    edit(form) {
+      const fd = new FormData(form);
+      const id = form.dataset.id;
+      store.set((s) => ({
+        bahan: s.bahan.map((x) =>
+          x.id === id
+            ? { ...x, nama: fd.get("nama").trim(), satuan: fd.get("satuan"), harga: Number(fd.get("harga")) || 0, min: Number(fd.get("min")) || 0, estimasi: Number(fd.get("harga")) === Number(x.harga) ? x.estimasi : false }
+            : x,
+        ),
+      }));
+      open = null;
+      toast("Bahan disimpan");
+      render();
+    },
+    addBahan(form) {
+      const fd = new FormData(form);
+      const nama = fd.get("nama").trim();
+      const s = store.get();
+      if (s.bahan.some((b) => b.nama.toLowerCase() === nama.toLowerCase())) return toast("Bahan dengan nama itu sudah ada", "err");
+      const stokAwal = Number(fd.get("stok")) || 0;
+      const b = { id: uid(), nama, satuan: fd.get("satuan"), harga: Number(fd.get("harga")) || 0, stok: stokAwal, min: Number(fd.get("min")) || 0, estimasi: false };
+      store.set({
+        bahan: [...s.bahan, b],
+        stokLog: stokAwal ? [...s.stokLog, { id: uid(), tanggal: todayISO(), bahanId: b.id, delta: stokAwal, alasan: "opname", catatan: "stok awal" }] : s.stokLog,
+      });
+      toast(`${nama} ditambahkan`);
+      render();
+    },
+    jual(form) {
+      const fd = new FormData(form);
+      const id = form.dataset.id;
+      const porsi = Number(fd.get("porsi")) || 0;
+      if (porsi <= 0) return toast("Isi jumlah porsi", "err");
+      const s = store.get();
+      const r = s.resep.find((x) => x.id === id);
+      const harga = Number(fd.get("harga")) || 0;
+      const butuh = kebutuhan(r, porsi);
+      const tanggal = todayISO();
+      const pakai = Object.fromEntries(butuh.map((k) => [k.bahanId, k.qty]));
+      const bahan = s.bahan.map((b) => (pakai[b.id] ? { ...b, stok: (Number(b.stok) || 0) - pakai[b.id] } : b));
+      const patch = {
+        bahan,
+        stokLog: [...s.stokLog, ...butuh.filter((k) => k.qty).map((k) => ({ id: uid(), tanggal, bahanId: k.bahanId, delta: -k.qty, alasan: "jual", catatan: `${porsi}× ${r.nama}` }))],
+      };
+      if (fd.get("kas") && harga > 0) {
+        patch.transactions = [...s.transactions, { id: uid(), tanggal, jenis: "masuk", kategori: "Penjualan", nominal: Math.round(porsi * harga), catatan: `Jual ${porsi} porsi ${r.nama}` }];
+      }
+      store.set(patch);
+      open = null;
+      const habis = bahan.filter((b) => pakai[b.id] && (Number(b.stok) || 0) <= (Number(b.min) || 0));
+      toast(`${porsi} porsi ${r.nama} tercatat${patch.transactions ? ` · +${rupiah(porsi * harga)}` : ""}${habis.length ? ` · ⚠️ menipis: ${habis.map((b) => b.nama).join(", ")}` : ""}`);
+      render();
+    },
+  },
+};

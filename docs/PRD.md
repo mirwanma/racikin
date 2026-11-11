@@ -51,8 +51,14 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Sinkron data ke cloud antar perangkat (dokumen JSON per user, RLS), tetap offline-first, dialog saat konflik.
 - AI Online wajib login + kuota per user (default 6/menit, 60/hari).
 
+### Fase 3: Stok & Resep (selesai)
+- Resep per menu dengan HPP/porsi & margin otomatis dari harga bahan; resep bisa disusun AI.
+- Stok bahan: beli (otomatis ke Kas), opname, riwayat, peringatan menipis di Beranda.
+- Catat penjualan per menu: stok berkurang sesuai resep + pemasukan masuk Kas.
+- HPP resep dipakai di kalkulator BEP dan konteks Mentor AI.
+
 ### Di luar MVP (fase berikutnya)
-Mode tim/karyawan, stok & resep, CRM/kartu stempel digital, foto produk AI, generator logo (gambar), integrasi WhatsApp, push notification terjadwal, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
+Mode tim/karyawan, CRM/kartu stempel digital, foto produk AI, generator logo (gambar), integrasi WhatsApp, push notification terjadwal, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
 
 ## 6. Arsitektur MVP
 - **Frontend**: PWA statis (HTML + CSS + JS modules, tanpa build) di root repo ini, di-host di GitHub Pages. Data disimpan di `localStorage` (offline-first).
