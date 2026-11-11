@@ -1,0 +1,70 @@
+# PRD — Racikin (MVP)
+
+> **Racikin** — *"Racik ide jadi cuan."*
+> Co-founder AI di saku buat yang mau mulai (atau lagi jalanin) usaha F&B.
+
+Versi: 0.1 (MVP) · Status: Draft · Studi kasus pertama: TAHGUY (tahu guyur, Cimahi)
+
+---
+
+## 1. Masalah
+Calon pengusaha F&B (terutama anak muda & UMKM rumahan) biasanya:
+- Punya ide, tapi nggak tahu idenya layak atau nggak.
+- Nggak punya RAB, modal sering bocor ke hal yang nggak penting.
+- Bingung branding, bingung mulai dari sosmed atau GoFood dulu.
+- Nggak nyatet keuangan → nggak tahu sebenarnya untung atau rugi.
+- Posting sosmed angin-anginan, nggak ada jadwal.
+
+Tools yang ada terpisah-pisah (Canva, Excel, aplikasi kasir, ChatGPT) dan semuanya generik.
+
+## 2. Solusi
+PWA berbasis AI yang menemani user dari **ide → modal → brand → launching → pembukuan → rutin harian**, di mana semua output AI dipersonalisasi dari **Profil Bisnis** user (jenis F&B, konsep jualan, lokasi, target pasar, modal, waktu, skill).
+
+## 3. Target User (MVP)
+- **Fokus: F&B saja** (makanan berat, jajanan, minuman/kopi, dessert, frozen food, katering).
+- Persona utama: "Raka", 22–30 th, mau buka usaha kuliner pertama dengan modal Rp 3–30 jt, aktif di HP, sosmed-savvy, belum ngerti keuangan.
+- Persona kedua: pemilik UMKM F&B yang sudah jalan tapi pembukuan & konten berantakan.
+
+## 4. Gaya & Prinsip Produk
+- Bahasa **santai ala anak muda** ("kamu", "gas", "cuan"), tapi tetap jujur & jelas.
+- Mobile-first, bisa di-install (PWA), bisa dipakai offline untuk input kas.
+- AI bantu, user tetap pegang kendali: semua hasil AI bisa diedit.
+- Setiap layar ada aksi berikutnya yang jelas (guided journey).
+
+## 5. Ruang Lingkup MVP
+
+| # | Modul | Fitur MVP | Kriteria selesai |
+|---|---|---|---|
+| 0 | Profil Bisnis (onboarding) | Wizard singkat: ide, jenis F&B, konsep, lokasi, target pasar, modal, harga rencana, waktu, skill | Profil tersimpan & dipakai semua prompt AI; bisa diedit |
+| 1 | Analisa Ide | Skor kelayakan 0–100, ringkasan, persona, SWOT, kompetitor, pembeda, estimasi harga/HPP/margin, risiko, langkah validasi | Hasil tersimpan, bisa dianalisa ulang |
+| 2 | RAB & Modal | RAB AI per kategori (wajib/opsional), mode hemat, edit item, input **realisasi**, total vs modal, biaya bulanan, kalkulator **BEP** | Total rencana vs realisasi vs modal terlihat jelas |
+| 3 | Brand Kit | Opsi nama, tagline, brand story, tone, palet warna, font, konsep logo, ide menu, ide kemasan; pilih & simpan brand aktif | Nama/tagline terpilih dipakai di modul lain |
+| 4 | Aktivasi | Checklist per channel (IG, TikTok, Google Maps, WA Business, GoFood, GrabFood, ShopeeFood), rencana launching 4 minggu, deskripsi menu untuk ojol | Checklist bisa dicentang & progres tersimpan |
+| 5 | Pembukuan (Kas) | Input manual, **input cepat teks bebas** ("jual 25 porsi @12rb, beli tahu 50rb") → AI jadi transaksi, laporan bulanan (masuk/keluar/laba, per kategori, grafik harian), insight AI, export CSV | Laporan bulan berjalan akurat dari data |
+| 6 | Jadwal Konten | Kalender konten 14/30 hari (platform, pilar, format, ide, hook, caption, hashtag, jam), tandai selesai, tugas hari ini di Beranda, generator caption | User tahu "hari ini posting apa" |
+| + | Mentor AI | Chat tanya apa saja, dengan konteks profil + ringkasan data | Jawaban menyebut konteks bisnis user |
+| + | Beranda | Progres journey 6 langkah, ringkasan kas, tugas konten hari ini, aksi cepat | — |
+| + | Setelan | Mode AI (Demo / Online), export/import data JSON, reset | — |
+
+### Di luar MVP (fase berikutnya)
+Login & sync cloud multi-device, mode tim/karyawan, stok & resep, CRM/kartu stempel digital, foto produk AI, generator logo (gambar), integrasi WhatsApp, push notification terjadwal, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
+
+## 6. Arsitektur MVP
+- **Frontend**: PWA statis (HTML + CSS + JS modules, tanpa build) di root repo ini, di-host di GitHub Pages. Data disimpan di `localStorage` (offline-first).
+- **AI**: Supabase Edge Function `racikin-ai` → Google Gemini API (Claude sebagai cadangan). Prompt & JSON schema tiap task disimpan **di server** (`supabase/functions/racikin-ai/tasks.ts`); klien cuma kirim `{task, profile, input}`. Output pakai *structured outputs* biar selalu JSON valid.
+- **Mode Demo**: tanpa backend, app tetap jalan pakai generator template lokal (buat coba-coba & demo ke orang).
+
+### Kontrak task AI
+`analyze_idea`, `generate_rab`, `generate_brand`, `activation_plan`, `content_calendar`, `caption`, `parse_transactions`, `cashflow_insight`, `mentor_chat` — shape output didefinisikan di `tasks.ts` dan wajib sama dengan generator demo di `js/demo.js`.
+
+## 7. Metrik Sukses (MVP)
+- ≥ 70% user yang mulai onboarding menyelesaikan Profil Bisnis.
+- ≥ 50% user menjalankan minimal 3 modul AI.
+- User aktif mencatat kas ≥ 3 hari/minggu (north star: **kebiasaan nyatet**).
+- ≥ 40% item konten terjadwal ditandai selesai.
+
+## 8. Risiko & Catatan
+- Biaya API AI → batasi per task (max tokens, effort), nanti tambah kuota per user.
+- Endpoint AI publik bisa disalahgunakan → MVP: task whitelist di server; fase 2: login + rate limit.
+- Data di `localStorage` bisa hilang kalau browser dibersihkan → sediakan export/import; fase 2: sync cloud.
+- Angka estimasi AI (harga, RAB) bukan nasihat keuangan → tampilkan disclaimer.
