@@ -1,3 +1,4 @@
+import { icon } from "../icons.js";
 import { store } from "../store.js";
 import { esc, rupiah, list, loading, empty } from "../ui.js";
 import { ai } from "../ai.js";
@@ -11,7 +12,7 @@ export const ide = {
       return (
         head("Analisa Ide") +
         empty({
-          icon: "💡",
+          icon: "bulb",
           title: "Ide kamu layak nggak, ya?",
           text: `AI bakal analisa "${s.profile.ide}" berdasarkan lokasi, target pasar, dan modalmu.`,
           action: "run",
@@ -27,7 +28,7 @@ export const ide = {
       </section>
 
       <section class="card">
-        <h2 class="card-title">💸 Harga & margin</h2>
+        <h2 class="card-title">Harga & margin</h2>
         <div class="stats3">
           <div><small>Harga jual</small><b>${rupiah(r.harga.harga_jual)}</b></div>
           <div><small>HPP/porsi</small><b>${rupiah(r.harga.hpp)}</b></div>
@@ -37,12 +38,12 @@ export const ide = {
       </section>
 
       <section class="card">
-        <h2 class="card-title">🙋 Calon pembelimu</h2>
+        <h2 class="card-title">Calon pembelimu</h2>
         ${r.persona.map((x) => `<div class="persona"><b>${esc(x.nama)}</b><p class="small">${esc(x.deskripsi)}</p></div>`).join("")}
       </section>
 
       <section class="card">
-        <h2 class="card-title">🧭 SWOT</h2>
+        <h2 class="card-title">SWOT</h2>
         <div class="swot">
           <div class="s"><h4>Kekuatan</h4>${list(r.swot.kekuatan)}</div>
           <div class="w"><h4>Kelemahan</h4>${list(r.swot.kelemahan)}</div>
@@ -52,22 +53,22 @@ export const ide = {
       </section>
 
       <section class="card">
-        <h2 class="card-title">⚔️ Kompetitor & pembeda</h2>
+        <h2 class="card-title">Kompetitor & pembeda</h2>
         ${r.kompetitor.map((k) => `<p><b>${esc(k.nama)}</b> <span class="muted small">— ${esc(k.catatan)}</span></p>`).join("")}
         <h4>Cara kamu menang:</h4>${list(r.pembeda, "checks")}
       </section>
 
       <section class="card">
-        <h2 class="card-title">⚠️ Risiko</h2>${list(r.risiko)}
+        <h2 class="card-title">Risiko</h2>${list(r.risiko)}
       </section>
 
       <section class="card accent">
-        <h2 class="card-title">🧪 Validasi minggu ini</h2>${list(r.validasi, "checks")}
+        <h2 class="card-title">Validasi minggu ini</h2>${list(r.validasi, "checks")}
       </section>
 
       <div class="row2">
-        <button class="btn ghost" data-action="run">↻ Analisa ulang</button>
-        <a href="#/rab" class="btn primary">Lanjut ke RAB →</a>
+        <button class="btn ghost" data-action="run">Analisa ulang</button>
+        <a href="#/rab" class="btn primary">Lanjut ke RAB</a>
       </div>
       ${disclaimer}`;
   },

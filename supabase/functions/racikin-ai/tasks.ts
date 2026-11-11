@@ -25,7 +25,8 @@ Aturan:
 - Pakai angka realistis harga pasar Indonesia (Rupiah, tanpa desimal).
 - Kalau idenya punya risiko besar, bilang terus terang dengan sopan.
 - Jangan mengarang data statistik spesifik; kalau estimasi, sebut sebagai estimasi.
-- Semua teks dalam Bahasa Indonesia.`;
+- Semua teks dalam Bahasa Indonesia.
+- Jangan pakai emoji di judul, verdict, ringkasan, atau poin-poin (boleh maksimal 1 di caption sosmed kalau memang cocok).`;
 
 export interface TaskDef {
   instruction: string;

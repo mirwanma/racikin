@@ -1,3 +1,4 @@
+import { icon } from "../icons.js";
 import { store } from "../store.js";
 import { esc, loading, todayISO, addDays, fmtDate, copy } from "../ui.js";
 import { ai } from "../ai.js";
@@ -21,7 +22,7 @@ export const konten = {
 
     const capSection = `
       <details class="card" ${capOpen || captions ? "open" : ""} id="caption">
-        <summary><b>✍️ Generator caption</b></summary>
+        <summary><b>Generator caption</b></summary>
         <form data-form="caption" class="stack">
           <input name="topik" placeholder="Topik, cth: promo beli 2 gratis 1 weekend ini" required>
           <select name="platform"><option>Instagram</option><option>TikTok</option><option>WhatsApp Status</option></select>
@@ -39,7 +40,7 @@ export const konten = {
       return `
         ${head("Jadwal Konten", "#/")}
         <section class="card empty">
-          <div class="empty-icon">📅</div>
+          <div class="empty-icon">${icon("calendar", 30)}</div>
           <h3>Biar nggak bingung mau posting apa</h3>
           <p>AI bikinin kalender konten lengkap: ide, hook, caption, hashtag, dan jam posting.</p>
           <form data-form="gen" class="stack">
@@ -71,7 +72,7 @@ export const konten = {
             return `
           <details class="card post ${j.done ? "done" : ""} ${d === today ? "today" : ""} ${d < today && !j.done ? "late" : ""}" ${d === today ? "open" : ""}>
             <summary>
-              <button class="check" data-action="toggle" data-hari="${j.hari_ke}" aria-label="Tandai selesai">${j.done ? "✓" : ""}</button>
+              <button class="check" data-action="toggle" data-hari="${j.hari_ke}" aria-label="Tandai selesai">${j.done ? icon("check", 15) : ""}</button>
               <div class="post-head"><small>${fmtDate(d)} · ${esc(j.jam)}${d === today ? " · <b>HARI INI</b>" : ""}</small><b>${esc(j.ide)}</b><small class="muted">${esc(j.platform)} · ${esc(j.format)} · ${esc(j.pilar)}</small></div>
             </summary>
             <div class="post-body">
@@ -84,7 +85,7 @@ export const konten = {
           })
           .join("")}
       </div>
-      <button class="btn ghost block" data-action="reset">↻ Bikin kalender baru</button>`;
+      <button class="btn ghost block" data-action="reset">Bikin kalender baru</button>`;
   },
 
   actions: {

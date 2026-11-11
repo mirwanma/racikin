@@ -1,3 +1,4 @@
+import { icon } from "../icons.js";
 import { store } from "../store.js";
 import { esc, toast } from "../ui.js";
 import { render, go } from "../app.js";
@@ -8,17 +9,17 @@ let busy = false;
 let info = ""; // pesan sukses (mis. cek email)
 
 const STATUS = {
-  off: ["⚪", "Belum login"],
-  syncing: ["🔄", "Lagi sinkron…"],
-  synced: ["✅", "Tersimpan di cloud"],
-  offline: ["📴", "Offline, nanti disinkron otomatis"],
-  error: ["⚠️", "Gagal sinkron"],
+  off: ["cloud", "Belum login"],
+  syncing: ["sync", "Lagi sinkron…"],
+  synced: ["check", "Tersimpan di cloud"],
+  offline: ["cloud", "Offline, nanti disinkron otomatis"],
+  error: ["alert", "Gagal sinkron"],
 };
 
 export function syncBadge() {
   if (!cloud.user) return "";
-  const [icon, label] = STATUS[cloud.status] || STATUS.off;
-  return `<a href="#/akun" class="pill sync ${cloud.status}" title="${esc(label)}">${icon} ${cloud.status === "synced" ? "Cloud" : esc(label)}</a>`;
+  const [ic, label] = STATUS[cloud.status] || STATUS.off;
+  return `<a href="#/akun" class="pill sync ${cloud.status}" title="${esc(label)}">${icon(ic, 13)} ${cloud.status === "synced" ? "Cloud" : esc(label)}</a>`;
 }
 
 async function run(fn) {
@@ -35,7 +36,7 @@ async function run(fn) {
   }
 }
 
-const head = `<header class="page-head"><a href="#/" class="back" aria-label="Kembali">←</a><h1>Akun</h1></header>`;
+const head = `<header class="page-head"><a href="#/" class="back" aria-label="Kembali">${icon("back", 18)}</a><h1>Akun</h1></header>`;
 
 export const akun = {
   render() {
@@ -47,7 +48,7 @@ export const akun = {
     if (cloud.recovery && cloud.user) {
       return `${head}
         <form class="card stack" data-form="newpass">
-          <h2 class="card-title">🔑 Bikin password baru</h2>
+          <h2 class="card-title">Bikin password baru</h2>
           <p class="muted small">Untuk ${esc(cloud.user.email)}</p>
           <input name="password" type="password" minlength="6" autocomplete="new-password" placeholder="Password baru (min. 6 karakter)" required>
           <button class="btn primary" ${busy ? "disabled" : ""}>${busy ? "Menyimpan…" : "Simpan password"}</button>
@@ -55,22 +56,22 @@ export const akun = {
     }
 
     if (cloud.user) {
-      const [icon, label] = STATUS[cloud.status] || STATUS.off;
+      const [ic, label] = STATUS[cloud.status] || STATUS.off;
       const q = cloud.quota;
       return `${head}
         <section class="card stack">
           <div class="row-between"><div><small class="muted">Masuk sebagai</small><h2 style="margin:0">${esc(cloud.user.email)}</h2></div><span class="avatar">${esc(cloud.user.email[0].toUpperCase())}</span></div>
-          <div class="sync-box ${cloud.status}"><span>${icon}</span><div><b>${esc(label)}</b>${cloud.error ? `<p class="small">${esc(cloud.error)}</p>` : `<p class="small muted">Data bisnismu otomatis tersimpan & bisa dibuka di HP lain.</p>`}</div></div>
-          <button class="btn soft" data-action="sync" ${cloud.status === "syncing" ? "disabled" : ""}>🔄 Sinkron sekarang</button>
+          <div class="sync-box ${cloud.status}"><span>${icon(ic, 20)}</span><div><b>${esc(label)}</b>${cloud.error ? `<p class="small">${esc(cloud.error)}</p>` : `<p class="small muted">Data bisnismu otomatis tersimpan & bisa dibuka di HP lain.</p>`}</div></div>
+          <button class="btn soft" data-action="sync" ${cloud.status === "syncing" ? "disabled" : ""}>${icon("sync", 16)} Sinkron sekarang</button>
         </section>
 
         <section class="card">
-          <h2 class="card-title">🤖 AI Online</h2>
-          <p class="small">${store.get().settings.aiMode === "online" ? "Aktif ✅" : `Masih Mode Demo. <a href="#/setelan" class="link">Aktifkan di Setelan</a>`}</p>
+          <h2 class="card-title">AI Online</h2>
+          <p class="small">${store.get().settings.aiMode === "online" ? "Aktif" : `Masih Mode Demo. <a href="#/setelan" class="link">Aktifkan di Setelan</a>`}</p>
           ${q ? `<p class="small muted">Pemakaian hari ini: ${q.used_today}/${q.limit_day}</p>` : `<p class="small muted">Kuota: maks. 60 permintaan AI per hari.</p>`}
         </section>
 
-        <button class="btn ghost block" data-action="logout">Keluar</button>`;
+        <button class="btn ghost block" data-action="logout">${icon("logout", 16)} Keluar</button>`;
     }
 
     const tabs = `<div class="seg">
@@ -86,13 +87,13 @@ export const akun = {
           <input name="email" type="email" autocomplete="email" placeholder="Email" required>
           <button class="btn primary" ${busy ? "disabled" : ""}>${busy ? "Mengirim…" : "Kirim link reset"}</button>
           ${info ? `<p class="ok-box small">${esc(info)}</p>` : ""}
-          <button type="button" class="btn ghost" data-action="mode" data-m="masuk">← Kembali ke Masuk</button>
+          <button type="button" class="btn ghost" data-action="mode" data-m="masuk">Kembali ke Masuk</button>
         </form>`;
     }
 
     return `${head}
       <section class="card accent">
-        <h2 class="card-title">☁️ Kenapa perlu akun?</h2>
+        <h2 class="card-title">Kenapa perlu akun?</h2>
         <ul class="checks">
           <li>Data bisnismu aman di cloud, nggak hilang kalau ganti HP</li>
           <li>Buka dari HP & laptop, datanya sama</li>
@@ -129,7 +130,7 @@ export const akun = {
       return run(async () => {
         await signOut({ clearLocal: clear });
         mode = "masuk";
-        toast("Sudah keluar 👋");
+        toast("Sudah keluar");
         if (clear) go("profil");
       });
     },
@@ -152,7 +153,7 @@ export const akun = {
         } else {
           await signIn(email, password);
         }
-        toast("Berhasil masuk 🎉");
+        toast("Berhasil masuk");
         go(store.get().profile ? "" : "profil");
       });
     },
@@ -167,7 +168,7 @@ export const akun = {
       const password = new FormData(form).get("password");
       return run(async () => {
         await setNewPassword(password);
-        toast("Password baru disimpan ✅");
+        toast("Password baru disimpan");
         go("");
       });
     },

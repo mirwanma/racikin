@@ -1,3 +1,4 @@
+import { icon } from "../icons.js";
 import { store } from "../store.js";
 import { esc, toast, download } from "../ui.js";
 import { render, go } from "../app.js";
@@ -7,16 +8,16 @@ export const setelan = {
   render(s) {
     const st = s.settings;
     return `
-      <header class="page-head"><a href="#/" class="back">←</a><h1>Setelan</h1></header>
+      <header class="page-head"><a href="#/" class="back" aria-label="Kembali">${icon("back", 18)}</a><h1>Setelan</h1></header>
 
       <a href="#/akun" class="card module">
-        <span class="module-num">☁️</span>
+        <span class="module-num">${icon("cloud", 18)}</span>
         <div><h3>Akun & Cloud</h3><p class="muted small">${cloud.user ? esc(cloud.user.email) + " · data tersinkron" : "Belum login: data cuma ada di perangkat ini"}</p></div>
-        <span class="chev">›</span>
+        <span class="chev">${icon("chevron", 18)}</span>
       </a>
 
       <form class="card stack" data-form="ai">
-        <h2 class="card-title">🤖 Mode AI</h2>
+        <h2 class="card-title">Mode AI</h2>
         <div class="seg">
           <label><input type="radio" name="aiMode" value="demo" ${st.aiMode !== "online" ? "checked" : ""}><span>Demo (offline)</span></label>
           <label><input type="radio" name="aiMode" value="online" ${st.aiMode === "online" ? "checked" : ""}><span>AI Online</span></label>
@@ -34,23 +35,23 @@ export const setelan = {
       </form>
 
       <section class="card stack">
-        <h2 class="card-title">💾 Data kamu</h2>
+        <h2 class="card-title">Data kamu</h2>
         <p class="muted small">${cloud.user ? "Data tersimpan di perangkat ini dan di cloud akunmu." : "Data cuma tersimpan di perangkat ini. Login biar aman di cloud, atau rajin backup ya."}</p>
         <div class="row2">
-          <button class="btn soft" data-action="export">⬇ Backup (JSON)</button>
-          <label class="btn soft">⬆ Pulihkan<input type="file" accept="application/json" data-change="import" hidden></label>
+          <button class="btn soft" data-action="export">${icon("download", 16)} Backup</button>
+          <label class="btn soft">Pulihkan<input type="file" accept="application/json" data-change="import" hidden></label>
         </div>
         <button class="btn danger" data-action="reset">Hapus data di perangkat ini</button>
       </section>
 
-      <p class="muted small center">Racikin v0.2 · dibuat bareng tim TAHGUY 🍜</p>`;
+      <p class="muted small center">Racikin v0.2 · dibuat bareng tim TAHGUY</p>`;
   },
   forms: {
     ai(form) {
       const fd = new FormData(form);
       const settings = { aiMode: fd.get("aiMode"), endpoint: fd.get("endpoint").trim(), anonKey: fd.get("anonKey").trim() };
       store.set({ settings });
-      toast("Setelan disimpan ✅");
+      toast("Setelan disimpan");
       render();
     },
   },
@@ -75,7 +76,7 @@ export const setelan = {
       const file = el.files[0];
       if (!file) return;
       store.importJSON(await file.text());
-      toast("Data dipulihkan ✅");
+      toast("Data dipulihkan");
       go("");
     },
   },

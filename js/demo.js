@@ -34,7 +34,7 @@ export const demo = {
     if ((p.skill || []).includes("Sosmed / konten")) skor += 4;
     if (p.konsep === "Kios / ruko" && modal < 10_000_000) skor -= 12;
     skor = Math.max(30, Math.min(92, skor));
-    const verdict = skor >= 78 ? "Gas, potensinya kuat! 🔥" : skor >= 60 ? "Layak, asal eksekusi rapi" : "Hati-hati, perlu dimatengin";
+    const verdict = skor >= 78 ? "Gas, potensinya kuat!" : skor >= 60 ? "Layak, asal eksekusi rapi" : "Hati-hati, perlu dimatengin";
     return {
       skor,
       verdict,
@@ -161,9 +161,9 @@ export const demo = {
         { minggu: 4, fokus: "Retensi pelanggan", aktivitas: ["Luncurkan kartu stempel (beli 5 gratis 1)", "Broadcast WA menu baru", "Evaluasi menu terlaris & tidak laku"] },
       ],
       deskripsi_menu: [
-        { menu: `${brandName(p)} Original`, deskripsi: "Menu andalan kami! Diracik fresh tiap hari, gurih, hangat, bikin pengen nambah. Wajib coba buat first-timer 🔥" },
+        { menu: `${brandName(p)} Original`, deskripsi: "Menu andalan kami! Diracik fresh tiap hari, gurih, hangat, bikin pengen nambah. Wajib coba buat first-timer" },
         { menu: "Paket Bestie", deskripsi: "2 porsi + 2 minuman, lebih hemat buat makan bareng bestie. Cocok buat nugas atau nongkrong!" },
-        { menu: "Level Pedes Nampol", deskripsi: "Buat pecinta pedas, pilih level 1–5. Hati-hati, level 5 bikin keringetan tapi nagih 🌶️" },
+        { menu: "Level Pedes Nampol", deskripsi: "Buat pecinta pedas, pilih level 1–5. Hati-hati, level 5 bikin keringetan tapi nagih" },
       ],
     };
   },
@@ -178,10 +178,10 @@ export const demo = {
     ];
     const ide = [
       ["Produk", "Reels", "Video slow-mo menu andalan", "POV: kamu laper jam 4 sore…", "TikTok"],
-      ["Behind the scene", "TikTok", "Proses persiapan bahan dari pagi", "Ini yang terjadi sebelum kami buka 👀", "TikTok"],
+      ["Behind the scene", "TikTok", "Proses persiapan bahan dari pagi", "Ini yang terjadi sebelum kami buka", "TikTok"],
       ["Pelanggan", "Story", "Repost story pembeli + stiker terima kasih", "Makasih udah mampir, bestie!", "Instagram"],
       ["Promo & info", "Foto", "Info jam buka & lokasi", "Kamu di sekitar sini? Mampir yuk!", "Instagram"],
-      ["Produk", "Carousel", "3 menu terlaris minggu ini", "Ranking menu paling laku minggu ini 🏆", "Instagram"],
+      ["Produk", "Carousel", "3 menu terlaris minggu ini", "Ranking menu paling laku minggu ini", "Instagram"],
       ["Behind the scene", "Reels", "Kenalan sama owner", "Kenapa aku mulai usaha ini…", "Instagram"],
       ["Promo & info", "Story", "Promo weekend via WA", "Weekend promo, cuma hari ini!", "WhatsApp Status"],
       ["Pelanggan", "TikTok", "Tanya pembeli: rating 1–10", "Kita tanya jujur, enak nggak sih?", "TikTok"],
@@ -211,9 +211,9 @@ export const demo = {
     const t = input.topik || "menu andalan";
     return {
       captions: [
-        { hook: `Siapa yang belum coba ${t}? 👀`, caption: `${t} dari ${nama} lagi hangat-hangatnya. Dijamin bikin mood naik! Pesan sekarang lewat WA ya.`, hashtag: `#${nama.replace(/\s+/g, "")} #kulinerlokal #fyp` },
+        { hook: `Siapa yang belum coba ${t}?`, caption: `${t} dari ${nama} lagi hangat-hangatnya. Dijamin bikin mood naik! Pesan sekarang lewat WA ya.`, hashtag: `#${nama.replace(/\s+/g, "")} #kulinerlokal #fyp` },
         { hook: "Stop scroll dulu bentar…", caption: `Ini dia ${t} yang lagi rame dibicarain. Udah cobain belum? Tag temen yang harus kamu traktir!`, hashtag: "#jajanankekinian #racikin #foodie" },
-        { hook: "Jujur, ini favorit kami 🥹", caption: `${t} diracik fresh tiap hari. Kalau suka, jangan lupa kasih ulasan di Google Maps ya!`, hashtag: `#kuliner${(p.kota || "").replace(/\s+/g, "")} #umkm` },
+        { hook: "Jujur, ini favorit kami", caption: `${t} diracik fresh tiap hari. Kalau suka, jangan lupa kasih ulasan di Google Maps ya!`, hashtag: `#kuliner${(p.kota || "").replace(/\s+/g, "")} #umkm` },
       ],
     };
   },
@@ -261,7 +261,7 @@ export const demo = {
     const top = Object.entries(kategori_keluar).sort((a, b) => b[1] - a[1])[0];
     const margin = masuk ? Math.round((laba / masuk) * 100) : 0;
     return {
-      headline: laba >= 0 ? `Bulan ini masih cuan ${margin}%, mantap! 💰` : "Bulan ini masih minus, yuk evaluasi 🔍",
+      headline: laba >= 0 ? `Bulan ini masih cuan ${margin}%, mantap!` : "Bulan ini masih minus, yuk evaluasi",
       insight: [
         `Total pemasukan Rp ${masuk.toLocaleString("id-ID")} dan pengeluaran Rp ${keluar.toLocaleString("id-ID")}.`,
         top ? `Pengeluaran terbesar ada di ${top[0]} (Rp ${top[1].toLocaleString("id-ID")}).` : "Belum ada catatan pengeluaran.",
@@ -306,7 +306,7 @@ export const demo = {
   mentor_chat(p, input) {
     const last = (input.messages || []).slice(-1)[0]?.content || "";
     return {
-      balasan: `(Mode Demo) Pertanyaan bagus soal "${last.slice(0, 80)}"! Buat jawaban yang beneran dipersonalisasi untuk ${p.nama || "bisnismu"} di ${area(p)}, aktifkan Mode AI Online di Setelan ya. Sementara itu, tips umum: fokus ke 2–3 menu andalan, catat kas tiap hari, dan posting konten minimal 5x seminggu. Gas! 🚀`,
+      balasan: `(Mode Demo) Pertanyaan bagus soal "${last.slice(0, 80)}"! Buat jawaban yang beneran dipersonalisasi untuk ${p.nama || "bisnismu"} di ${area(p)}, aktifkan Mode AI Online di Setelan ya. Sementara itu, tips umum: fokus ke 2–3 menu andalan, catat kas tiap hari, dan posting konten minimal 5x seminggu. Gas!`,
     };
   },
 };

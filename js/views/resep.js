@@ -1,3 +1,4 @@
+import { icon } from "../icons.js";
 import { store, uid } from "../store.js";
 import { esc, rupiah, toast, list } from "../ui.js";
 import { ai } from "../ai.js";
@@ -63,7 +64,7 @@ function preview() {
       <div><small>Margin</small><b class="${cls}">${Math.round(c.margin)}%</b></div>
     </div>
     ${c.kurang ? `<p class="warn-box small">${c.kurang} bahan belum ada harganya.</p>` : ""}
-    ${c.margin && c.margin < 30 ? `<p class="small muted">💡 Margin di bawah 30% biasanya terlalu tipis untuk F&B. Coba naikkan harga atau kurangi bahan termahal.</p>` : ""}
+    ${c.margin && c.margin < 30 ? `<p class="small muted">Margin di bawah 30% biasanya terlalu tipis untuk F&B. Coba naikkan harga atau kurangi bahan termahal.</p>` : ""}
     <div class="breakdown small">${c.rows
       .filter((x) => x.row.nama && x.biaya)
       .sort((a, b) => b.biaya - a.biaya)
@@ -82,7 +83,7 @@ function rowHtml(row, i) {
     <input list="bahan-list" placeholder="Bahan" value="${esc(row.nama)}" data-change="row" data-f="nama" data-i="${i}" aria-label="Nama bahan">
     <input type="number" min="0" step="any" placeholder="Jml" value="${esc(row.qty)}" data-change="row" data-f="qty" data-i="${i}" aria-label="Jumlah">
     <select data-change="row" data-f="satuan" data-i="${i}" ${b ? "disabled" : ""} aria-label="Satuan">${SATUAN.map((s) => `<option ${s === (b?.satuan || row.satuan) ? "selected" : ""}>${s}</option>`).join("")}</select>
-    <button type="button" class="icon-btn sm" data-action="delRow" data-i="${i}" aria-label="Hapus baris">✕</button>
+    <button type="button" class="icon-btn sm" data-action="delRow" data-i="${i}" aria-label="Hapus baris">${icon("x", 14)}</button>
     ${
       row.nama && !b
         ? `<label class="new-price"><span>Bahan baru · harga per ${esc(row.satuan)}</span><input type="number" min="0" step="any" placeholder="Rp" value="${esc(row.harga)}" data-change="row" data-f="harga" data-i="${i}"></label>`
@@ -107,17 +108,17 @@ export const resep = {
           <label class="field"><span>Harga jual/porsi</span><input type="number" min="0" value="${esc(draft.harga)}" data-change="field" data-f="harga"></label>
           <label class="field"><span>Resep ini jadi berapa porsi?</span><input type="number" min="1" step="1" value="${esc(draft.hasil)}" data-change="field" data-f="hasil"></label>
         </div>
-        <button type="button" class="btn soft" data-action="aiFill">✨ Isi bahan & takaran pakai AI</button>
+        <button type="button" class="btn soft" data-action="aiFill">${icon("spark", 16)} Isi bahan & takaran pakai AI</button>
       </section>
 
       <section class="card">
-        <h2 class="card-title">🧂 Bahan (untuk ${esc(draft.hasil)} porsi)</h2>
+        <h2 class="card-title">Bahan (untuk ${esc(draft.hasil)} porsi)</h2>
         <div class="resep-rows">${draft.rows.map(rowHtml).join("")}</div>
         <button type="button" class="btn ghost block" data-action="addRow">+ Bahan</button>
       </section>
 
       <section class="card accent" id="hpp-box">${preview()}</section>
-      ${tips ? `<section class="card"><h2 class="card-title">💡 Tips dari AI</h2>${list(tips, "checks")}<p class="muted small">Harga bahan dari AI adalah estimasi. Update pakai harga belanja aslimu di tab Bahan.</p></section>` : ""}
+      ${tips ? `<section class="card"><h2 class="card-title">Tips dari AI</h2>${list(tips, "checks")}<p class="muted small">Harga bahan dari AI adalah estimasi. Update pakai harga belanja aslimu di tab Bahan.</p></section>` : ""}
 
       <button class="btn primary block lg" data-action="save">Simpan resep</button>
       ${draft.id ? `<button class="btn danger block" data-action="del">Hapus resep</button>` : ""}`;

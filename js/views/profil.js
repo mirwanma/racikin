@@ -1,3 +1,4 @@
+import { icon } from "../icons.js";
 import { store } from "../store.js";
 import { esc, toast } from "../ui.js";
 import { go } from "../app.js";
@@ -24,14 +25,14 @@ export const profil = {
     return `
       ${first ? `
       <section class="hero">
-        <div class="hero-badge">🍜 Racikin</div>
+        <div class="hero-badge">racikin</div>
         <h1>Racik ide jadi <span class="hl">cuan.</span></h1>
         <p>Co-founder AI buat usaha F&B kamu, dari ide, modal, brand, sampai jualan tiap hari. Isi profil bisnis dulu biar semua saran AI pas buat kamu.</p>
-      </section>` : `<header class="page-head"><a href="#/" class="back">←</a><h1>Profil Bisnis</h1></header>`}
+      </section>` : `<header class="page-head"><a href="#/" class="back" aria-label="Kembali">${icon("back", 18)}</a><h1>Profil Bisnis</h1></header>`}
 
       <form data-form="save" class="stack">
         <div class="card stack">
-          <h2 class="card-title">👋 Kenalan dulu</h2>
+          <h2 class="card-title">Kenalan dulu</h2>
           <label class="field"><span>Nama kamu</span>
             <input name="owner" value="${esc(p.owner)}" placeholder="cth: Raka" required></label>
           <label class="field"><span>Ide usahamu (ceritain aja bebas)</span>
@@ -41,7 +42,7 @@ export const profil = {
         </div>
 
         <div class="card stack">
-          <h2 class="card-title">🍽️ Jenis & konsep</h2>
+          <h2 class="card-title">Jenis & konsep</h2>
           <div class="field"><span>Jenis F&B</span>${chips("jenis", JENIS, p.jenis, "radio")}</div>
           <div class="field"><span>Konsep jualan</span>${chips("konsep", KONSEP, p.konsep, "radio")}</div>
           <label class="field"><span>Menu utama</span>
@@ -49,7 +50,7 @@ export const profil = {
         </div>
 
         <div class="card stack">
-          <h2 class="card-title">📍 Lokasi & pasar</h2>
+          <h2 class="card-title">Lokasi & pasar</h2>
           <div class="row2">
             <label class="field"><span>Kota</span><input name="kota" value="${esc(p.kota)}" placeholder="cth: Cimahi" required></label>
             <label class="field"><span>Dekat mana?</span><input name="area" value="${esc(p.area)}" placeholder="cth: Kampus Unjani"></label>
@@ -58,7 +59,7 @@ export const profil = {
         </div>
 
         <div class="card stack">
-          <h2 class="card-title">💰 Modal & waktu</h2>
+          <h2 class="card-title">Modal & waktu</h2>
           <div class="row2">
             <label class="field"><span>Modal yang ada (Rp)</span>
               <input name="modal" type="number" inputmode="numeric" min="0" step="50000" value="${esc(p.modal)}" placeholder="5000000" required></label>
@@ -69,9 +70,9 @@ export const profil = {
           <div class="field"><span>Skill kamu</span>${chips("skill", SKILL, p.skill)}</div>
         </div>
 
-        <button class="btn primary block lg">${first ? "Gas, mulai racik! 🚀" : "Simpan profil"}</button>
+        <button class="btn primary block lg">${first ? "Gas, mulai racik!" : "Simpan profil"}</button>
         ${first ? `<button type="button" class="btn ghost block" data-action="sample">Isi contoh (TAHGUY)</button>
-        <a href="#/akun" class="btn ghost block">Sudah punya akun? Masuk ☁️</a>` : ""}
+        <a href="#/akun" class="btn ghost block">Sudah punya akun? Masuk</a>` : ""}
       </form>`;
   },
 
@@ -95,7 +96,7 @@ export const profil = {
       };
       const first = !store.get().profile;
       store.set({ profile });
-      toast(first ? `Siap, ${profile.owner}! Yuk mulai 🎉` : "Profil disimpan ✅");
+      toast(first ? `Siap, ${profile.owner}! Yuk mulai` : "Profil disimpan");
       go(first ? "" : "bisnis");
     },
   },
@@ -119,7 +120,7 @@ export const profil = {
           skill: ["Masak", "Sosmed / konten"],
         },
       });
-      toast("Profil contoh TAHGUY dimuat 🍜");
+      toast("Profil contoh TAHGUY dimuat");
       go("");
     },
   },

@@ -1,3 +1,4 @@
+import { icon } from "../icons.js";
 import { render } from "../app.js";
 import { toast, esc } from "../ui.js";
 import { isDemo, AuthRequiredError } from "../ai.js";
@@ -22,7 +23,7 @@ export async function runAI(key, fn) {
 }
 
 export const head = (title, back = "#/bisnis") =>
-  `<header class="page-head"><a href="${back}" class="back" aria-label="Kembali">←</a><h1>${esc(title)}</h1>${
+  `<header class="page-head"><a href="${back}" class="back" aria-label="Kembali">${icon("back", 18)}</a><h1>${esc(title)}</h1>${
     isDemo() ? `<a href="#/setelan" class="pill demo" title="Hasil dari template lokal">Mode Demo</a>` : `<span class="pill ai">AI Online</span>`
   }</header>`;
 
