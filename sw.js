@@ -1,5 +1,5 @@
 // Service worker: app shell offline-first. Naikkan VERSION tiap rilis.
-const VERSION = "racikin-v11";
+const VERSION = "racikin-v12";
 const SHELL = [
   "./",
   "index.html",
@@ -14,6 +14,7 @@ const SHELL = [
   "js/pos.js",
   "js/online.js",
   "js/merge.js",
+  "js/push.js",
   "js/studio/theme.js",
   "js/studio/art.js",
   "js/stok-utils.js",
@@ -43,6 +44,7 @@ const SHELL = [
   "js/views/kasir.js",
   "js/views/online.js",
   "js/views/tim.js",
+  "js/views/notif.js",
 ];
 
 self.addEventListener("install", (e) => {
@@ -73,5 +75,37 @@ self.addEventListener("fetch", (e) => {
         return res;
       })
       .catch(() => caches.match(req).then((r) => r || caches.match("index.html"))),
+  );
+});
+
+// ---------- Pengingat (Web Push) ----------
+self.addEventListener("push", (e) => {
+  let d = {};
+  try {
+    d = e.data ? e.data.json() : {};
+  } catch {
+    d = { body: e.data ? e.data.text() : "" };
+  }
+  e.waitUntil(
+    self.registration.showNotification(d.title || "Racikin", {
+      body: d.body || "",
+      icon: "icons/icon-192.png",
+      badge: "icons/icon-192.png",
+      tag: d.tag || "racikin",
+      renotify: true,
+      data: { url: d.url || "#/" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const target = new URL("./" + (e.notification.data?.url || "#/"), self.registration.scope).href;
+  e.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      const win = list.find((c) => c.url.startsWith(self.registration.scope));
+      if (win) return win.focus().then((w) => w.navigate ? w.navigate(target) : w);
+      return self.clients.openWindow(target);
+    }),
   );
 });

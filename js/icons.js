@@ -28,6 +28,7 @@ const P = {
   register: '<rect x="3.5" y="11" width="17" height="9.5" rx="1.5"/><path d="M7 11V5h10v6M9.5 8h5M7.5 15h2M11 15h2M14.5 15h2"/>',
   x: '<path d="M6 6l12 12M18 6 6 18"/>',
   team: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20.5c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M15.5 4.8a3.5 3.5 0 0 1 0 6.4M18 15.3c2 .7 3.2 2.5 3.5 5.2"/>',
+  bell: '<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 21h4"/>',
   logout: '<path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"/>',
 };
 

@@ -677,3 +677,9 @@ body[data-role="kasir"] .tabbar a.only-kasir { display: flex; }
 .team-row p { margin: 2px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .team-row select { width: auto; padding: 6px 8px; }
 .invite-mini { font-size: 13px; font-weight: 700; letter-spacing: .08em; padding: 4px 6px; border: 1.5px dashed var(--ink); border-radius: 6px; }
+
+/* ---------- Pengingat ---------- */
+.notif-opt { align-items: flex-start; padding: 10px 0; border-top: 1px dashed var(--line); }
+.notif-opt:first-of-type { border-top: 0; }
+.notif-opt span { display: flex; flex-direction: column; gap: 2px; }
+.notif-opt input:checked + span { text-decoration: none; color: var(--ink); }

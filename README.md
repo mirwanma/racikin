@@ -85,6 +85,14 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - Tabel: `team_members`, `team_invites`; fungsi: `my_team`, `team_list`, `create_invite`, `join_team`, `doc_get`, `doc_save`, `team_role` (juga dipakai RLS `stamp_cards`, supaya kasir bisa memperbarui kartu stempel).
 - Batasan: nomor order harian dihitung per perangkat, jadi dua HP yang mencatat order hampir bersamaan bisa dapat nomor yang sama (nama kasir ditampilkan untuk membedakan).
 
+## Pengingat (push notification)
+- Halaman `#/notif` (Setelan / Akun > Pengingat): nyalakan notifikasi di HP ini, pilih jenis pengingat & jamnya. Muncul walau app ditutup.
+- Jenis: **jadwal posting hari ini** (dari Kalender Konten), **bahan menipis**, **pelanggan perlu diajak balik** (tiap Senin), **rekap tutup kasir** (omzet, order, terlaris). Kasir hanya stok & rekap. Tiap jenis maksimal sekali sehari, hanya kalau ada isinya.
+- Cara kerja: `pg_cron` memanggil Edge Function `racikin-push` tiap 15 menit (via `pg_net`, membawa token rahasia dari `private.push_config`). Fungsi membaca dokumen usaha, menghitung pengingat yang jatuh tempo sesuai zona waktu & jam tiap perangkat, lalu mengirim Web Push.
+- Web Push diimplementasi sendiri pakai WebCrypto (`webpush.ts`: enkripsi aes128gcm RFC 8291 + VAPID RFC 8292), tanpa layanan pihak ketiga. Kunci VAPID dibuat otomatis saat pertama dipakai dan disimpan di schema `private` (tidak bisa diakses klien), jadi **tidak perlu set secret apa pun**.
+- Langganan per perangkat di `push_subscriptions` (ditulis lewat `push_subscribe` / `push_unsubscribe`, hanya host layanan push resmi yang diterima). Langganan mati (404/410) dihapus otomatis. Logout = pengingat di perangkat itu dimatikan.
+- iPhone/iPad: hanya bisa setelah Racikin dipasang ke Layar Utama (iOS 16.4+).
+
 ## Desain: "papan warung"
 - **Warna**: kuning marigold `#FFC531` (utama) + hitam tinta `#1B1916` di atas kertas krem `#F6EFDC`. Aksen hemat: merah cabai (minus/peringatan) & hijau daun (untung/selesai). Mode gelap otomatis.
 - **Font**: Archivo (judul pakai versi lebar/expanded, kesan papan nama) + IBM Plex Mono untuk label & angka kecil (kesan struk).
@@ -139,6 +147,7 @@ js/app.js          router hash + event delegation
 js/store.js        data lokal (localStorage)
 js/cloud.js        login Supabase, sinkron data ke cloud, mode tim (undang/gabung/keluar)
 js/merge.js        penggabungan otomatis data dari beberapa perangkat (3-way merge)
+js/push.js         daftar/berhenti pengingat push di perangkat ini, preferensi, tes
 js/ai.js           klien AI (online pakai token login / demo)
 js/stok-utils.js   hitung HPP, porsi yang bisa dibuat, stok menipis
 js/loyalty.js      program stempel, no. WA, link kartu, template pesan
@@ -150,6 +159,7 @@ js/demo.js         generator Mode Demo (shape = schema di tasks.ts)
 js/views/*.js      satu file per halaman
 docs/PRD.md        Product Requirements Document
 supabase/migrations/   user_data, ai_usage + consume_ai_quota, stamp_cards + get_stamp_card, mode tim (rev, team_members, team_invites, doc_get/doc_save)
+supabase/functions/racikin-push/   pengingat terjadwal: index.ts (key/test/run), notif.ts (jadwal), webpush.ts (enkripsi + VAPID)
 supabase/functions/racikin-ai/
   index.ts         endpoint (wajib login + kuota) → Gemini API / Claude API
   tasks.ts         prompt + JSON schema tiap task

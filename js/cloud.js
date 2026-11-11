@@ -409,6 +409,8 @@ export async function setNewPassword(password) {
 export async function signOut({ clearLocal = false } = {}) {
   need();
   if (readMeta().dirty) await sync(); // jangan sampai perubahan terakhir hilang
+  // Perangkat yang sudah logout tidak boleh terus menerima pengingat usaha ini.
+  await import("./push.js").then((m) => m.disable()).catch(() => {});
   const member = isMember();
   await client.auth.signOut();
   // Data usaha milik orang lain (anggota tim) tidak ditinggal di perangkat.
