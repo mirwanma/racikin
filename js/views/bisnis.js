@@ -42,6 +42,11 @@ export const bisnis = {
           <div><h3>Laporan Laba Rugi</h3><p class="muted small">Pendapatan, HPP, biaya & laba bersih per bulan, menu paling untung, cetak PDF</p></div>
           <span class="chev">${icon("chevron", 18)}</span>
         </a>
+        <a href="#/dapur" class="card module">
+          <span class="module-num">${icon("bowl", 18)}</span>
+          <div><h3>Dapur</h3><p class="muted small">${s.posSetting?.dapur ? "Aktif · pesanan dari Kasir tampil di layar dapur" : "Opsional: layar pesanan untuk dapur yang terpisah dari kasir"}</p></div>
+          <span class="chev">${icon("chevron", 18)}</span>
+        </a>
         <a href="#/online" class="card module">
           <span class="module-num">${icon("megaphone", 18)}</span>
           <div><h3>Harga Online</h3><p class="muted small">Harga & komisi GoFood, GrabFood, ShopeeFood + untung per porsi</p></div>

@@ -99,6 +99,10 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Daftar belanja otomatis dari pemakaian & stok, per supplier, kirim via WA, catat hasil belanja (stok, harga, Kas).
 - Data supplier, riwayat harga bahan & dampak kenaikan harga ke HPP menu.
 
+### Fase 13: Mode dapur (selesai)
+- Opsional: pesanan Kasir (dengan nama/meja & catatan) tampil realtime di layar dapur Baru → Dimasak → Siap; kasir dapat kabar siap diambil.
+- Peran tim Dapur (hanya layar dapur, tanpa data penjualan).
+
 ### Di luar MVP (fase berikutnya)
 Foto produk AI (gambar), integrasi WhatsApp, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
 

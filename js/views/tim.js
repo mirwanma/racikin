@@ -7,6 +7,7 @@ import { cloud, role, loadTeam, createInvite, listTeam, listInvites, cancelInvit
 
 export const PERAN = {
   kasir: { nama: "Kasir", akses: ["Jualan di Kasir & lihat rekap hari ini", "Tambah stempel & data pelanggan", "Catat stok bahan masuk / opname"], tidak: "Tidak bisa lihat Kas, laporan, RAB, ide & rencana bisnis, atau ubah harga & resep." },
+  dapur: { nama: "Dapur", akses: ["Lihat pesanan dari Kasir di layar dapur", "Tandai pesanan dimasak & siap diambil"], tidak: "Hanya layar dapur. Tidak bisa lihat penjualan, Kas, stok, pelanggan, atau data usaha lain." },
   manajer: { nama: "Manajer", akses: ["Semua fitur: Kasir, Kas & laporan, stok, resep, harga, konten", "Pakai AI dengan kuota akunnya sendiri"], tidak: "Tidak bisa mengundang / mengeluarkan anggota tim." },
 };
 export const peranNama = (r) => (r === "owner" ? "Pemilik" : PERAN[r]?.nama || r);
@@ -116,12 +117,14 @@ function ownerView(s) {
     <form class="card stack" data-form="undang">
       <h2 class="card-title">Undang anggota</h2>
       <label class="field"><span>Nama panggilan</span><input name="nama" maxlength="40" placeholder="cth: Rina" required></label>
-      <div class="seg">
+      <div class="seg seg3">
         <label><input type="radio" name="role" value="kasir" checked><span>Kasir</span></label>
+        <label><input type="radio" name="role" value="dapur"><span>Dapur</span></label>
         <label><input type="radio" name="role" value="manajer"><span>Manajer</span></label>
       </div>
-      <details class="small"><summary>Bedanya kasir & manajer</summary>
+      <details class="small"><summary>Bedanya kasir, dapur & manajer</summary>
         <h4>Kasir</h4>${aksesList("kasir")}
+        <h4>Dapur</h4>${aksesList("dapur")}
         <h4>Manajer</h4>${aksesList("manajer")}
       </details>
       <button class="btn primary" ${busy ? "disabled" : ""}>${icon("plus", 16)} ${busy ? "Membuat…" : "Bikin kode undangan"}</button>
@@ -287,7 +290,7 @@ export const gabung = {
         const t = await joinTeam(kode);
         sessionStorage.removeItem("racikin:gabung");
         toast(`Selamat bergabung di ${t.bisnis || "tim"}!`);
-        go(t.role === "kasir" ? "kasir" : "");
+        go(t.role === "kasir" ? "kasir" : t.role === "dapur" ? "dapur" : "");
       });
     },
   },
