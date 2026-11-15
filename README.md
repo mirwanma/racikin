@@ -63,6 +63,13 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - Grafik laba bersih 6 bulan (satu seri, bulan rugi di bawah garis nol + tanda minus; tooltip saat hover), menu paling untung & margin paling tipis, catatan otomatis (margin, komisi online, marketing, tren, stok/susut).
 - **Cetak / simpan PDF** (tampilan cetak khusus) dan **unduh CSV**. Logika di `js/laporan.js`.
 
+## Pesan lewat meja / QR (opsional)
+- Aktifkan di Bisnis > **Meja & QR** (`#/meja`, pemilik/manajer). Kalau tidak aktif, Kasir tidak berubah dan link QR menampilkan "pesan lewat meja tidak aktif".
+- Tambah meja (satu-satu atau sekaligus), tiap meja punya **QR unik** (`#/m/<token>`); **cetak semua QR** sebagai kartu meja, ganti QR (token baru), hapus meja. Tampil jumlah pesanan & yang menunggu per meja hari ini.
+- **Pelanggan** (tanpa login/install): lihat menu & harga toko (yang habis ditandai), keranjang, checkout dengan nama & catatan, pilih **Bayar di kasir** atau **Bayar digital (QRIS)**. Bayar digital saat ini **SIMULASI** (tidak ada uang ditarik; bisa disembunyikan). Halaman status: kode pesanan, diterima kasir, dimasak/siap (kalau mode dapur aktif), status bayar.
+- **Kasir**: kotak "Pesanan meja" realtime → **Terima** mengisi keranjang + nama meja/pelanggan & catatan → selesaikan seperti biasa (Kas, stok, shift, stempel, tiket dapur); pesanan lunas digital otomatis memakai metode QRIS. **Tolak** dengan alasan → pelanggan melihatnya.
+- Keamanan: menu publik disalin ke `public_menu` (tanpa HPP/stok detail); pelanggan hanya lewat fungsi `get_table_menu` / `place_table_order` / `get_table_order` / `pay_table_order_dummy`. **Harga & total dihitung server**, validasi menu/qty/nama/metode, batas 5 pesanan per meja per 5 menit, status pesanan hanya bisa dibaca dengan secret milik HP pelanggan. Pesanan meja > 7 hari dihapus tiap malam (data penjualannya tetap di Kasir/Kas). Logika di `js/meja.js`, QR pakai `js/vendor/qrcode-1.4.4.js` (MIT).
+
 ## Mode dapur (opsional)
 - Untuk usaha yang dapurnya jauh dari kasir. Aktifkan di halaman `#/dapur` (Bisnis > Dapur, pemilik/manajer). Kalau tidak aktif, Kasir tidak berubah.
 - Kasir: saat bayar ada kolom **Atas nama / no. meja** & **Catatan untuk dapur**; setelah selesai, tiket terkirim ke dapur (offline → antre & dikirim ulang otomatis). Struk menunjukkan status kirim.
@@ -203,6 +210,7 @@ js/ai.js           klien AI (online pakai token login / demo)
 js/stok-utils.js   hitung HPP, porsi yang bisa dibuat, stok menipis
 js/loyalty.js      program stempel, no. WA, link kartu, template pesan
 js/pos.js          kasir: order -> kas harian gabungan, stok, stempel, batal, rekap, struk
+js/meja.js         pesan lewat meja: menu publik, pesanan meja realtime, API pelanggan, QR
 js/dapur.js        mode dapur: tiket ke dapur, status, realtime, antrean offline
 js/shift.js        shift kasir: buka/tutup, uang laci, ringkasan & selisih
 js/belanja.js      daftar belanja otomatis, supplier, riwayat & perubahan harga bahan

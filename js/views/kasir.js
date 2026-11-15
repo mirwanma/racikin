@@ -8,6 +8,7 @@ import { program, waLink } from "../loyalty.js";
 import { cloud, markCards, isKasir, pelaku, teamActive } from "../cloud.js";
 import { METODE, metodeNama, subtotal, buatOrder, batalOrder, rekapHari, struk, perKasir } from "../pos.js";
 import { dapurAktif, kirimTiket, tiketDari, ubahStatus as statusDapur, daftarTiket, dengar as dengarDapur } from "../dapur.js";
+import { mejaAktif, pesananMasuk, dengarPesanan, ubahPesanan } from "../meja.js";
 import { shiftAktif, ringkasan as ringkasanShift, wajibShift } from "../shift.js";
 import { activeChannels, channelCfg, channelNama, hargaDi, isOnline, komisiRp } from "../online.js";
 
@@ -17,6 +18,8 @@ let step = "menu"; // menu | bayar | struk
 let cart = []; // { key, resepId, nama, harga, qty }
 let form = { diskon: 0, metode: "tunai", bayar: 0, pelangganId: "", atasNama: "", catatanDapur: "" };
 let lepasDapur = null;
+let lepasMeja = null;
+let mejaRef = null; // pesanan meja yang sedang dibayar { id, metode, bayar_status, kode, meja_nama }
 let last = null; // { order, stempelInfo }
 let openOrder = null;
 let channel = "toko"; // toko | gofood | grabfood | shopeefood
@@ -59,6 +62,29 @@ function channelChips(s) {
     ${[{ id: "toko", nama: "Toko" }, ...act].map((c) => `<label class="chip"><input type="radio" name="channel" value="${c.id}" data-change="channel" ${channel === c.id ? "checked" : ""}><span>${esc(c.nama)}</span></label>`).join("")}
     ${isKasir() ? "" : `<a href="#/online" class="icon-btn sm" aria-label="Atur harga online">${icon("gear", 14)}</a>`}
   </div>`;
+}
+
+/** Pesanan dari QR meja yang menunggu kasir. */
+function mejaInbox() {
+  const list = pesananMasuk();
+  if (!list.length) return "";
+  return `<section class="meja-inbox"><h3>${icon("grid", 16)} Pesanan meja <span class="kds-n">${list.length}</span></h3>
+    ${list
+      .map(
+        (o) => `<div class="mi-row ${mejaRef?.id === o.id ? "on" : ""}">
+          <div><b>${esc(o.meja_nama)} · ${esc(o.nama)}</b>
+            <p class="small">${o.items.map((x) => `${x.qty}× ${esc(x.nama)}`).join(", ")}</p>
+            <p class="small muted">Kode <b class="mono">${esc(o.kode)}</b> · ${rupiah(o.total)} · ${
+              o.metode === "digital" ? (o.bayar_status === "lunas" ? `<span class="pos">lunas digital (simulasi)</span>` : `<span class="neg">menunggu bayar digital</span>`) : "bayar di kasir"
+            }${o.catatan ? ` · "${esc(o.catatan)}"` : ""}</p></div>
+          <div class="mi-act">
+            <button class="btn primary sm" data-action="terimaMeja" data-id="${o.id}">Terima</button>
+            <button class="btn ghost sm" data-action="tolakMeja" data-id="${o.id}">Tolak</button>
+          </div>
+        </div>`,
+      )
+      .join("")}
+  </section>`;
 }
 
 /** Pesanan yang sudah siap di dapur (mode dapur). */
@@ -106,7 +132,7 @@ function menuView(s) {
         <p>Menu kasir diambil dari resep. Bikin resep dulu biar harga, HPP & stok nyambung otomatis.</p>
         ${isKasir() ? `<p class="small muted">Minta pemilik usaha bikin menu dulu.</p>` : `<a href="#/resep?id=new" class="btn primary">+ Bikin menu</a>`}
       </section>`;
-  return `${shiftBar(s)}${dapurAktif(s) ? `<div id="siap-strip">${siapStrip()}</div>` : ""}${channelChips(s)}${grid}
+  return `${shiftBar(s)}${mejaAktif(s) ? `<div id="meja-inbox">${mejaInbox()}</div>` : ""}${dapurAktif(s) ? `<div id="siap-strip">${siapStrip()}</div>` : ""}${channelChips(s)}${grid}
     <details class="card">
       <summary><b>Item lain (di luar menu)</b></summary>
       <form class="row3 pos-custom" data-form="custom">
@@ -141,7 +167,11 @@ function bayarView(s) {
         </div>
       </section>`
     : "";
-  return `${dapurForm}
+  const mejaInfo = mejaRef
+    ? `<section class="card meja-bayar ${mejaRef.metode === "digital" && mejaRef.bayar_status === "lunas" ? "lunas" : ""}"><b>${esc(mejaRef.meja_nama)} · ${esc(mejaRef.nama)}</b> <span class="small">kode <b class="mono">${esc(mejaRef.kode)}</b></span>
+        <p class="small">${mejaRef.metode === "digital" && mejaRef.bayar_status === "lunas" ? "Sudah dibayar digital (simulasi). Metode diset QRIS, tinggal tekan Selesaikan." : mejaRef.metode === "digital" ? "Pelanggan memilih bayar digital tapi belum lunas. Terima pembayaran di kasir." : "Pelanggan bayar di kasir."}</p></section>`
+    : "";
+  return `${mejaInfo}${dapurForm}
     <section class="card">
       <div class="row-between"><h2 class="card-title">Pesanan${online ? ` <span class="tag">${esc(channelNama(channel))}</span>` : ""}</h2>${isWide() ? `<button class="btn ghost sm" data-action="clear">Kosongkan</button>` : `<button class="btn ghost sm" data-action="back">+ Tambah item</button>`}</div>
       ${cart
@@ -299,8 +329,19 @@ function rekapView(s) {
 
 export const kasir = {
   after(root) {
-    if (!dapurAktif(store.get())) return;
-    lepasDapur?.();
+    if (mejaAktif(store.get()) && !lepasMeja) {
+      lepasMeja = dengarPesanan((e) => {
+        if (!location.hash.startsWith("#/kasir")) return lepasMeja?.(), (lepasMeja = null);
+        if (e.type === "insert") {
+          toast(`Pesanan baru dari ${e.baru.meja_nama} (${e.baru.nama})`);
+          navigator.vibrate?.(200);
+        }
+        if (e.type === "update" && e.lama?.bayar_status !== "lunas" && e.baru?.bayar_status === "lunas") toast(`${e.baru.meja_nama}: pembayaran digital lunas`);
+        const el = document.querySelector("#meja-inbox");
+        if (el) el.innerHTML = mejaInbox();
+      });
+    }
+    if (!dapurAktif(store.get()) || lepasDapur) return; // pasang sekali
     lepasDapur = dengarDapur((e) => {
       if (!location.hash.startsWith("#/kasir")) {
         lepasDapur?.();
@@ -360,6 +401,7 @@ export const kasir = {
     },
     clear() {
       cart = [];
+      mejaRef = null;
       render();
     },
     checkout() {
@@ -380,6 +422,7 @@ export const kasir = {
       const s = store.get();
       if (wajibShift(s) && !shiftAktif(s, pelaku())) return toast("Buka shift dulu sebelum jualan", "err");
       const { patch, order, stempelInfo } = buatOrder(s, { cart, ...form, channel, kasir: pelaku(), shiftId: shiftAktif(s, pelaku())?.id || null });
+      if (mejaRef) order.meja = { id: mejaRef.id, nama: mejaRef.meja_nama, kode: mejaRef.kode };
       const keDapur = dapurAktif(s);
       if (form.atasNama.trim()) order.atasNama = form.atasNama.trim().slice(0, 40);
       if (keDapur && form.catatanDapur.trim()) order.catatanDapur = form.catatanDapur.trim().slice(0, 200);
@@ -393,6 +436,11 @@ export const kasir = {
       }
       if (order.stempel) markCards({ ids: [order.pelangganId] });
       last = { order, stempelInfo, dapur: keDapur ? "mengirim" : null };
+      if (mejaRef) {
+        const ref = mejaRef;
+        mejaRef = null;
+        ubahPesanan(ref.id, { status: "diproses", bayar_status: "lunas", pos_order_id: order.id }).catch((e) => toast("Status pesanan meja gagal diperbarui: " + e.message, "err"));
+      }
       cart = [];
       form = { diskon: 0, metode: "tunai", bayar: 0, pelangganId: "", atasNama: "", catatanDapur: "" }; // tiap order baru mulai dari Tunai
       step = "struk";
@@ -407,6 +455,46 @@ export const kasir = {
     },
     order(el) {
       openOrder = openOrder === el.dataset.id ? null : el.dataset.id;
+      render();
+    },
+    terimaMeja(el) {
+      const o = pesananMasuk().find((x) => x.id === el.dataset.id);
+      if (!o) return;
+      if (cart.length && !mejaRef && !confirm("Keranjang sekarang akan diganti dengan pesanan meja ini. Lanjut?")) return;
+      const s = store.get();
+      const hilang = o.items.filter((x) => !s.resep.some((r) => r.id === x.id));
+      channel = "toko";
+      cart = o.items.map((x) => {
+        const r = s.resep.find((y) => y.id === x.id);
+        return { key: r ? r.id : "x-" + uid(), resepId: r ? r.id : null, nama: x.nama, harga: x.harga, qty: x.qty };
+      });
+      mejaRef = o;
+      form = {
+        ...form,
+        diskon: 0,
+        metode: o.metode === "digital" && o.bayar_status === "lunas" ? "qris" : "tunai",
+        bayar: 0,
+        atasNama: `${o.meja_nama} · ${o.nama}`.slice(0, 40),
+        catatanDapur: o.catatan || "",
+      };
+      step = "bayar";
+      tab = "jual";
+      if (hilang.length) toast(`${hilang.length} item sudah tidak ada di menu, dicatat sebagai item lain`, "err");
+      render();
+      window.scrollTo(0, 0);
+    },
+    async tolakMeja(el) {
+      const o = pesananMasuk().find((x) => x.id === el.dataset.id);
+      if (!o) return;
+      const alasan = prompt(`Tolak pesanan ${o.meja_nama} (${o.nama})? Tulis alasan singkat untuk pelanggan:`, "Maaf, menu sedang habis");
+      if (alasan === null) return;
+      await ubahPesanan(o.id, { status: "batal", alasan: alasan.slice(0, 120) });
+      if (mejaRef?.id === o.id) {
+        mejaRef = null;
+        cart = [];
+        step = "menu";
+      }
+      toast("Pesanan meja ditolak");
       render();
     },
     async diambil(el) {
