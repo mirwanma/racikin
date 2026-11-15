@@ -793,7 +793,7 @@ body[data-role="kasir"] .tabbar a.only-kasir { display: flex; }
   .view.cols > .hero,
   .view.cols > .journey-wrap,
   .view.cols > .row2.no-print { column-span: all; }
-  .view.cols > .seg, .view.cols > .month-nav { max-width: 560px; }
+  .view.cols > .seg { max-width: 560px; }
 
   /* Rail navigasi */
   .tabbar {
@@ -864,4 +864,22 @@ body[data-role="kasir"] .tabbar a.only-kasir { display: flex; }
   .view { max-width: 680px; }
   .pos-bar { max-width: 656px; }
   .pos-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* ---------- Kas: daftar transaksi (periode, cari, filter) ---------- */
+.tx-periode { margin: 10px 0 8px; }
+.tx-rentang { margin-bottom: 8px; }
+.tx-tools { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
+.tx-search { flex: 1 1 200px; }
+.tx-filter > summary { list-style: none; cursor: pointer; }
+.tx-filter > summary::-webkit-details-marker { display: none; }
+.tx-filter[open] { flex-basis: 100%; }
+.tx-filter[open] > summary { margin-bottom: 8px; }
+.tx-filter-body { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 8px; align-items: center; }
+.tx-sum { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; margin: 12px 0 4px; padding: 8px 10px; border-radius: 8px; background: var(--yellow-tint); font-size: 13px; font-variant-numeric: tabular-nums; }
+.tx-sum b + b { margin-left: 6px; }
+.link-btn { background: none; border: 0; padding: 0; color: var(--ink); text-decoration: underline; cursor: pointer; font: inherit; }
+@media (max-width: 560px) {
+  .tx-filter-body { grid-template-columns: 1fr 1fr; }
+  .tx-filter-body select:first-child { grid-column: 1 / -1; }
 }
