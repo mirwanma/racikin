@@ -8,6 +8,7 @@
 // - Peralatan dicatat sebagai belanja aset (di bawah laba bersih), bukan biaya bulanan.
 import { bahanMap, hppOf } from "./stok-utils.js";
 import { CHANNELS } from "./online.js";
+import { cariPilihan, hppPilihan } from "./varian.js";
 
 export const KAT_HPP = ["Bahan Baku", "Kemasan"];
 export const KAT_ASET = ["Peralatan"];
@@ -25,6 +26,7 @@ export const bulanSebelum = (ym) => {
 /** Porsi terjual per menu bulan itu (dari rekap kasir harian). */
 function porsiBulan(s, ym, sampaiHari = 31) {
   const out = {};
+  const opsi = {};
   let hari = 0;
   let omzetKasir = 0;
   for (const [tgl, r] of Object.entries(s.posHarian || {})) {
@@ -32,8 +34,9 @@ function porsiBulan(s, ym, sampaiHari = 31) {
     hari++;
     omzetKasir += Number(r.omzet) || 0;
     for (const [nama, q] of Object.entries(r.items || {})) out[nama] = (out[nama] || 0) + (Number(q) || 0);
+    for (const [id, q] of Object.entries(r.opsi || {})) opsi[id] = (opsi[id] || 0) + (Number(q) || 0);
   }
-  return { porsi: out, hari, omzetKasir };
+  return { porsi: out, opsi, hari, omzetKasir };
 }
 
 /** Metode HPP yang disarankan untuk bulan itu. */
@@ -62,7 +65,7 @@ export function labaRugi(s, ym, metode = metodeDefault(s, ym), sampaiHari = 31) 
   const belanjaHpp = sum(keluar.filter((t) => KAT_HPP.includes(t.kategori)), (t) => t.nominal);
   const map = bahanMap(s.bahan);
   const hppMenu = Object.fromEntries((s.resep || []).map((r) => [r.nama, { hpp: hppOf(r, map).hpp, harga: Number(r.harga) || 0, id: r.id }]));
-  const { porsi, hari: hariKasir, omzetKasir } = porsiBulan(s, ym, sampaiHari);
+  const { porsi, opsi: opsiQ, hari: hariKasir, omzetKasir } = porsiBulan(s, ym, sampaiHari);
   let hppResep = 0;
   let porsiTanpaResep = 0;
   const menu = [];
@@ -74,6 +77,16 @@ export function labaRugi(s, ym, metode = metodeDefault(s, ym), sampaiHari = 31) 
     }
     hppResep += q * m.hpp;
     menu.push({ nama, porsi: q, harga: m.harga, hpp: m.hpp, omzet: q * m.harga, untung: q * (m.harga - m.hpp), margin: m.harga ? ((m.harga - m.hpp) / m.harga) * 100 : 0 });
+  }
+  // Varian & topping: HPP tambahan per pilihan terjual (pilihan yang sudah dihapus tidak dihitung).
+  const opsi = [];
+  for (const [id, q] of Object.entries(opsiQ)) {
+    const f = cariPilihan(s, id);
+    if (!f) continue;
+    const h = hppPilihan(f.p, map);
+    const harga = Number(f.p.harga) || 0;
+    hppResep += q * h;
+    opsi.push({ nama: f.p.nama, grup: f.g.nama, porsi: q, harga, hpp: h, omzet: q * harga, untung: q * (harga - h) });
   }
   const hpp = Math.round(metode === "resep" ? hppResep : belanjaHpp);
 
@@ -115,6 +128,7 @@ export function labaRugi(s, ym, metode = metodeDefault(s, ym), sampaiHari = 31) 
     aset,
     arusKas,
     menu: menu.sort((a, b) => b.untung - a.untung),
+    opsi: opsi.sort((a, b) => b.porsi - a.porsi),
     komisi: biayaKat["Komisi Order Online"] || 0,
     marketing: biayaKat["Marketing"] || 0,
     transaksi: tx.length,

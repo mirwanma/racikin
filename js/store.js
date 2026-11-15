@@ -13,7 +13,8 @@ const DEFAULT = {
   insight: null,
   chat: [],               // { role, content }
   bahan: [],              // { id, nama, satuan, harga (per satuan), stok, min, estimasi, tracked }
-  resep: [],              // { id, nama, harga (jual), hasil (porsi), items:[{ bahanId, qty }] }
+  resep: [],              // { id, nama, harga (jual), hasil (porsi), items:[{ bahanId, qty }], opsiIds?:[grupId] }
+  opsi: [],               // grup varian & topping { id, nama, tipe, wajib, maks, pilihan:[...] } (lihat js/varian.js)
   stokLog: [],            // { id, tanggal, bahanId, delta, alasan: beli|jual|opname, catatan }
   online: null,           // { channels: { gofood: { aktif, komisi, markup, bulat } }, harga: { resepId: { gofood } } }
   orders: [],             // order kasir (detail 30 hari terakhir)

@@ -112,6 +112,11 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Upload foto per menu, percantik otomatis (gratis) atau pakai AI (Gemini, butuh billing), bandingkan sebelum simpan.
 - Foto tampil di Kasir, Stok & menu pelanggan QR meja.
 
+### Fase 16: Varian & topping (selesai)
+- Grup pilihan (pilih satu / banyak + maks, wajib/opsional) yang dipakai ulang di banyak menu; tiap pilihan punya harga tambahan, bahan tambahan, dan status habis.
+- Terhubung ke Kasir (sheet pilihan), harga online, stok & batal order, struk/WA, tiket dapur, rekap harian, laporan laba rugi (HPP pilihan), dan pesan lewat meja (validasi & harga di server).
+- Berikutnya (belum): pilihan yang mengganti bahan resep atau mengalikan porsi (ukuran L = 1,5×).
+
 ### Di luar MVP (fase berikutnya)
 Foto produk AI (gambar), integrasi WhatsApp, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
 

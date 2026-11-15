@@ -5,9 +5,11 @@ import { render } from "../app.js";
 import { head } from "./_shared.js";
 import { program, patchStempel, siapTukar } from "../loyalty.js";
 import { markCards, isKasir } from "../cloud.js";
+import { varianTab } from "./varian.js";
+import { grupMenu } from "../varian.js";
 import { SATUAN, bahanMap, hppOf, bisaDibuat, menipis, belumDiisi, kebutuhan, fmtQty } from "../stok-utils.js";
 
-let tab = "menu"; // menu | bahan
+let tab = "menu"; // menu | bahan | varian
 let open = null; // { type: beli|opname|edit|jual, id }
 
 const isOpen = (type, id) => open && open.type === type && open.id === id;
@@ -37,6 +39,7 @@ function menuTab(s) {
             <div><small>Margin</small><b class="${marginCls}">${Math.round(h.margin)}%</b></div>
           </div>
           ${h.kurangHarga ? `<p class="warn-box small">${h.kurangHarga} bahan belum ada harganya, HPP belum akurat.</p>` : ""}
+          ${grupMenu(s, r).length ? `<p class="small">Varian: ${grupMenu(s, r).map((g) => `<a href="#/varian?id=${g.id}" class="tag">${esc(g.nama)}</a>`).join(" ")}</p>` : ""}
           <p class="small muted">${
             !r.items.length
               ? "Belum ada bahan di resep."
@@ -195,6 +198,7 @@ function bahanTab(s) {
 export const stok = {
   render(s) {
     if (location.hash.includes("tab=bahan")) tab = "bahan";
+    if (location.hash.includes("tab=varian")) tab = "varian";
     if (isKasir()) {
       // Kasir: cukup bahan & stok (resep, HPP & penjualan manual lewat Kasir saja).
       tab = "bahan";
@@ -207,11 +211,12 @@ export const stok = {
     }
     return `
       ${head("Stok & Resep", "#/")}
-      <div class="seg">
+      <div class="seg seg3">
         <label><input type="radio" name="tab" value="menu" data-change="tab" ${tab === "menu" ? "checked" : ""}><span>Menu & Resep</span></label>
+        <label><input type="radio" name="tab" value="varian" data-change="tab" ${tab === "varian" ? "checked" : ""}><span>Varian</span></label>
         <label><input type="radio" name="tab" value="bahan" data-change="tab" ${tab === "bahan" ? "checked" : ""}><span>Bahan & Stok</span></label>
       </div>
-      ${tab === "menu" ? menuTab(s) : bahanTab(s)}`;
+      ${tab === "menu" ? menuTab(s) : tab === "varian" ? varianTab(s) : bahanTab(s)}`;
   },
   after(root) {
     root.querySelector("[autofocus]")?.focus();
@@ -244,6 +249,7 @@ export const stok = {
       store.set({
         bahan: s.bahan.filter((x) => x.id !== id),
         resep: s.resep.map((r) => ({ ...r, items: r.items.filter((it) => it.bahanId !== id) })),
+        opsi: (s.opsi || []).map((g) => ({ ...g, pilihan: g.pilihan.map((p) => ({ ...p, items: (p.items || []).filter((it) => it.bahanId !== id) })) })),
       });
       open = null;
       render();

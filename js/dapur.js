@@ -3,6 +3,7 @@
 //
 // Status: baru -> dimasak -> siap -> diambil (selesai) | batal
 import { sb, cloud, onCloudChange } from "./cloud.js";
+import { labelOpsi } from "./varian.js";
 
 export const STATUS = {
   baru: { nama: "Baru", next: "dimasak", aksi: "Mulai masak" },
@@ -46,7 +47,7 @@ export function tiketDari(order, { nama = "", catatan = "" } = {}) {
     id: order.id,
     no: order.no,
     data: {
-      items: order.items.map((i) => ({ nama: i.nama, qty: i.qty })),
+      items: order.items.map((i) => (i.opsi?.length ? { nama: i.nama, qty: i.qty, opsi: labelOpsi(i) } : { nama: i.nama, qty: i.qty })),
       nama: String(nama || "").trim().slice(0, 40),
       catatan: String(catatan || "").trim().slice(0, 200),
       channel: order.channel || "toko",

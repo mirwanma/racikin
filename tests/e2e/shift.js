@@ -1,6 +1,8 @@
 // E2E Racikin (shift.js). Lihat tests/README.md untuk cara menjalankan.
 const { chromium } = require('playwright');
 const B = (process.env.RACIKIN_URL || 'http://localhost:8766/'), OUT = process.argv[2];
+// Klik menu di Kasir; menu dengan varian membuka sheet -> langsung Tambah pakai pilihan default.
+const pos = async (p, n) => { await p.click(`.pos-item >> nth=${n}`); if (await p.$('.sheet')) await p.click('.sheet [data-action=pilihTambah]'); };
 const txt = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').trim();
 const st = (p) => p.evaluate(() => JSON.parse(localStorage.getItem('racikin:v1')));
 const num = (t) => Number(String(t).replace(/[^\d]/g, ''));
@@ -32,7 +34,7 @@ const num = (t) => Number(String(t).replace(/[^\d]/g, ''));
   console.log('kas laci:', s.transactions.filter(t => t.ref === 'laci').slice(-1).map(t => `${t.tanggal} ${t.kategori} ${t.nominal} ${t.catatan}`));
   // Jual 1 order tunai
   await p.goto(B + '#/kasir'); await p.click('label:has(input[value=jual])'); await p.waitForSelector('.pos-grid');
-  await p.click('.pos-item >> nth=0'); await p.click('[data-action=checkout]'); await p.click('[data-action=uang] >> nth=0'); await p.click('[data-action=selesai]'); await p.waitForSelector('.struk');
+  await pos(p, 0); await p.click('[data-action=checkout]'); await p.click('[data-action=uang] >> nth=0'); await p.click('[data-action=selesai]'); await p.waitForSelector('.struk');
   s = await st(p);
   const last = s.orders[s.orders.length - 1];
   console.log('order baru shiftId cocok:', last.shiftId === s.shifts.find(x => !x.tutup && !x.kasir).id, '| shift Rina terbuka:', s.shifts.some(x => !x.tutup && x.kasir?.nama === 'Rina'), '| total', last.total);

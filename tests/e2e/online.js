@@ -1,6 +1,8 @@
 // E2E Racikin (online.js). Lihat tests/README.md untuk cara menjalankan.
 const { chromium } = require('playwright');
 const B = (process.env.RACIKIN_URL || 'http://localhost:8766/'), OUT = process.argv[2];
+// Klik menu di Kasir; menu dengan varian membuka sheet -> langsung Tambah pakai pilihan default.
+const pos = async (p, n) => { await p.click(`.pos-item >> nth=${n}`); if (await p.$('.sheet')) await p.click('.sheet [data-action=pilihTambah]'); };
 const st = (p) => p.evaluate(() => JSON.parse(localStorage.getItem('racikin:v1')));
 const txt = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').trim();
 (async () => {
@@ -37,7 +39,7 @@ const txt = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').tr
   console.log('chips:', await p.$$eval('.pos-channels .chip span', s => s.map(x => x.textContent).join(' | ')));
   await p.click('label:has(input[name=channel][value=gofood])');
   console.log('harga gofood di grid:', await txt(p, '.pos-item .pos-price'));
-  await p.click('.pos-item >> nth=0'); await p.click('.pos-item >> nth=0');
+  await pos(p, 0); await pos(p, 0);
   await p.click('label:has(input[name=channel][value=toko])');
   console.log('ganti ke toko -> bar:', await txt(p, '.pos-bar div'));
   await p.click('label:has(input[name=channel][value=gofood])');
@@ -49,7 +51,7 @@ const txt = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').tr
   console.log('struk:', await txt(p, '.struk'));
   await p.screenshot({ path: OUT + '/3-struk-online.png' });
   // order toko tunai
-  await p.click('[data-action=baru]'); await p.click('label:has(input[name=channel][value=toko])'); await p.click('.pos-item >> nth=0');
+  await p.click('[data-action=baru]'); await p.click('label:has(input[name=channel][value=toko])'); await pos(p, 0);
   await p.click('[data-action=checkout]'); await p.click('[data-action=uang] >> nth=0'); await p.click('[data-action=selesai]'); await p.waitForSelector('.struk');
   // rekap & kas
   await p.click('label:has(input[value=rekap])'); await p.waitForSelector('.pos-order');

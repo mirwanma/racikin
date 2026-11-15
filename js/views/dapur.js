@@ -35,7 +35,7 @@ function kartu(t, now) {
     <ul class="kt-items">${(d.items || [])
       .map(
         (it, i) => `<li><button class="kt-item ${done.has(i) ? "ok" : ""}" data-action="item" data-id="${esc(t.id)}" data-i="${i}" ${t.status === "siap" ? "disabled" : ""}>
-          <span class="kt-qty">${it.qty}×</span><span>${esc(it.nama)}</span>${done.has(i) ? icon("check", 16) : ""}</button></li>`,
+          <span class="kt-qty">${it.qty}×</span><span>${esc(it.nama)}${it.opsi ? `<small class="kt-opsi">${esc(it.opsi)}</small>` : ""}</span>${done.has(i) ? icon("check", 16) : ""}</button></li>`,
       )
       .join("")}</ul>
     ${d.catatan ? `<p class="kt-note">${esc(d.catatan)}</p>` : ""}

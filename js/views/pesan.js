@@ -4,12 +4,14 @@ import { esc, rupiah, toast } from "../ui.js";
 import { render } from "../app.js";
 import { icon } from "../icons.js";
 import { ambilMenu, kirimPesanan, cekPesanan, bayarSimulasi, qrSvg } from "../meja.js";
+import { grupMenu, cekPilihan, pilihanAwal, aturan, kunciItem, labelOpsi } from "../varian.js";
 
 let token = null;
 let menu = null; // hasil get_table_menu
 let err = "";
 let loading = false;
-let cart = new Map(); // id -> qty
+let cart = new Map(); // kunci (menu + pilihan) -> { id, qty, opsi: [{ g, id, nama, harga }] }
+let pilih = null; // sheet varian { id, ids, error }
 let step = "menu"; // menu | checkout | bayar | status
 let cari = "";
 let busy = false;
@@ -41,8 +43,25 @@ const namaTersimpan = () => {
 };
 
 const tokenDariUrl = () => location.hash.replace(/^#\/?m\/?/, "").split(/[?/]/)[0];
-const items = () => [...cart.entries()].map(([id, qty]) => ({ m: menu.menu.find((x) => x.id === id), qty })).filter((x) => x.m && x.qty > 0);
-const total = () => items().reduce((a, x) => a + x.m.harga * x.qty, 0);
+// Bentuk data publik disesuaikan supaya fungsi varian.js bisa dipakai: { opsi } & { opsiIds }.
+const sv = () => ({ opsi: menu?.opsi || [] });
+const rv = (m) => ({ opsiIds: m?.opsi || [] });
+const punya = (m) => grupMenu(sv(), rv(m)).length > 0;
+const tambahan = (opsi) => (opsi || []).reduce((a, o) => a + (Number(o.harga) || 0), 0);
+const items = () =>
+  [...cart.entries()]
+    .map(([key, c]) => {
+      const m = menu.menu.find((x) => x.id === c.id);
+      return { key, m, qty: c.qty, opsi: c.opsi || [], harga: (m?.harga || 0) + tambahan(c.opsi) };
+    })
+    .filter((x) => x.m && x.qty > 0);
+const total = () => items().reduce((a, x) => a + x.harga * x.qty, 0);
+const qtyMenu = (id) => [...cart.values()].filter((c) => c.id === id).reduce((a, c) => a + c.qty, 0);
+const tambahCart = (id, opsi = []) => {
+  const key = kunciItem(id, opsi);
+  const c = cart.get(key);
+  cart.set(key, { id, opsi, qty: (c?.qty || 0) + 1 });
+};
 const jumlah = () => items().reduce((a, x) => a + x.qty, 0);
 
 async function muat() {
@@ -93,29 +112,70 @@ function menuView() {
     <div class="pm-list">
       ${list
         .map((m) => {
-          const q = cart.get(m.id) || 0;
+          const q = qtyMenu(m.id);
+          const varian = punya(m);
           return `<div class="pm-item ${m.habis ? "habis" : ""} ${q ? "in" : ""}">
             ${m.foto && /^https:\/\//.test(m.foto) ? `<img class="pm-img" src="${esc(m.foto)}" alt="" loading="lazy" decoding="async">` : ""}
-            <div class="pm-info"><b>${esc(m.nama)}</b><p class="mono">${rupiah(m.harga)}${m.habis ? " · habis" : ""}</p></div>
+            <div class="pm-info"><b>${esc(m.nama)}</b><p class="mono">${rupiah(m.harga)}${m.habis ? " · habis" : varian ? ` · ada pilihan` : ""}</p></div>
             ${
               m.habis
                 ? `<span class="tag">Habis</span>`
-                : q
-                  ? `<div class="stepper"><button class="icon-btn sm" data-action="kurang" data-id="${esc(m.id)}" aria-label="Kurangi">−</button><b>${q}</b><button class="icon-btn sm" data-action="tambah" data-id="${esc(m.id)}" aria-label="Tambah">+</button></div>`
+                : varian
+                  ? `<button class="btn ${q ? "primary" : "soft"} sm" data-action="pilih" data-id="${esc(m.id)}">${q ? `${q} · tambah` : `${icon("plus", 14)} Pilih`}</button>`
+                  : q
+                  ? `<div class="stepper"><button class="icon-btn sm" data-action="kurang" data-key="${esc(m.id)}" aria-label="Kurangi">−</button><b>${q}</b><button class="icon-btn sm" data-action="tambah" data-id="${esc(m.id)}" aria-label="Tambah">+</button></div>`
                   : `<button class="btn soft sm" data-action="tambah" data-id="${esc(m.id)}">${icon("plus", 14)} Tambah</button>`
             }
           </div>`;
         })
         .join("") || `<p class="muted">Menu tidak ditemukan.</p>`}
     </div>
-    ${jumlah() ? `<div class="pm-bar"><div><small class="mono">${jumlah()} item</small><b>${rupiah(total())}</b></div><button class="btn primary" data-action="checkout">Lanjut ${icon("chevron", 16)}</button></div>` : ""}`;
+    ${pilihSheet()}
+    ${jumlah() && !pilih ? `<div class="pm-bar"><div><small class="mono">${jumlah()} item</small><b>${rupiah(total())}</b></div><button class="btn primary" data-action="checkout">Lanjut ${icon("chevron", 16)}</button></div>` : ""}`;
+}
+
+function pilihSheet() {
+  if (!pilih) return "";
+  const m = menu.menu.find((x) => x.id === pilih.id);
+  if (!m) return "";
+  const ids = new Set(pilih.ids);
+  const cek = cekPilihan(sv(), rv(m), pilih.ids, {});
+  return `<div class="sheet-bg" data-action="pilihTutup"></div>
+    <section class="sheet" role="dialog" aria-modal="true" aria-label="Pilih varian ${esc(m.nama)}">
+      <header class="row-between"><div><h2 class="card-title" style="margin:0">${esc(m.nama)}</h2><p class="small muted">${rupiah(m.harga)}</p></div>
+        <button class="icon-btn sm" data-action="pilihTutup" aria-label="Tutup">${icon("x", 14)}</button></header>
+      <div class="sheet-body">
+      ${grupMenu(sv(), rv(m))
+        .map(
+          (g) => `<fieldset class="opsi-grup"><legend><b>${esc(g.nama)}</b> <small class="muted">${aturan(g)}</small></legend>
+          <div class="opsi-list">${g.pilihan
+            .map((p) => {
+              const on = ids.has(p.id);
+              return `<button type="button" class="opsi-btn ${on ? "on" : ""} ${g.tipe === "satu" ? "radio" : ""}" data-action="pilihOpsi" data-g="${esc(g.id)}" data-id="${esc(p.id)}" ${p.habis ? "disabled" : ""} aria-pressed="${on}">
+                <span class="opsi-dot">${on ? icon("check", 12) : ""}</span><span>${esc(p.nama)}</span><small class="mono">${p.habis ? "habis" : p.harga ? `+${rupiah(p.harga)}` : "gratis"}</small></button>`;
+            })
+            .join("")}</div></fieldset>`,
+        )
+        .join("")}
+      </div>
+      ${pilih.error ? `<p class="warn-box small">${esc(pilih.error)}</p>` : ""}
+      <button class="btn primary block lg" data-action="pilihTambah">Tambah · ${rupiah(m.harga + tambahan(cek.opsi))}</button>
+    </section>`;
 }
 
 function checkoutView() {
   return `${header()}
     <section class="card">
       <div class="row-between"><h2 class="card-title" style="margin:0">Pesananmu</h2><button class="btn ghost sm" data-action="balik">+ Tambah</button></div>
-      ${items().map((x) => `<div class="row-between pos-sum"><span>${x.qty}× ${esc(x.m.nama)}</span><b>${rupiah(x.m.harga * x.qty)}</b></div>`).join("")}
+      ${items()
+        .map(
+          (x) => `<div class="pos-line">
+            <div><b>${esc(x.m.nama)}</b>${x.opsi.length ? `<p class="small pos-opsi">${esc(labelOpsi(x))}</p>` : ""}<p class="small muted">${rupiah(x.harga)}</p></div>
+            <div class="stepper"><button class="icon-btn sm" data-action="kurang" data-key="${esc(x.key)}" aria-label="Kurangi">−</button><b>${x.qty}</b><button class="icon-btn sm" data-action="lebih" data-key="${esc(x.key)}" aria-label="Tambah">+</button></div>
+            <b class="pos-line-total">${rupiah(x.harga * x.qty)}</b>
+          </div>`,
+        )
+        .join("")}
       <div class="row-between pos-total"><span>Total</span><b>${rupiah(total())}</b></div>
     </section>
     <form class="card stack" data-form="pesan">
@@ -183,7 +243,7 @@ function statusView() {
       <p class="pm-paid ${o.bayar_status}">${o.bayar_status === "lunas" ? `${icon("check", 14)} Lunas${o.metode === "digital" ? " (digital, simulasi)" : ""}` : `Bayar di kasir: ${rupiah(o.total)} · sebutkan kode <b class="mono">${esc(o.kode)}</b>`}</p>
     </section>
     <section class="card">
-      ${(o.items || []).map((x) => `<div class="row-between pos-sum"><span>${x.qty}× ${esc(x.nama)}</span><b>${rupiah(x.harga * x.qty)}</b></div>`).join("")}
+      ${(o.items || []).map((x) => `<div class="row-between pos-sum"><span>${x.qty}× ${esc(x.nama)}${x.opsi?.length ? `<small class="struk-opsi">${esc(labelOpsi(x))}</small>` : ""}</span><b>${rupiah(x.harga * x.qty)}</b></div>`).join("")}
       <div class="row-between pos-total"><span>Total</span><b>${rupiah(o.total)}</b></div>
       ${o.catatan ? `<p class="small muted">Catatan: ${esc(o.catatan)}</p>` : ""}
     </section>
@@ -199,6 +259,7 @@ export const pesan = {
       menu = null;
       err = "";
       cart = new Map();
+      pilih = null;
       step = "menu";
       order = null;
     }
@@ -234,12 +295,60 @@ export const pesan = {
 
   actions: {
     tambah(el) {
-      cart.set(el.dataset.id, (cart.get(el.dataset.id) || 0) + 1);
+      tambahCart(el.dataset.id);
+      render();
+    },
+    lebih(el) {
+      const c = cart.get(el.dataset.key);
+      if (c) c.qty++;
       render();
     },
     kurang(el) {
-      const q = (cart.get(el.dataset.id) || 0) - 1;
-      q > 0 ? cart.set(el.dataset.id, q) : cart.delete(el.dataset.id);
+      const c = cart.get(el.dataset.key);
+      if (c && --c.qty <= 0) cart.delete(el.dataset.key);
+      if (!jumlah() && step === "checkout") step = "menu";
+      render();
+    },
+    pilih(el) {
+      const m = menu.menu.find((x) => x.id === el.dataset.id);
+      if (!m) return;
+      pilih = { id: m.id, ids: pilihanAwal(sv(), rv(m), {}), error: "" };
+      render();
+    },
+    pilihOpsi(el) {
+      const m = menu.menu.find((x) => x.id === pilih?.id);
+      const g = grupMenu(sv(), rv(m)).find((x) => x.id === el.dataset.g);
+      if (!g) return;
+      const id = el.dataset.id;
+      const ids = new Set(pilih.ids);
+      if (ids.has(id)) {
+        if (!(g.tipe === "satu" && g.wajib)) ids.delete(id);
+      } else {
+        if (g.tipe === "satu") for (const p of g.pilihan) ids.delete(p.id);
+        else if (g.maks && g.pilihan.filter((p) => ids.has(p.id)).length >= g.maks) {
+          pilih.error = `${g.nama}: maksimal ${g.maks}`;
+          return render();
+        }
+        ids.add(id);
+      }
+      pilih = { ...pilih, ids: [...ids], error: "" };
+      render();
+    },
+    pilihTambah() {
+      const m = menu.menu.find((x) => x.id === pilih?.id);
+      if (!m) return (pilih = null), render();
+      const cek = cekPilihan(sv(), rv(m), pilih.ids, {});
+      if (!cek.ok) {
+        pilih.error = cek.error;
+        return render();
+      }
+      tambahCart(m.id, cek.opsi);
+      pilih = null;
+      toast(`${m.nama} masuk pesanan`);
+      render();
+    },
+    pilihTutup() {
+      pilih = null;
       render();
     },
     checkout() {
@@ -288,7 +397,7 @@ export const pesan = {
         } catch {
           /* abaikan */
         }
-        const r = await kirimPesanan(token, items().map((x) => ({ id: x.m.id, qty: x.qty })), nama, String(fd.get("catatan") || ""), metode);
+        const r = await kirimPesanan(token, items().map((x) => ({ id: x.m.id, qty: x.qty, ...(x.opsi.length ? { opsi: x.opsi.map((o) => o.id) } : {}) })), nama, String(fd.get("catatan") || ""), metode);
         simpan({ id: r.id, secret: r.secret });
         order = await cekPesanan(r.id, r.secret);
         cart = new Map();

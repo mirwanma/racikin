@@ -4,9 +4,9 @@
 // (seed tetap), dan semua angka saling cocok: Kas = rekap kasir, stok = belanja - pemakaian.
 import { uid } from "./store.js";
 import { todayISO, addDays } from "./ui.js";
-import { kebutuhan } from "./stok-utils.js";
+import { hargaItem, kunciItem, pakaiItem } from "./varian.js";
 import { reconcile, SIMPAN_HARI } from "./pos.js";
-import { hargaDi, komisiRp } from "./online.js";
+import { komisiRp } from "./online.js";
 import { newToken } from "./loyalty.js";
 import { demo } from "./demo.js";
 import { ringkasan } from "./shift.js";
@@ -96,6 +96,14 @@ const MENU = [
   ["air", "Air Mineral", 4000, [["air", 1]], 20, true],
 ];
 
+// Grup varian: [kode, nama, tipe, wajib, maks, [[kode, nama, harga, [[bahan, qty]], bobot]], menu yang memakai]
+const OPSI = [
+  ["level", "Level pedas", "satu", true, 0, [["l0", "Tidak pedas", 0, [], 3], ["l1", "Level 1", 0, [["cabai", 3]], 4], ["l3", "Level 3", 0, [["cabai", 8]], 5], ["l5", "Level 5", 1000, [["cabai", 15]], 3]], ["ori", "telur", "baksotg", "komplit", "keju", "paket", "baksotahu"]],
+  ["topping", "Topping tambahan", "banyak", false, 3, [["tlr", "Telur", 4000, [["telur", 1]], 4], ["kj", "Keju", 3000, [["keju", 15]], 3], ["bks", "Bakso", 4000, [["bakso", 3]], 3], ["bg", "Bawang goreng ekstra", 1000, [["bgoreng", 5]], 2]], ["ori", "pedas", "telur", "baksotg", "crispy", "walik"]],
+  ["ukuran", "Ukuran", "satu", true, 0, [["reg", "Reguler", 0, [], 7], ["jmb", "Jumbo", 3000, [["teh", 1], ["gula", 10], ["es", 100]], 3]], ["esteh"]],
+  ["manis", "Tingkat manis", "satu", false, 0, [["nrm", "Normal", 0, [], 7], ["krg", "Kurang manis", 0, [], 3]], ["tehaaren", "esjeruk"]],
+];
+
 const NAMA = [
   "Dimas Pratama", "Sinta Ayu", "Rizky Maulana", "Nadia Putri", "Fajar Nugroho", "Alya Rahma", "Bagas Saputra", "Citra Lestari",
   "Galih Ramadhan", "Intan Permata", "Yoga Aditya", "Salsa Nabila", "Reza Firmansyah", "Tiara Anggraini", "Ilham Hidayat", "Putri Amelia",
@@ -150,6 +158,21 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH }
     hasil: 1,
     items: items.map(([b, qty]) => ({ bahanId: idB[b], qty })),
   }));
+  // Varian & topping
+  const opsi = OPSI.map(([k, nama, tipe, wajib, maks, pilihan]) => ({
+    id: uid() + k,
+    nama,
+    tipe,
+    wajib,
+    ...(maks ? { maks } : {}),
+    pilihan: pilihan.map(([pk, pn, harga, items]) => ({ id: uid() + pk, nama: pn, harga, items: items.map(([b, qty]) => ({ bahanId: idB[b], qty })) })),
+  }));
+  MENU.forEach(([k], i) => {
+    const ids = OPSI.map(([, , , , , , dipakai], j) => (dipakai.includes(k) ? opsi[j].id : null)).filter(Boolean);
+    if (ids.length) resep[i].opsiIds = ids;
+  });
+  const bobotPilihan = Object.fromEntries(OPSI.flatMap(([, , , , , pilihan], j) => pilihan.map(([, , , , w], x) => [opsi[j].pilihan[x].id, w])));
+  const sOpsi = { opsi, resep };
   const menu = MENU.map(([k, , , , bobot, minum = false, mulai = 0], i) => ({ k, bobot, minum, mulai, resep: resep[i] }));
   const makanan = menu.filter((m) => !m.minum);
   const minuman = menu.filter((m) => m.minum);
@@ -181,7 +204,7 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH }
     },
     harga: {},
   };
-  const sOnline = { online };
+  const sOnline = { online, opsi, resep };
 
   // ---------- Simulasi penjualan ----------
   const orders = [];
@@ -204,11 +227,32 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH }
     jamList.forEach((jam, i) => {
       const channel = weighted(["toko", "gofood", "grabfood", "shopeefood"], (c) => ({ toko: 78, gofood: 11, grabfood: 8, shopeefood: 3 })[c]);
       const cart = new Map();
-      const add = (m, q = 1) => cart.set(m.k, { m, qty: (cart.get(m.k)?.qty || 0) + q });
+      // Pilihan varian acak: grup wajib selalu dipilih, topping sesekali (kadang 2).
+      const acakOpsi = (m) => {
+        const out = [];
+        for (const g of opsi.filter((x) => (m.resep.opsiIds || []).includes(x.id))) {
+          if (g.tipe === "satu") {
+            if (!g.wajib && !chance(0.35)) continue;
+            const p = weighted(g.pilihan, (x) => bobotPilihan[x.id]);
+            out.push({ g: g.id, id: p.id, nama: p.nama, harga: p.harga });
+          } else if (chance(0.3)) {
+            const n = chance(0.25) ? 2 : 1;
+            const dipilih = new Set();
+            while (dipilih.size < n) dipilih.add(weighted(g.pilihan, (x) => bobotPilihan[x.id]));
+            for (const p of g.pilihan.filter((x) => dipilih.has(x))) out.push({ g: g.id, id: p.id, nama: p.nama, harga: p.harga });
+          }
+        }
+        return out;
+      };
+      const add = (m, q = 1) => {
+        const o = acakOpsi(m);
+        const key = kunciItem(m.k, o);
+        cart.set(key, { m, opsi: o, qty: (cart.get(key)?.qty || 0) + q });
+      };
       const nMakan = weighted([1, 2, 3], (x) => ({ 1: 62, 2: 28, 3: 10 })[x]);
       for (let j = 0; j < nMakan; j++) add(weighted(tersedia(makanan), (m) => m.bobot), chance(0.12) ? 2 : 1);
       if (chance(channel === "toko" ? 0.55 : 0.4)) for (let j = 0; j < nMakan && chance(0.75); j++) add(weighted(tersedia(minuman), (m) => m.bobot));
-      const items = [...cart.values()].map(({ m, qty }) => ({ resepId: m.resep.id, nama: m.resep.nama, harga: hargaDi(sOnline, m.resep, channel), qty }));
+      const items = [...cart.values()].map(({ m, qty, opsi: o }) => ({ resepId: m.resep.id, nama: m.resep.nama, harga: hargaItem(sOnline, m.resep, o, channel), qty, ...(o.length ? { opsi: o } : {}) }));
       const sub = items.reduce((a, it) => a + it.harga * it.qty, 0);
       const diskon = channel === "toko" && chance(0.04) ? 2000 : 0;
       const total = sub - diskon;
@@ -261,10 +305,7 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH }
           stempelLog.push({ id: uid(), tanggal, pelangganId: p.id, delta: -1, alasan: "koreksi", catatan: `Batal kasir #${order.no}` });
         }
       } else {
-        for (const it of items) {
-          const rr = resep.find((x) => x.id === it.resepId);
-          for (const k of kebutuhan(rr, it.qty)) pakaiHarian[tanggal][k.bahanId] = (pakaiHarian[tanggal][k.bahanId] || 0) + k.qty;
-        }
+        for (const it of items) for (const k of pakaiItem(sOpsi, it)) pakaiHarian[tanggal][k.bahanId] = (pakaiHarian[tanggal][k.bahanId] || 0) + k.qty;
       }
       orders.push(order);
     });
@@ -422,6 +463,7 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH }
     chat: [],
     bahan,
     resep,
+    opsi,
     stokLog,
     online,
     orders,

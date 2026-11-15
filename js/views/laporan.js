@@ -94,6 +94,14 @@ function menuCard(r) {
     <h2 class="card-title">Menu paling untung</h2>
     <table class="lr-table"><thead><tr><th>Menu</th><th class="num">Porsi</th><th class="num">Untung</th><th class="num">Margin</th></tr></thead><tbody>${top.map(row).join("")}</tbody></table>
     ${tipis.length ? `<h4>Margin paling tipis</h4><table class="lr-table"><tbody>${tipis.map(row).join("")}</tbody></table>` : ""}
+    ${
+      r.opsi?.length
+        ? `<h4>Varian & topping terlaris</h4><table class="lr-table"><thead><tr><th>Pilihan</th><th class="num">Porsi</th><th class="num">Untung +/−</th></tr></thead><tbody>${r.opsi
+            .slice(0, 5)
+            .map((o) => `<tr><td>${esc(o.nama)} <small class="muted">${esc(o.grup)}</small></td><td class="num">${o.porsi}</td><td class="num">${short(o.untung)}</td></tr>`)
+            .join("")}</tbody></table><p class="small muted">Pilihan gratis yang pakai bahan (mis. level pedas) bikin untung minus. Pertimbangkan kasih harga tambahan.</p>`
+        : ""
+    }
     <p class="small muted">Perkiraan pakai harga toko & HPP resep saat ini. Untung = porsi × (harga − HPP), sebelum biaya operasional.</p>
   </section>`;
 }

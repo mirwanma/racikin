@@ -1,6 +1,8 @@
 // E2E Racikin (rotate.js). Lihat tests/README.md untuk cara menjalankan.
 const { chromium } = require('playwright');
 const B = (process.env.RACIKIN_URL || 'http://localhost:8766/'), OUT = process.argv[2];
+// Klik menu di Kasir; menu dengan varian membuka sheet -> langsung Tambah pakai pilihan default.
+const pos = async (p, n) => { await p.click(`.pos-item >> nth=${n}`); if (await p.$('.sheet')) await p.click('.sheet [data-action=pilihTambah]'); };
 const txt = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').trim();
 (async () => {
   const b = await chromium.launch();
@@ -9,13 +11,13 @@ const txt = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').tr
   p.on('dialog', d => d.accept());
   await p.goto(B); await p.click('[data-action=dummy]'); await p.waitForSelector('.journey');
   await p.goto(B + '#/kasir'); await p.waitForSelector('.pos-split');
-  await p.click('.pos-item >> nth=0'); await p.click('.pos-item >> nth=1');
+  await pos(p, 0); await pos(p, 1);
   console.log('landscape: split', !!(await p.$('.pos-split')), '| tombol selesai terlihat', await p.locator('[data-action=selesai]').isVisible(), '| rail kiri', await p.evaluate(() => getComputedStyle(document.querySelector('.tabbar')).flexDirection));
   const box = await p.locator('[data-action=selesai]').boundingBox();
   console.log('tombol selesai di dalam layar:', box.y + box.height <= 820);
   await p.click('[data-action=uang] >> nth=0'); await p.click('[data-action=selesai]'); await p.waitForSelector('.pos-right .struk');
   console.log('struk di panel kanan:', (await txt(p, '.pos-right .struk-head')));
-  await p.click('.pos-item >> nth=2');
+  await pos(p, 2);
   console.log('klik menu saat struk -> panel:', (await txt(p, '.pos-right .card-title')).slice(0, 30));
   // Putar ke portrait
   await p.setViewportSize({ width: 820, height: 1180 }); await p.waitForTimeout(300);
