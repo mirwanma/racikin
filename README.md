@@ -165,6 +165,20 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - Semua angka saling cocok: Kas = rekap kasir per hari, stok = total riwayat stok, stempel = total log stempel. Beberapa bahan sengaja menipis & beberapa pelanggan "perlu diajak balik" supaya fitur pengingat kelihatan.
 - Mengganti data bisnis di perangkat (dan di cloud kalau sedang login); setelan perangkat tetap.
 
+## Akun demo tim TAHGUY
+Untuk mencoba mode tim, dapur, dan pesan meja di beberapa perangkat, ada 4 akun demo (satu tim) di project Supabase:
+
+| Peran | Email | Nama di tim |
+|---|---|---|
+| Pemilik | `pemilik.tahguy@racikin.test` | Raka |
+| Kasir | `kasir.tahguy@racikin.test` | Rina |
+| Manajer | `manajer.tahguy@racikin.test` | Dodi |
+| Dapur | `dapur.tahguy@racikin.test` | Sari |
+
+- Password **tidak** disimpan di repo (tanya pemilik project). Akun pemilik sudah berisi data contoh 2 bulan, mode dapur & pesan meja aktif (8 meja).
+- Data contoh mencatat order & shift atas nama yang jaga: Rina (hari kerja), Dodi (akhir pekan), Pemilik (sesekali). Kalau data contoh dimuat oleh pemilik yang punya tim, nama & ID diambil dari anggota tim sungguhan.
+- Hapus akun demo dari dashboard Supabase (Authentication → Users) kalau sudah tidak dipakai.
+
 ## Jalanin lokal
 Tanpa build. Dari root repo:
 
