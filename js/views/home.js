@@ -7,7 +7,7 @@ import { syncBadge } from "./akun.js";
 import { cloud } from "../cloud.js";
 import { program, siapTukar, perluDiajak } from "../loyalty.js";
 import { menipis, belumDiisi, bahanMap, bisaDibuat, fmtQty } from "../stok-utils.js";
-import { langkah, isJalan, tawarNaik, hariJualan, MASALAH } from "../tahap.js";
+import { langkah, isJalan, tawarNaik, hariJualan, fokus } from "../tahap.js";
 
 /** Langkah di Beranda (beda untuk usaha baru vs yang sudah jalan, lihat js/tahap.js). */
 export const journey = (s) => langkah(s, { anggotaTim: cloud.team?.role === "owner" ? cloud.team.anggota || 0 : 0 });
@@ -99,7 +99,7 @@ export const home = {
           <h2 class="card-title">${isJalan(s) ? "Beresin usahamu" : "Perjalanan bisnismu"}</h2>
           <span class="pill">${done}/${steps.length}</span>
         </div>
-        ${isJalan(s) && p.masalah?.length ? `<p class="small muted">Fokus: ${p.masalah.map((m) => esc(MASALAH.find((x) => x.id === m)?.nama || m)).join(" · ")}</p>` : ""}
+        ${isJalan(s) && fokus(p).length ? `<p class="small muted">Fokus: ${fokus(p).map(esc).join(" · ")}</p>` : ""}
         <div class="progress"><span style="width:${(done / steps.length) * 100}%"></span></div>
         <div class="steps">
           ${steps.map((x, i) => `<a href="${x.href}" class="step ${x.done ? "done" : ""} ${x === next ? "next" : ""}"><span class="step-icon">${x.done ? icon("check", 15) : i + 1}</span><span>${x.label}</span></a>`).join("")}

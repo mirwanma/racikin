@@ -33,6 +33,7 @@ const steps = (p) => p.$$eval('.journey .step', (a) => a.map((x) => x.textConten
   await p.click('label.chip:has(input[name=masalah][value=karyawan])');
   await p.click('label.chip:has(input[name=masalah][value=sepi])');
   ok(!(await p.isChecked('input[name=masalah][value=sepi]')), 'masalah maksimal 2');
+  await p.fill('textarea[name=masalahLain]', 'Sering kehabisan kuah pas jam makan siang');
   await p.click('label.chip:has(input[name=waktu][value="Full-time"])');
   await p.screenshot({ path: OUT + '/t1-profil-jalan.png', fullPage: true });
   await p.click('form[data-form=save] button.primary'); await p.waitForSelector('.journey');
@@ -40,6 +41,8 @@ const steps = (p) => p.$$eval('.journey .step', (a) => a.map((x) => x.textConten
   console.log('profil:', JSON.stringify(s.profile));
   ok(s.profile.tahap === 'jalan' && s.profile.karyawan === 2 && s.profile.masalah.join() === 'stok,karyawan' && s.profile.modal === 0, 'profil "udah jalan" tersimpan');
   ok(s.profile.ide.startsWith('Warung bakso'), 'cerita usaha tersimpan di field ide (konteks AI)');
+  ok(s.profile.masalahLain === 'Sering kehabisan kuah pas jam makan siang', 'masalah lain tersimpan');
+  ok((await txt(p, '.journey')).includes('Sering kehabisan kuah'), 'masalah lain tampil di baris Fokus');
   console.log('langkah:', await steps(p));
   ok((await txt(p, '.journey h2')) === 'Beresin usahamu', 'judul beranda "Beresin usahamu"');
   const st1 = await steps(p);
@@ -63,7 +66,7 @@ const steps = (p) => p.$$eval('.journey .step', (a) => a.map((x) => x.textConten
   await p.fill('input[name=modal]', '20000000');
   await p.click('form[data-form=save] button.primary'); await p.waitForTimeout(400);
   s = await st(p);
-  ok(s.profile.tahap === 'ide' && s.profile.modal === 20000000 && s.profile.karyawan === 2, 'pindah ke ide: modal tersimpan, data usaha jalan tetap ada');
+  ok(s.profile.tahap === 'ide' && s.profile.modal === 20000000 && s.profile.karyawan === 2 && !!s.profile.masalahLain, 'pindah ke ide: modal tersimpan, data usaha jalan tetap ada');
   await p.goto(B); await p.waitForSelector('.journey');
   ok((await steps(p))[0].includes('Analisa ide'), 'beranda ide: langkah analisa ide');
 

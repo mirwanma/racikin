@@ -3,7 +3,7 @@ import { store } from "../store.js";
 import { esc, toast } from "../ui.js";
 import { go } from "../app.js";
 import { muatDummy } from "./_dummy.js";
-import { TAHAP, LAMA, SALURAN, MASALAH, MAKS_MASALAH } from "../tahap.js";
+import { TAHAP, LAMA, SALURAN, MASALAH, MAKS_MASALAH, MAKS_MASALAH_LAIN } from "../tahap.js";
 
 export const JENIS = ["Makanan berat", "Jajanan / snack", "Minuman / kopi", "Dessert", "Frozen food", "Katering"];
 export const KONSEP = ["Gerobak / booth", "Kios / ruko", "Online / dari rumah", "Cloud kitchen"];
@@ -83,6 +83,8 @@ export const profil = {
           <div class="field"><span>Masalah yang paling mau diberesin <small>(pilih maks. ${MAKS_MASALAH})</small></span>
             <div class="chips">${MASALAH.map((m) => `<label class="chip"><input type="checkbox" name="masalah" value="${m.id}" data-change="masalah" ${(p.masalah || []).includes(m.id) ? "checked" : ""}><span>${esc(m.nama)}</span></label>`).join("")}</div>
           </div>
+          <label class="field"><span>Masalah lain <small>(opsional, tulis bebas)</small></span>
+            <textarea name="masalahLain" rows="2" maxlength="${MAKS_MASALAH_LAIN}" placeholder="cth: sering kehabisan kuah pas jam makan siang, susah cari karyawan yang awet">${esc(p.masalahLain || "")}</textarea></label>
         </div>
 
         <div class="card stack">
@@ -171,10 +173,11 @@ export const profil = {
           karyawan: Number(fd.get("karyawan")) || 0,
           saluran: fd.getAll("saluran"),
           masalah: fd.getAll("masalah").slice(0, MAKS_MASALAH),
+          masalahLain: String(fd.get("masalahLain") || "").trim().slice(0, MAKS_MASALAH_LAIN),
         });
       } else {
         // Data "udah jalan" tetap disimpan kalau sempat diisi (bisa balik ke tahap itu tanpa isi ulang).
-        for (const k of ["lama", "omzetHarian", "karyawan", "saluran", "masalah", "tolakNaik"]) if (lama[k] !== undefined) profile[k] = lama[k];
+        for (const k of ["lama", "omzetHarian", "karyawan", "saluran", "masalah", "masalahLain", "tolakNaik"]) if (lama[k] !== undefined) profile[k] = lama[k];
       }
       const first = !store.get().profile;
       store.set({ profile });

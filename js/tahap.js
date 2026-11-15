@@ -17,6 +17,14 @@ export const MASALAH = [
   { id: "online", nama: "Ribet atur harga GoFood dkk" },
 ];
 export const MAKS_MASALAH = 2;
+export const MAKS_MASALAH_LAIN = 200; // isian bebas "Masalah lain" (opsional)
+
+/** Teks fokus untuk Beranda: masalah yang dipilih + isian bebas. */
+export function fokus(p) {
+  const list = (p?.masalah || []).map((m) => MASALAH.find((x) => x.id === m)?.nama || m);
+  if (p?.masalahLain?.trim()) list.push(p.masalahLain.trim());
+  return list;
+}
 export const HARI_NAIK = 14; // hari jualan di Kasir sebelum ditawari pindah ke tampilan "udah jalan"
 
 export const tahapOf = (s) => (s.profile?.tahap === "jalan" ? "jalan" : "ide");

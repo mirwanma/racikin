@@ -47,4 +47,9 @@ assert.equal(T.tawarNaik({ ...rame, posHarian: { ...rame.posHarian, "2026-10-01"
 assert.equal(T.tawarNaik({ ...rame, profile: { tolakNaik: true } }), false);
 assert.equal(T.tawarNaik({ ...rame, profile: { tahap: "jalan" } }), false);
 
+// Fokus = masalah dipilih + isian bebas
+assert.deepEqual(T.fokus({ masalah: ["stok"], masalahLain: "  kuah sering habis " }), ["Stok sering habis atau bocor", "kuah sering habis"]);
+assert.deepEqual(T.fokus({ masalah: [], masalahLain: "   " }), []);
+assert.deepEqual(T.fokus(null), []);
+
 console.log("tahap OK");
