@@ -117,6 +117,10 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Terhubung ke Kasir (sheet pilihan), harga online, stok & batal order, struk/WA, tiket dapur, rekap harian, laporan laba rugi (HPP pilihan), dan pesan lewat meja (validasi & harga di server).
 - Berikutnya (belum): pilihan yang mengganti bahan resep atau mengalikan porsi (ukuran L = 1,5×).
 
+### Fase 17: Usaha yang sudah jalan, tahap A (selesai)
+- Pilihan tahap di onboarding (baru ide / udah jalan), profil versi usaha berjalan (lama usaha, omzet, karyawan, saluran, masalah utama), langkah Beranda yang disesuaikan & diurutkan menurut masalah utama, halaman Bisnis versi "Usahamu", tawaran naik tahap setelah 14 hari jualan.
+- Berikutnya: **tahap B** input menu cepat pakai AI (teks/foto papan menu) + layar stok & saldo awal; **tahap C** "Cek kesehatan usaha" dari data asli + impor riwayat penjualan (CSV/Excel/laporan ojol).
+
 ### Di luar MVP (fase berikutnya)
 Foto produk AI (gambar), integrasi WhatsApp, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
 

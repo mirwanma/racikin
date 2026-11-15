@@ -5,7 +5,7 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 **Live:** https://racikin.vercel.app (auto-deploy dari `main` via Vercel)
 
 ## Fitur MVP
-- **Profil Bisnis**: onboarding yang jadi konteks semua AI (ada tombol "Isi contoh TAHGUY")
+- **Profil Bisnis**: onboarding yang jadi konteks semua AI (ada tombol "Isi contoh TAHGUY"). Dua pintu masuk: **Baru ide / mau mulai** atau **Udah jalan** (lihat "Tahap usaha")
 - **Analisa Ide**: skor kelayakan, SWOT, persona, kompetitor, harga/HPP/margin, risiko, validasi
 - **RAB & Modal**: RAB per kategori (normal/hemat), realisasi, biaya bulanan, kalkulator BEP, export CSV
 - **Brand Kit**: nama, tagline, story, tone, palet warna, font, konsep logo, ide menu & kemasan
@@ -29,6 +29,14 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - **Catat penjualan** per menu mengurangi stok semua bahan resep dan (opsional) mencatat pemasukan *Penjualan* di Kas.
 - AI task `generate_recipe` menyusun bahan + takaran + estimasi harga (ditandai "estimasi" sampai diganti harga belanja asli).
 - Rata-rata HPP resep dipakai sebagai default HPP di kalkulator BEP, dan ringkasan menu ikut jadi konteks Mentor AI.
+
+## Tahap usaha (baru ide vs udah jalan)
+- Pertanyaan pertama di Profil: **Baru ide / mau mulai** atau **Udah jalan** (`profile.tahap`: `ide` / `jalan`; profil lama tanpa field ini = `ide`).
+- **Udah jalan** mengganti isian ide & modal dengan: cerita usaha, nama usaha (wajib), sudah jalan berapa lama, omzet rata-rata/hari, jumlah karyawan, harga rata-rata, saluran jualan, dan **maks. 2 masalah utama** (untung tipis, catatan berantakan, stok bocor, kontrol karyawan, pembeli sepi, harga online).
+- **Beranda** ("Beresin usahamu"): Masukin menu & resep → stok awal → Kasir → (harga online kalau jualan di ojol) → (ajak tim kalau ada karyawan) → (kartu stempel & konten kalau pembeli sepi) → seminggu jualan, cek untung. Langkah yang terkait masalah utama didahulukan; menu selalu pertama.
+- **Halaman Bisnis** jadi "Usahamu": operasional dulu, modul perencanaan pindah ke **Alat pengembangan** (cek ulang konsep, rencana renovasi/cabang, rebranding, checklist online, Studio Brand).
+- Usaha tahap ide yang sudah **14 hari jualan** di Kasir ditawari pindah ke tampilan "udah jalan" (bisa "Nanti aja"). Isian "udah jalan" tetap disimpan kalau pindah balik ke tahap ide.
+- Data contoh TAHGUY = usaha udah jalan (fokus: untung & stok). Logika di `js/tahap.js`.
 
 ## Varian & topping
 - Tab **Varian** di Stok & Resep (`#/stok?tab=varian`), editor `#/varian?id=…` (ada contoh cepat: level pedas, topping, ukuran, tingkat manis).
