@@ -1,5 +1,5 @@
 import { store } from "./store.js";
-import { $, esc, toast } from "./ui.js";
+import { $, esc, toast, isWide, WIDE_QUERY } from "./ui.js";
 import { home } from "./views/home.js";
 import { profil } from "./views/profil.js";
 import { bisnis } from "./views/bisnis.js";
@@ -34,6 +34,8 @@ const KASIR_ROUTES = new Set(["kasir", "pelanggan", "stok", "akun", "setelan", "
 const tabOfKasir = { kasir: "kasir", pelanggan: "pelanggan", stok: "stok", akun: "akun", setelan: "akun", tim: "akun", notif: "akun", shift: "kasir" };
 const FREE_ROUTES = ["profil", "setelan", "akun", "kartu", "gabung", "tim", "notif"];
 
+// Halaman yang di layar lebar disusun dua kolom (kartu mengalir kiri-kanan).
+const COLS = new Set(["home", "bisnis", "kas", "laporan", "pelanggan", "stok", "belanja", "shift", "tim", "setelan", "akun", "notif", "ide", "rab", "brand", "aktivasi", "konten", "online", "studio"]);
 const view = $("#view");
 let current = home;
 
@@ -62,6 +64,7 @@ export function render() {
     return;
   }
   current = routes[name] || home;
+  view.classList.toggle("cols", COLS.has(name || "home"));
   view.innerHTML = current.render(store.get());
   current.after?.(view);
   const tab = peran === "kasir" ? tabOfKasir[name] : tabOf[name];
@@ -129,6 +132,14 @@ function softRender() {
     return;
   }
   render();
+}
+// Tablet diputar / jendela diubah ukurannya: render ulang supaya tata letak ikut berganti.
+document.body.dataset.wide = isWide() ? "1" : "";
+if (typeof matchMedia === "function") {
+  matchMedia(WIDE_QUERY).addEventListener?.("change", () => {
+    document.body.dataset.wide = isWide() ? "1" : "";
+    softRender();
+  });
 }
 initCloud();
 onCloudChange(softRender);

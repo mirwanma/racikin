@@ -117,6 +117,12 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - Langganan per perangkat di `push_subscriptions` (ditulis lewat `push_subscribe` / `push_unsubscribe`, hanya host layanan push resmi yang diterima). Langganan mati (404/410) dihapus otomatis. Logout = pengingat di perangkat itu dimatikan.
 - iPhone/iPad: hanya bisa setelah Racikin dipasang ke Layar Utama (iOS 16.4+).
 
+## Tablet & layar lebar
+- **≥ 900px** (tablet landscape, laptop): tab bar jadi **rail navigasi di kiri**; konten lebih lebar dan sebagian besar halaman disusun **dua kolom** (kartu mengalir kiri-kanan; 3 kolom untuk Beranda & Bisnis di ≥ 1400px).
+- **Kasir dua panel**: menu di kiri, pesanan + pelanggan + pembayaran di kanan. Tinggi pas satu layar; daftar pesanan yang di-scroll, jadi tombol **Selesaikan** selalu terlihat. Struk muncul di panel kanan, ketuk menu lagi untuk pesanan berikutnya.
+- **700–899px** (tablet portrait): tetap satu kolom & tab bar bawah, konten sedikit lebih lebar, menu kasir 3 kolom.
+- Rotasi layar langsung mengganti tata letak tanpa kehilangan keranjang (`isWide()` di `js/ui.js`, daftar halaman dua kolom `COLS` di `js/app.js`).
+
 ## Desain: "papan warung"
 - **Warna**: kuning marigold `#FFC531` (utama) + hitam tinta `#1B1916` di atas kertas krem `#F6EFDC`. Aksen hemat: merah cabai (minus/peringatan) & hijau daun (untung/selesai). Mode gelap otomatis.
 - **Font**: Archivo (judul pakai versi lebar/expanded, kesan papan nama) + IBM Plex Mono untuk label & angka kecil (kesan struk).

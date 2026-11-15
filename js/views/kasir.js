@@ -1,5 +1,5 @@
 import { store, uid } from "../store.js";
-import { esc, rupiah, toast, todayISO } from "../ui.js";
+import { esc, rupiah, toast, todayISO, isWide } from "../ui.js";
 import { render } from "../app.js";
 import { icon } from "../icons.js";
 import { head } from "./_shared.js";
@@ -105,7 +105,7 @@ function menuView(s) {
       </form>
     </details>
     ${
-      cart.length
+      cart.length && !isWide()
         ? `<div class="pos-bar">
             <button class="btn ghost sm" data-action="clear" aria-label="Kosongkan">${icon("x", 14)}</button>
             <div><small class="mono">${count()} item${channel !== "toko" ? ` · ${esc(channelNama(channel))}` : ""}</small><b>${rupiah(subtotal(cart))}</b></div>
@@ -124,7 +124,7 @@ function bayarView(s) {
   const pelanggan = s.loyalty && s.pelanggan.length;
   return `
     <section class="card">
-      <div class="row-between"><h2 class="card-title">Pesanan${online ? ` <span class="tag">${esc(channelNama(channel))}</span>` : ""}</h2><button class="btn ghost sm" data-action="back">+ Tambah item</button></div>
+      <div class="row-between"><h2 class="card-title">Pesanan${online ? ` <span class="tag">${esc(channelNama(channel))}</span>` : ""}</h2>${isWide() ? `<button class="btn ghost sm" data-action="clear">Kosongkan</button>` : `<button class="btn ghost sm" data-action="back">+ Tambah item</button>`}</div>
       ${cart
         .map(
           (c) => `<div class="pos-line">
@@ -287,6 +287,15 @@ export const kasir = {
       <label><input type="radio" name="tab" value="jual" data-change="tab" ${tab === "jual" ? "checked" : ""}><span>Jual</span></label>
       <label><input type="radio" name="tab" value="rekap" data-change="tab" ${tab === "rekap" ? "checked" : ""}><span>Hari ini</span></label>
     </div>`;
+    if (isWide() && tab === "jual") {
+      // Tablet landscape: menu di kiri, keranjang & pembayaran selalu terlihat di kanan.
+      const panel = cart.length
+        ? bayarView(s)
+        : step === "struk" && last
+          ? strukView(s)
+          : `<section class="card empty pos-empty"><div class="empty-icon">${icon("register", 30)}</div><h3>Keranjang kosong</h3><p>Ketuk menu di kiri untuk mulai pesanan.</p></section>`;
+      return `${head("Kasir", "#/")}${tabs}<div class="pos-split"><div class="pos-left">${menuView(s)}</div><aside class="pos-right">${panel}</aside></div>`;
+    }
     const body = tab === "rekap" ? rekapView(s) : step === "struk" && last ? strukView(s) : step === "bayar" && cart.length ? bayarView(s) : menuView(s);
     return `${head("Kasir", "#/")}${tabs}${body}`;
   },
@@ -295,6 +304,7 @@ export const kasir = {
     add(el) {
       const r = store.get().resep.find((x) => x.id === el.dataset.id);
       if (!r) return;
+      if (step === "struk") step = "menu"; // pesanan baru langsung dari menu
       addItem({ key: r.id, resepId: r.id, nama: r.nama, harga: hargaDi(store.get(), r, channel) });
       render();
     },
