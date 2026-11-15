@@ -22,6 +22,8 @@ const DEFAULT = {
   loyalty: null,          // { nama, target, hadiah, minBelanja, pesanAjak }
   pelanggan: [],          // { id, nama, wa, stempel, kunjungan, hadiahDiambil, terakhir, dibuat, token }
   stempelLog: [],         // { id, tanggal, pelangganId, delta, alasan: beli|tukar|koreksi, catatan }
+  shifts: [],             // shift kasir (lihat js/shift.js)
+  posSetting: null,       // { wajibShift }
   settings: { aiMode: "demo", endpoint: "", anonKey: "" },
 };
 

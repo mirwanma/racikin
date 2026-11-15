@@ -40,6 +40,14 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - Tab **Hari ini**: omzet, jumlah order, rata-rata, per metode bayar, menu terlaris, daftar order. **Batalkan order** mengembalikan kas, stok & stempel.
 - Data: `orders` (detail order, disimpan 30 hari) + `posHarian` (rekap harian permanen) — supaya dokumen cloud tetap kecil walau ratusan order per hari. Logika di `js/pos.js`.
 
+## Shift & tutup kasir
+- Halaman `#/shift` (dari bar shift di Kasir, atau Kasir > Hari ini > "Shift & tutup kasir").
+- **Buka shift**: isi modal awal laci. Order yang dicatat selama shift diberi `shiftId`.
+- **Uang laci** selama shift: *Pengeluaran* (beli es, gas; otomatis jadi pengeluaran Kas dengan tag "Laci"), *Tambah uang* (kembalian), *Setor / ambil* (diambil pemilik). Dua yang terakhir hanya memindah uang, tidak masuk Kas.
+- **Tutup shift**: hitung uang di laci (bisa per pecahan), app menghitung uang seharusnya = modal + penjualan tunai + tambah − pengeluaran − setor, lalu **selisih** (pas / kurang / lebih). Ringkasan saat tutup disimpan permanen.
+- Pemilik/manajer: riwayat shift semua kasir (30 hari), selisih per kasir, tutup shift kasir lain yang lupa ditutup, dan opsi **wajib buka shift sebelum jualan**. Kasir hanya melihat shift miliknya.
+- Data: `state.shifts` (disimpan 90 hari) & `state.posSetting`; logika di `js/shift.js`. Kasir boleh menulis `shifts` di server, tapi tidak `posSetting`.
+
 ## Harga online (GoFood, GrabFood, ShopeeFood)
 - Halaman `#/online` (dari Kasir atau hub Bisnis). Per saluran: aktif, **komisi %**, **markup %**, pembulatan (Rp100/500/1.000). Harga online = harga toko × (1 + markup), dibulatkan ke atas; bisa diisi manual per menu.
 - **Saran markup** = markup yang membuat untung per porsi sama dengan jual di toko: `1/(1 − komisi) − 1` (komisi 20% → 25%).
@@ -101,7 +109,7 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 
 ## Data contoh (demo)
 - Onboarding: **Coba demo lengkap (data 2 bulan)**; atau Setelan > Data kamu > **Isi data contoh TAHGUY (2 bulan)**.
-- Isi (`js/dummy.js`, acak tapi tetap/seeded): 15 menu + resep & HPP, 25 bahan dengan riwayat belanja & pemakaian, ±2.000 order kasir 60 hari (toko + GoFood/GrabFood/ShopeeFood, detail order 30 hari terakhir), Kas lengkap (penjualan, komisi order online, belanja bahan & kemasan, sewa, gas, gaji, iklan, pesanan katering), 35 pelanggan setia + stempel, RAB + realisasi, brand kit, checklist aktivasi, kalender konten.
+- Isi (`js/dummy.js`, acak tapi tetap/seeded): 15 menu + resep & HPP, 25 bahan dengan riwayat belanja & pemakaian, ±2.000 order kasir 60 hari (toko + GoFood/GrabFood/ShopeeFood, detail order 30 hari terakhir), Kas lengkap (penjualan, komisi order online, belanja bahan & kemasan, sewa, gas, gaji, iklan, pesanan katering), 35 pelanggan setia + stempel, RAB + realisasi, brand kit, checklist aktivasi, kalender konten, riwayat shift 30 hari (dengan beberapa selisih). Data hari ini hanya sampai jam sekarang (TAHGUY buka ±14.30).
 - Semua angka saling cocok: Kas = rekap kasir per hari, stok = total riwayat stok, stempel = total log stempel. Beberapa bahan sengaja menipis & beberapa pelanggan "perlu diajak balik" supaya fitur pengingat kelihatan.
 - Mengganti data bisnis di perangkat (dan di cloud kalau sedang login); setelan perangkat tetap.
 
@@ -158,6 +166,7 @@ js/ai.js           klien AI (online pakai token login / demo)
 js/stok-utils.js   hitung HPP, porsi yang bisa dibuat, stok menipis
 js/loyalty.js      program stempel, no. WA, link kartu, template pesan
 js/pos.js          kasir: order -> kas harian gabungan, stok, stempel, batal, rekap, struk
+js/shift.js        shift kasir: buka/tutup, uang laci, ringkasan & selisih
 js/online.js       harga & komisi per saluran online, saran markup, untung per porsi
 js/studio/         theme.js (warna/font/ekspor PNG-SVG) + art.js (logo, mockup, spanduk, poster, dst.)
 js/vendor/         supabase-js (UMD, disimpan lokal supaya jalan offline)

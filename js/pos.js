@@ -10,6 +10,7 @@ import { todayISO } from "./ui.js";
 import { kebutuhan } from "./stok-utils.js";
 import { program, patchStempel } from "./loyalty.js";
 import { CHANNELS, isOnline, channelNama, komisiRp } from "./online.js";
+import { laciTransactions } from "./shift.js";
 
 // Metode bayar untuk order di toko. Order online memakai id saluran (gofood, grabfood, shopeefood) sebagai metode.
 export const METODE = [
@@ -114,7 +115,7 @@ function prune(orders) {
  * Buat order baru. cart = [{ resepId|null, nama, harga, qty }].
  * Return { patch, order, stempelInfo }.
  */
-export function buatOrder(s, { cart, diskon = 0, metode = "tunai", bayar = 0, pelangganId = "", channel = "toko", kasir = null }) {
+export function buatOrder(s, { cart, diskon = 0, metode = "tunai", bayar = 0, pelangganId = "", channel = "toko", kasir = null, shiftId = null }) {
   if (isOnline(channel)) metode = channel; // order online dibayar lewat platform
   const tanggal = todayISO();
   const items = cart.filter((i) => i.qty > 0).map((i) => ({ resepId: i.resepId || null, nama: i.nama, harga: Number(i.harga) || 0, qty: Number(i.qty) }));
@@ -140,6 +141,7 @@ export function buatOrder(s, { cart, diskon = 0, metode = "tunai", bayar = 0, pe
     status: "selesai",
   };
   if (kasir) order.kasir = kasir; // { id, nama } yang mencatat (mode tim)
+  if (shiftId) order.shiftId = shiftId; // shift kasir yang sedang terbuka
 
   let st = { ...s };
   // stempel pelanggan
@@ -189,9 +191,10 @@ const pick = (obj) => Object.fromEntries(KEYS.filter((k) => k in obj).map((k) =>
 export function reconcile(s, { kas = true } = {}) {
   const orders = s.orders || [];
   const tanggal = [...new Set(orders.map((o) => o.tanggal))];
-  if (!tanggal.length) return s;
   let posHarian = { ...(s.posHarian || {}) };
-  let transactions = s.transactions || [];
+  // Pengeluaran dari laci kasir (shift) juga dihitung ulang di Kas.
+  let transactions = kas && s.shifts?.length ? laciTransactions(s) : s.transactions || [];
+  if (!tanggal.length) return kas ? { ...s, transactions } : s;
   for (const t of tanggal) {
     posHarian = rekapPatch({ posHarian }, t, orders);
     if (kas) transactions = kasPatch(transactions, orders, t);

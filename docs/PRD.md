@@ -87,6 +87,10 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Preferensi per perangkat (jenis & jam), mengikuti zona waktu perangkat; kasir hanya menerima stok & rekap.
 - Dijadwalkan pg_cron tiap 15 menit; tanpa layanan pihak ketiga & tanpa secret tambahan.
 
+### Fase 10: Shift & tutup kasir (selesai)
+- Buka shift dengan modal laci, catat uang keluar/masuk laci, tutup shift dengan hitung uang fisik → selisih per shift & per kasir.
+- Opsi wajib buka shift sebelum jualan; pemilik bisa menutup shift kasir lain.
+
 ### Di luar MVP (fase berikutnya)
 Foto produk AI (gambar), integrasi WhatsApp, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
 

@@ -683,3 +683,20 @@ body[data-role="kasir"] .tabbar a.only-kasir { display: flex; }
 .notif-opt:first-of-type { border-top: 0; }
 .notif-opt span { display: flex; flex-direction: column; gap: 2px; }
 .notif-opt input:checked + span { text-decoration: none; color: var(--ink); }
+
+/* ---------- Shift kasir ---------- */
+.shift-bar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin-bottom: 12px; border: 1.5px dashed var(--line-2); border-radius: 10px; text-decoration: none; color: var(--ink); font-size: 13px; background: var(--card); }
+.shift-bar span:first-of-type { flex: 1; min-width: 0; }
+.shift-bar.on { border: 1.5px solid var(--ink); background: var(--yellow-soft); }
+.shift-bar .mono { font-size: 12px; white-space: nowrap; }
+.shift-card { border: 1.5px solid var(--ink); }
+.shift-row { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 8px 0; }
+.pecahan-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 12px; margin: 8px 0; }
+.pecahan-grid label { display: grid; grid-template-columns: 48px 1fr; align-items: center; gap: 6px; }
+.pecahan-grid input { padding: 6px 8px !important; }
+.tag.ok { background: var(--leaf); color: #fff; }
+.tag.minus { background: var(--chili); color: #fff; }
+.tag.plus { background: var(--yellow); color: var(--ink); }
+.set-opt { border-top: 0; padding: 0; }
+.set-opt span { display: flex; flex-direction: column; gap: 2px; }
+.set-opt input:checked + span { text-decoration: none; color: var(--ink); }
