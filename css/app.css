@@ -700,3 +700,50 @@ body[data-role="kasir"] .tabbar a.only-kasir { display: flex; }
 .set-opt { border-top: 0; padding: 0; }
 .set-opt span { display: flex; flex-direction: column; gap: 2px; }
 .set-opt input:checked + span { text-decoration: none; color: var(--ink); }
+
+/* ---------- Laporan laba rugi ---------- */
+.lr-link { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 10px 12px; border: 1.5px solid var(--ink); border-radius: 10px; text-decoration: none; color: var(--ink); background: var(--yellow-soft); }
+.lr-link span { flex: 1; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.lr-hero { text-align: left; }
+.lr-big { font-size: 34px; font-weight: 850; font-stretch: 118%; letter-spacing: -.01em; margin: 4px 0 2px; font-variant-numeric: tabular-nums; }
+.lr-big.rugi { color: var(--chili); }
+.delta { display: block; font-size: 11.5px; font-weight: 650; margin-top: 2px; text-transform: none; letter-spacing: 0; font-family: var(--font); }
+.delta.up { color: var(--leaf); }
+.delta.down { color: var(--chili); }
+.lr-hero .stats3 { margin-top: 12px; }
+.lr-chart { position: relative; display: flex; justify-content: space-around; align-items: stretch; height: calc(var(--h) + 26px); margin-top: 8px; }
+.lr-zero { position: absolute; left: 0; right: 0; height: 1px; background: var(--line-2); }
+.lr-col { position: relative; flex: 1; height: var(--h); background: none; border: 0; padding: 0; cursor: pointer; font: inherit; color: var(--ink); }
+.lr-bar { position: absolute; left: 50%; width: 24px; margin-left: -12px; background: var(--ink); opacity: .32; border-radius: 4px 4px 0 0; }
+.lr-bar.neg { border-radius: 0 0 4px 4px; }
+.lr-col.on .lr-bar, .lr-col:hover .lr-bar, .lr-col:focus-visible .lr-bar { opacity: 1; }
+.lr-val { position: absolute; left: 0; right: 0; text-align: center; font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.lr-x { position: absolute; left: 0; right: 0; top: calc(var(--h) + 6px); text-align: center; font-size: 11px; color: var(--muted); font-family: var(--mono); text-transform: uppercase; }
+.lr-col.on .lr-x { color: var(--ink); font-weight: 700; }
+.lr-tip { display: none; position: absolute; z-index: 3; bottom: calc(100% - 20px); left: 50%; transform: translateX(-50%); min-width: 150px; padding: 8px 10px; white-space: nowrap; background: var(--ink); color: var(--paper); border-radius: 8px; font-size: 12px; text-align: left; flex-direction: column; gap: 2px; pointer-events: none; }
+.lr-col:first-child .lr-tip { left: 0; transform: none; }
+.lr-col:last-child .lr-tip { left: auto; right: 0; transform: none; }
+.lr-col:hover .lr-tip, .lr-col:focus-visible .lr-tip { display: flex; }
+.lr-statement h2 { margin: 2px 0; }
+.lr-statement h4 { margin: 14px 0 4px; }
+.lr-row { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; font-size: 14px; }
+.lr-row b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lr-row.sub { border-top: 1px solid var(--line-2); font-weight: 650; }
+.lr-row.total { border-top: 1.5px solid var(--ink); font-weight: 700; padding-top: 7px; }
+.lr-row.grand { border-top: 1.5px solid var(--ink); border-bottom: 3px double var(--ink); font-size: 16px; font-weight: 800; padding: 9px 0; margin-top: 4px; }
+.lr-row.grand.rugi b { color: var(--chili); }
+.lr-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.lr-table th { text-align: left; font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 4px 0; }
+.lr-table td { padding: 6px 0; border-top: 1px dashed var(--line); }
+.lr-table .num { text-align: right; font-variant-numeric: tabular-nums; padding-left: 8px; }
+.lr-notes { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; }
+.lr-notes li.n-warn::marker { color: var(--chili); }
+.lr-notes li.n-ok::marker { color: var(--leaf); }
+
+@media print {
+  body { background: #fff !important; color: #000 !important; padding: 0 !important; }
+  .tabbar, .toast, .no-print, .page-head .back, .page-head .pill, .sw-update { display: none !important; }
+  .card { box-shadow: none !important; border: 1px solid #ccc !important; break-inside: avoid; background: #fff !important; }
+  .lr-hero, .lr-statement { border-color: #000 !important; }
+  body[data-route="laporan"] #view > p.small { display: block; }
+}

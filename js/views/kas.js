@@ -73,6 +73,7 @@ export const kas = {
         </div>
         ${chart(st.harian)}
         <div class="legend small"><span><i class="dot in"></i>Masuk</span><span><i class="dot out"></i>Keluar</span></div>
+        <a href="#/laporan" class="lr-link">${icon("receipt", 16)}<span><b>Laporan laba rugi</b><small class="muted">"Laba" di atas = uang masuk − keluar. Laba sebenarnya (setelah HPP) ada di laporan.</small></span>${icon("chevron", 16)}</a>
       </section>
 
       <section class="card accent">
