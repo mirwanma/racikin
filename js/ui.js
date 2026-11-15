@@ -78,3 +78,7 @@ export async function copy(text) {
     toast("Gagal menyalin", "err");
   }
 }
+
+/** Layar lebar (tablet landscape / laptop): navigasi samping & tata letak dua panel. */
+export const WIDE_QUERY = "(min-width: 900px)";
+export const isWide = () => typeof matchMedia === "function" && matchMedia(WIDE_QUERY).matches;
