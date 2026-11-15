@@ -93,7 +93,7 @@ export const dapur = {
 
   after(root) {
     if (!root.querySelector("#kds")) return;
-    lepas?.();
+    if (lepas) return; // pendengar & timer cukup dipasang sekali
     lepas = dengar((e) => {
       if (!document.body.contains(root.querySelector("#kds"))) return;
       if (e.type === "insert" && suara) bunyi(2);

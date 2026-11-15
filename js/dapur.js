@@ -2,7 +2,7 @@
 // + Supabase Realtime. Tiket berisi item & catatan saja (tanpa harga).
 //
 // Status: baru -> dimasak -> siap -> diambil (selesai) | batal
-import { sb, cloud } from "./cloud.js";
+import { sb, cloud, onCloudChange } from "./cloud.js";
 
 export const STATUS = {
   baru: { nama: "Baru", next: "dimasak", aksi: "Mulai masak" },
@@ -158,6 +158,13 @@ function mulai() {
     }
   }, 20000);
 }
+
+// Halaman dibuka sebelum info akun/tim siap -> sambungkan begitu siap (atau setelah ganti akun).
+onCloudChange(() => {
+  if (!listeners.size) return;
+  if (!bisaDapur()) return berhenti();
+  if (!channel || channelOwner !== cloud.team.ownerId) mulai();
+});
 
 function berhenti() {
   clearInterval(pollTimer);

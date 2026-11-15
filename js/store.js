@@ -24,6 +24,7 @@ const DEFAULT = {
   stempelLog: [],         // { id, tanggal, pelangganId, delta, alasan: beli|tukar|koreksi, catatan }
   shifts: [],             // shift kasir (lihat js/shift.js)
   supplier: [],           // { id, nama, wa, catatan } (lihat js/belanja.js)
+  meja: [],               // { id, nama, token } untuk pesan lewat QR meja (lihat js/meja.js)
   posSetting: null,       // { wajibShift }
   settings: { aiMode: "demo", endpoint: "", anonKey: "" },
 };

@@ -932,3 +932,71 @@ body[data-route="dapur"] .view { max-width: 1400px; }
   .kds-h { display: flex; align-items: center; justify-content: space-between; font-size: 16px; margin: 2px 2px 0; }
 }
 .siap-strip .chip-btn { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ---------- Pesan lewat meja: halaman pelanggan ---------- */
+body[data-route="m"] .tabbar { display: none; }
+body[data-route="m"] { padding-left: 0 !important; }
+body[data-route="m"] .view { max-width: 640px; padding-bottom: 120px; }
+.pm-head { --pm1: var(--yellow); --pm2: var(--ink); background: var(--pm1); color: #1b1916; margin: -18px -16px 4px; padding: 22px 16px 18px; border-bottom: 1.5px solid var(--ink); }
+.pm-head h1 { margin: 2px 0; font-size: 28px; }
+.pm-head p { margin: 0; opacity: .8; }
+.pm-cari { margin-bottom: 4px; }
+.pm-list { display: flex; flex-direction: column; gap: 8px; }
+.pm-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; background: var(--card); border: 1.5px solid var(--line-2); border-radius: 12px; }
+.pm-item p { margin: 2px 0 0; font-size: 13px; color: var(--ink-soft); }
+.pm-item.in { border-color: var(--ink); background: var(--yellow-tint); }
+.pm-item.habis { opacity: .55; }
+.pm-bar { position: fixed; left: 12px; right: 12px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 9; max-width: 616px; margin: 0 auto; display: flex; align-items: center; gap: 12px; background: var(--card); border: 1.5px solid var(--ink); border-radius: 12px; padding: 10px 10px 10px 14px; box-shadow: 4px 4px 0 var(--shadow-c); }
+.pm-bar > div { flex: 1; display: flex; flex-direction: column; line-height: 1.15; }
+.pm-bar b { font-size: 19px; }
+.pm-pay { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; margin-top: 6px; border: 1.5px solid var(--line-2); border-radius: 10px; cursor: pointer; }
+.pm-pay span { display: flex; flex-direction: column; gap: 2px; }
+.pm-pay:has(input:checked) { border-color: var(--ink); background: var(--yellow-tint); }
+.pm-qris { align-items: center; text-align: center; }
+.pm-qr { width: 220px; max-width: 70vw; margin: 6px auto; background: #fff; padding: 8px; border: 1.5px solid var(--ink); border-radius: 10px; }
+.pm-qr svg, .meja-qr-big svg, .meja-mini svg, .mpc-qr svg { width: 100%; height: auto; display: block; }
+.tag.demo { background: var(--chili); color: #fff; }
+.pm-status { text-align: center; }
+.pm-kode { font-size: 40px; font-weight: 800; letter-spacing: .12em; margin: 2px 0 6px; }
+.pm-status h2 { margin: 4px 0 10px; }
+.pm-status.siap, .pm-status.diambil { border: 2px solid var(--leaf); }
+.pm-steps { list-style: none; padding: 0; margin: 6px auto 12px; display: flex; flex-direction: column; gap: 6px; max-width: 280px; text-align: left; }
+.pm-steps li { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+.pm-steps li::before { content: ""; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--line-2); flex: none; }
+.pm-steps li.ok { color: var(--ink); font-weight: 650; }
+.pm-steps li.ok::before { display: none; }
+.pm-steps li.ok .ico { color: var(--leaf); }
+.pm-paid { padding: 8px 10px; border-radius: 8px; background: var(--yellow-soft); font-size: 14px; }
+.pm-paid.lunas { background: color-mix(in srgb, var(--leaf) 14%, var(--card)); color: var(--leaf); font-weight: 700; display: flex; gap: 6px; align-items: center; justify-content: center; }
+
+/* ---------- Meja: kelola & cetak QR ---------- */
+.meja-row { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px dashed var(--line); }
+.meja-row:first-of-type { border-top: 0; }
+.meja-row p { margin: 2px 0 0; }
+.meja-mini { width: 52px; height: 52px; background: #fff; border-radius: 6px; padding: 2px; }
+.meja-detail { display: flex; flex-direction: column; gap: 10px; }
+.meja-qr-big { width: 240px; max-width: 80%; margin: 0 auto; background: #fff; padding: 8px; border: 1.5px solid var(--ink); border-radius: 10px; }
+.meja-link { word-break: break-all; text-align: center; margin: 0; }
+.meja-add { margin-top: 12px; grid-template-columns: 1fr 70px auto; }
+.meja-print { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.meja-print-card { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 12px; border: 1.5px dashed var(--ink); border-radius: 12px; background: #fff; color: #1b1916; text-align: center; break-inside: avoid; }
+.mpc-bisnis { font-size: 18px; font-stretch: 118%; text-transform: uppercase; }
+.mpc-qr { width: 170px; }
+.mpc-meja { font-size: 24px; font-weight: 850; font-stretch: 118%; }
+@media print {
+  .meja-print { grid-template-columns: repeat(3, 1fr); gap: 8mm; }
+  .meja-print-card { border-color: #999; }
+}
+
+/* ---------- Kasir: kotak pesanan meja ---------- */
+.meja-inbox { border: 1.5px solid var(--ink); border-radius: 12px; background: var(--card); padding: 10px 12px; margin-bottom: 12px; box-shadow: 3px 3px 0 var(--shadow-c); }
+.meja-inbox h3 { display: flex; align-items: center; gap: 6px; margin: 0 0 4px; font-size: 15px; }
+.mi-row { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px dashed var(--line); }
+.mi-row:first-of-type { border-top: 0; }
+.mi-row > div:first-child { flex: 1; min-width: 0; }
+.mi-row p { margin: 2px 0 0; }
+.mi-row.on { background: var(--yellow-tint); }
+.mi-act { display: flex; flex-direction: column; gap: 6px; }
+.meja-bayar { border: 1.5px solid var(--ink); background: var(--yellow-tint); }
+.meja-bayar.lunas { border-color: var(--leaf); }
+.meja-bayar p { margin: 4px 0 0; }

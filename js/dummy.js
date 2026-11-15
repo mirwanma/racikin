@@ -417,6 +417,7 @@ export function buatDataDummy({ today = todayISO(), settings } = {}) {
     shifts: [],
     posSetting: { wajibShift: false },
     supplier,
+    meja: Array.from({ length: 8 }, (_, i) => ({ id: uid() + "m" + i, nama: i < 6 ? `Meja ${i + 1}` : `Teras ${i - 5}`, token: (uid() + uid() + "racikin").slice(0, 24) })),
     settings: settings || { aiMode: "demo", endpoint: "", anonKey: "" },
   };
   // Shift kasir 30 hari terakhir: satu shift per hari, hari ini masih buka.

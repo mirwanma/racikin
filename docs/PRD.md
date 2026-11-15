@@ -103,6 +103,11 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Opsional: pesanan Kasir (dengan nama/meja & catatan) tampil realtime di layar dapur Baru → Dimasak → Siap; kasir dapat kabar siap diambil.
 - Peran tim Dapur (hanya layar dapur, tanpa data penjualan).
 
+### Fase 14: Pesan lewat meja / QR (selesai, opsional)
+- QR per meja → pelanggan pesan dari HP (menu, keranjang, checkout, bayar di kasir atau digital simulasi), status pesanan.
+- Pesanan masuk realtime ke Kasir (terima/tolak), lanjut ke Kas, stok, shift & dapur. Harga dihitung server.
+- Berikutnya: hubungkan pembayaran digital ke payment gateway sungguhan (mis. QRIS via Midtrans/Xendit) lewat webhook.
+
 ### Di luar MVP (fase berikutnya)
 Foto produk AI (gambar), integrasi WhatsApp, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
 
