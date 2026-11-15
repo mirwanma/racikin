@@ -5,11 +5,15 @@ import { ai } from "../ai.js";
 import { render, go } from "../app.js";
 import { busy, runAI, head } from "./_shared.js";
 import { SATUAN, fmtQty } from "../stok-utils.js";
+import { cloud, role } from "../cloud.js";
+import { GAYA, siapkan, percantikOtomatis, percantikAI, upload, hapusFile } from "../foto.js";
 
 // Draft resep yang sedang diedit (belum disimpan).
 let draft = null;
 let loadedFor = null;
 let tips = null;
+// Editor foto: { asli: {blob,url}, hasil: {blob,url,label,ai} | null, gaya, busy: ""|"auto"|"ai"|"simpan", error }
+let foto = null;
 
 const routeId = () => new URLSearchParams(location.hash.split("?")[1] || "").get("id") || "new";
 const key = (n) => String(n || "").trim().toLowerCase();
@@ -20,6 +24,7 @@ function load() {
   if (loadedFor === id && draft) return;
   loadedFor = id;
   tips = null;
+  foto = null;
   const s = store.get();
   const r = s.resep.find((x) => x.id === id);
   if (r) {
@@ -29,11 +34,79 @@ function load() {
       nama: r.nama,
       harga: r.harga,
       hasil: r.hasil || 1,
+      foto: r.foto || null,
       rows: r.items.map((it) => ({ nama: map[it.bahanId]?.nama || "", qty: it.qty, satuan: map[it.bahanId]?.satuan || "pcs", harga: "" })),
     };
   } else {
-    draft = { id: null, nama: "", harga: s.profile?.harga || "", hasil: 1, rows: [{ nama: "", qty: "", satuan: "pcs", harga: "" }] };
+    draft = { id: null, nama: "", harga: s.profile?.harga || "", hasil: 1, foto: null, rows: [{ nama: "", qty: "", satuan: "pcs", harga: "" }] };
   }
+}
+
+const ada = () => !!draft?.id && store.get().resep.some((r) => r.id === draft.id); // resep sudah tersimpan?
+const bisaFoto = () => cloud.user && cloud.team && ["owner", "manajer"].includes(role());
+
+function fotoCard() {
+  const pilihFile = (label, cls = "btn soft") =>
+    `<label class="${cls} ${bisaFoto() ? "" : "disabled"}">${icon("plus", 16)} ${label}<input type="file" accept="image/*" data-change="foto" hidden ${bisaFoto() ? "" : "disabled"}></label>`;
+  if (foto) {
+    const sibuk = foto.busy;
+    return `<section class="card foto-card">
+      <div class="row-between"><h2 class="card-title" style="margin:0">Foto menu</h2><button class="btn ghost sm" data-action="fotoBatal" ${sibuk ? "disabled" : ""}>Batal</button></div>
+      <div class="foto-compare ${foto.hasil || sibuk ? "dua" : ""}">
+        <figure><img src="${foto.asli.url}" alt="Foto asli"><figcaption>Asli</figcaption></figure>
+        ${
+          sibuk === "auto" || sibuk === "ai"
+            ? `<figure class="foto-loading"><div class="pot"><span></span><span></span><span></span></div><figcaption>${sibuk === "ai" ? "AI lagi mempercantik… (±10–30 dtk)" : "Memproses…"}</figcaption></figure>`
+            : foto.hasil
+              ? `<figure class="hasil"><img src="${foto.hasil.url}" alt="Hasil"><figcaption>${esc(foto.hasil.label)}</figcaption></figure>`
+              : ""
+        }
+      </div>
+      ${foto.error ? `<p class="warn-box small">${esc(foto.error)}</p>` : ""}
+      <div class="field"><span>Gaya (untuk AI)</span><div class="chips">${GAYA.map((g) => `<button type="button" class="chip-btn ${foto.gaya === g.id ? "on" : ""}" data-action="fotoGaya" data-g="${g.id}" ${sibuk ? "disabled" : ""}>${g.nama}</button>`).join("")}</div></div>
+      <div class="row2">
+        <button type="button" class="btn ghost foto-btn" data-action="fotoAuto" ${sibuk ? "disabled" : ""}><span>Percantik otomatis</span><small>gratis · di HP</small></button>
+        <button type="button" class="btn soft foto-btn" data-action="fotoAI" ${sibuk ? "disabled" : ""}><span>${icon("spark", 16)} Percantik pakai AI</span><small>Gemini · kuota harian</small></button>
+      </div>
+      <div class="row2">
+        <button type="button" class="btn ${foto.hasil ? "ghost" : "primary"}" data-action="fotoSimpan" data-v="asli" ${sibuk ? "disabled" : ""}>Simpan foto asli</button>
+        ${foto.hasil ? `<button type="button" class="btn primary" data-action="fotoSimpan" data-v="hasil" ${sibuk ? "disabled" : ""}>${sibuk === "simpan" ? "Menyimpan…" : `Simpan ${foto.hasil.ai ? "versi AI" : "hasil"}`}</button>` : ""}
+      </div>
+      <p class="small muted">Belum ada yang tersimpan sampai kamu pilih. AI hanya memperbaiki cahaya, warna & latar; isi makanannya dipertahankan.</p>
+    </section>`;
+  }
+  return `<section class="card foto-card">
+    <div class="row-between"><h2 class="card-title" style="margin:0">Foto menu <small class="muted">opsional</small></h2></div>
+    ${
+      draft.foto
+        ? `<div class="foto-now"><img src="${esc(draft.foto.url)}" alt="Foto ${esc(draft.nama)}">${draft.foto.ai ? `<span class="tag">AI</span>` : ""}</div>
+           <div class="row2">${pilihFile("Ganti foto", "btn ghost")}<button type="button" class="btn soft" data-action="fotoEditLama" ${bisaFoto() ? "" : "disabled"}>${icon("spark", 16)} Percantik foto ini</button></div>
+           <button type="button" class="btn ghost sm" data-action="fotoHapus" ${bisaFoto() ? "" : "disabled"}>Hapus foto</button>`
+        : `<div class="foto-empty">${icon("bowl", 30)}<p class="small muted">Foto tampil di Kasir & menu pelanggan (QR meja).</p>${pilihFile("Upload / ambil foto", "btn primary")}</div>`
+    }
+    ${bisaFoto() ? "" : `<p class="small muted">${cloud.user ? "Hanya pemilik/manajer yang bisa mengubah foto menu." : `<a href="#/akun" class="link">Login</a> dulu supaya foto bisa disimpan.`}</p>`}
+  </section>`;
+}
+
+async function fotoProses(kind) {
+  if (!foto || foto.busy) return;
+  foto.busy = kind;
+  foto.error = "";
+  render();
+  try {
+    if (kind === "auto") foto.hasil = { ...(await percantikOtomatis(foto.asli.blob)), label: "Percantik otomatis", ai: false };
+    else {
+      const r = await percantikAI(foto.asli.blob, { nama: draft.nama, gaya: foto.gaya });
+      foto.hasil = { ...r, label: `AI · ${GAYA.find((g) => g.id === foto.gaya)?.nama}`, ai: true };
+      if (r.quota) toast(`AI foto: ${r.quota.used_today}/${r.quota.limit_day} hari ini`);
+    }
+  } catch (e) {
+    foto.error = /quota|kuota|penuh|billing/i.test(e.message)
+      ? `${e.message} Catatan: edit gambar Gemini butuh billing aktif di Google AI Studio. Sementara itu pakai "Percantik otomatis" (gratis).`
+      : e.message;
+  }
+  foto.busy = "";
+  render();
 }
 
 /** Hitung HPP dari draft (bahan baru pakai harga yang diketik / estimasi AI). */
@@ -99,7 +172,7 @@ export const resep = {
     load();
     if (busy.resep) return head(draft.id ? "Edit Resep" : "Resep Baru", "#/stok") + `<div class="loading"><div class="pot"><span></span><span></span><span></span></div><p>AI lagi nyusun takaran ${esc(draft.nama)}…</p></div>`;
     return `
-      ${head(draft.id ? "Edit Resep" : "Resep Baru", "#/stok")}
+      ${head(ada() ? "Edit Resep" : "Resep Baru", "#/stok")}
       <datalist id="bahan-list">${s.bahan.map((b) => `<option value="${esc(b.nama)}">`).join("")}</datalist>
 
       <section class="card stack">
@@ -111,6 +184,8 @@ export const resep = {
         <button type="button" class="btn soft" data-action="aiFill">${icon("spark", 16)} Isi bahan & takaran pakai AI</button>
       </section>
 
+      ${fotoCard()}
+
       <section class="card">
         <h2 class="card-title">Bahan (untuk ${esc(draft.hasil)} porsi)</h2>
         <div class="resep-rows">${draft.rows.map(rowHtml).join("")}</div>
@@ -121,10 +196,22 @@ export const resep = {
       ${tips ? `<section class="card"><h2 class="card-title">Tips dari AI</h2>${list(tips, "checks")}<p class="muted small">Harga bahan dari AI adalah estimasi. Update pakai harga belanja aslimu di tab Bahan.</p></section>` : ""}
 
       <button class="btn primary block lg" data-action="save">Simpan resep</button>
-      ${draft.id ? `<button class="btn danger block" data-action="del">Hapus resep</button>` : ""}`;
+      ${ada() ? `<button class="btn danger block" data-action="del">Hapus resep</button>` : ""}`;
   },
 
   changes: {
+    async foto(el) {
+      const file = el.files?.[0];
+      el.value = "";
+      if (!file) return;
+      if (!/^image\//.test(file.type)) return toast("Pilih file foto (JPG/PNG/WebP)", "err");
+      try {
+        foto = { asli: await siapkan(file), hasil: null, gaya: "studio", busy: "", error: "" };
+      } catch (e) {
+        return toast(e.message || "Foto tidak bisa dibaca", "err");
+      }
+      render();
+    },
     field(el) {
       draft[el.dataset.f] = el.dataset.f === "nama" ? el.value : el.value === "" ? "" : Number(el.value);
       updatePreview();
@@ -145,6 +232,62 @@ export const resep = {
   },
 
   actions: {
+    fotoGaya(el) {
+      foto.gaya = el.dataset.g;
+      render();
+    },
+    fotoAuto: () => fotoProses("auto"),
+    fotoAI: () => fotoProses("ai"),
+    fotoBatal() {
+      foto = null;
+      render();
+    },
+    async fotoEditLama() {
+      try {
+        const blob = await fetch(draft.foto.url, { cache: "no-store" }).then((r) => {
+          if (!r.ok) throw new Error("Foto lama tidak bisa diambil");
+          return r.blob();
+        });
+        foto = { asli: await siapkan(blob), hasil: null, gaya: "studio", busy: "", error: "" };
+        render();
+      } catch (e) {
+        toast(e.message, "err");
+      }
+    },
+    async fotoSimpan(el) {
+      if (!foto || foto.busy) return;
+      const pilih = el.dataset.v === "hasil" && foto.hasil ? foto.hasil : foto.asli;
+      foto.busy = "simpan";
+      render();
+      try {
+        if (!draft.id) draft.id = uid(); // resep baru: id dibuat sekarang supaya nama file stabil
+        const { url, path } = await upload(pilih.blob, draft.id);
+        const lama = draft.foto?.path;
+        draft.foto = { url, path, ai: !!pilih.ai, at: new Date().toISOString() };
+        // Resep yang sudah ada: langsung simpan fotonya (tanpa harus tekan "Simpan resep").
+        if (store.get().resep.some((r) => r.id === draft.id)) {
+          store.set((s) => ({ resep: s.resep.map((r) => (r.id === draft.id ? { ...r, foto: draft.foto } : r)) }));
+        }
+        if (lama && lama !== path) hapusFile(lama);
+        foto = null;
+        toast(store.get().resep.some((r) => r.id === draft.id) ? "Foto menu disimpan" : "Foto siap · tekan Simpan resep");
+      } catch (e) {
+        foto.busy = "";
+        foto.error = e.message;
+      }
+      render();
+    },
+    fotoHapus() {
+      if (!confirm("Hapus foto menu ini?")) return;
+      const path = draft.foto?.path;
+      draft.foto = null;
+      if (store.get().resep.some((r) => r.id === draft.id)) {
+        store.set((s) => ({ resep: s.resep.map((r) => (r.id === draft.id ? (({ foto: _f, ...rest }) => rest)(r) : r)) }));
+      }
+      if (path) hapusFile(path);
+      render();
+    },
+
     addRow() {
       draft.rows.push({ nama: "", qty: "", satuan: "pcs", harga: "" });
       render();
@@ -197,8 +340,12 @@ export const resep = {
         if (ada) ada.qty += Number(row.qty);
         else items.push({ bahanId: b.id, qty: Number(row.qty) });
       }
-      const rec = { id: draft.id || uid(), nama, harga: Number(draft.harga) || 0, hasil: Math.max(1, Number(draft.hasil) || 1), items };
-      const resepList = draft.id ? s.resep.map((x) => (x.id === draft.id ? rec : x)) : [...s.resep, rec];
+      // Pertahankan field lain resep (mis. foto) — dulu field tambahan hilang setiap resep diedit.
+      const lama = s.resep.find((x) => x.id === draft.id) || {};
+      const rec = { ...lama, id: draft.id || uid(), nama, harga: Number(draft.harga) || 0, hasil: Math.max(1, Number(draft.hasil) || 1), items };
+      if (draft.foto) rec.foto = draft.foto;
+      else delete rec.foto;
+      const resepList = s.resep.some((x) => x.id === rec.id) ? s.resep.map((x) => (x.id === rec.id ? rec : x)) : [...s.resep, rec];
       store.set({ bahan, resep: resepList });
       const baru = bahan.length - s.bahan.length;
       toast(`Resep ${nama} disimpan${baru ? ` · ${baru} bahan baru ditambahkan` : ""}`);
@@ -213,6 +360,7 @@ export const resep = {
     },
     del() {
       if (!confirm(`Hapus resep "${draft.nama}"? Bahan & stoknya tetap ada.`)) return;
+      if (draft.foto?.path) hapusFile(draft.foto.path);
       store.set((s) => ({ resep: s.resep.filter((x) => x.id !== draft.id) }));
       draft = null;
       loadedFor = null;

@@ -95,7 +95,8 @@ function menuView() {
         .map((m) => {
           const q = cart.get(m.id) || 0;
           return `<div class="pm-item ${m.habis ? "habis" : ""} ${q ? "in" : ""}">
-            <div><b>${esc(m.nama)}</b><p class="mono">${rupiah(m.harga)}${m.habis ? " · habis" : ""}</p></div>
+            ${m.foto && /^https:\/\//.test(m.foto) ? `<img class="pm-img" src="${esc(m.foto)}" alt="" loading="lazy" decoding="async">` : ""}
+            <div class="pm-info"><b>${esc(m.nama)}</b><p class="mono">${rupiah(m.harga)}${m.habis ? " · habis" : ""}</p></div>
             ${
               m.habis
                 ? `<span class="tag">Habis</span>`

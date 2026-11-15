@@ -112,14 +112,16 @@ function menuView(s) {
       <p>Pemilik mengaktifkan "wajib buka shift". Isi modal awal laci, lalu mulai jualan.</p><a href="#/shift" class="btn primary">Buka shift</a></section>`;
   }
   const map = bahanMap(s.bahan);
+  const adaFoto = s.resep.some((r) => r.foto);
   const grid = s.resep.length
     ? `<div class="pos-grid">${s.resep
         .map((r) => {
           const inCart = cart.find((c) => c.key === r.id)?.qty || 0;
           const bd = bisaDibuat(r, map);
           const habis = bd.porsi === 0;
-          return `<button class="pos-item ${inCart ? "in" : ""} ${habis ? "habis" : ""}" data-action="add" data-id="${r.id}">
+          return `<button class="pos-item ${inCart ? "in" : ""} ${habis ? "habis" : ""} ${r.foto || adaFoto ? "foto" : ""}" data-action="add" data-id="${r.id}">
             ${inCart ? `<span class="pos-qty">${inCart}</span>` : ""}
+            ${r.foto ? `<img class="pos-img" src="${esc(r.foto.url)}" alt="" loading="lazy" decoding="async">` : adaFoto ? `<span class="pos-img ph" aria-hidden="true">${icon("bowl", 26)}</span>` : ""}
             <b>${esc(r.nama)}</b>
             <span class="pos-price">${rupiah(hargaDi(s, r, channel))}</span>
             ${bd.porsi !== null ? `<small class="mono">${habis ? "stok habis" : `sisa ±${bd.porsi}`}</small>` : ""}

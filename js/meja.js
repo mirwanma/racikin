@@ -21,7 +21,7 @@ export function menuPublik(s) {
     bisnis: s.brand?.terpilih?.nama || s.profile?.nama || "Menu",
     lokasi: [s.profile?.area, s.profile?.kota].filter(Boolean).join(", "),
     warna: pal.length >= 2 ? { utama: pal[0].hex, aksen: pal[1].hex } : null,
-    menu: (s.resep || []).map((r) => ({ id: r.id, nama: r.nama, harga: Math.round(Number(r.harga) || 0), habis: bisaDibuat(r, map).porsi === 0 })),
+    menu: (s.resep || []).map((r) => ({ id: r.id, nama: r.nama, harga: Math.round(Number(r.harga) || 0), habis: bisaDibuat(r, map).porsi === 0, ...(r.foto?.url ? { foto: r.foto.url } : {}) })),
     meja: (s.meja || []).map((m) => ({ id: m.id, nama: m.nama, token: m.token })),
   };
 }
