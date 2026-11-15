@@ -15,6 +15,7 @@ cd tests && npm run unit
 
 | File | Menguji |
 |---|---|
+| `unit/varian.test.mjs` | varian & topping: validasi pilihan, harga toko/online, stok & batal order, rekap, laporan, menu publik |
 | `unit/merge.test.mjs` | 3-way merge sinkron (order/stok/stempel dari beberapa HP) |
 | `unit/merge-shift.test.mjs` | merge data shift & catatan laci |
 | `unit/kas-filter.test.mjs` | filter & pencarian transaksi Kas |
@@ -32,7 +33,7 @@ mkdir -p /tmp/shots && node tests/e2e/kasir.js /tmp/shots
 
 `RACIKIN_URL` mengganti alamat app (default `http://localhost:8766/`).
 
-**Tanpa akun** (cukup app lokal): `mvp.js`, `kasir.js`, `online.js`, `tracked.js`, `studio.js`, `dummy.js`, `shift.js`, `laporan.js`, `belanja.js`, `kasfilter.js`, `tablet.js` (argumen opsional: lebar tinggi daftar-rute), `rotate.js`.
+**Tanpa akun** (cukup app lokal): `mvp.js`, `kasir.js`, `online.js`, `tracked.js`, `studio.js`, `dummy.js`, `shift.js`, `laporan.js`, `belanja.js`, `kasfilter.js`, `tablet.js` (argumen opsional: lebar tinggi daftar-rute), `rotate.js`, `varian.js` (halaman pelanggan QR diuji dengan RPC mock).
 
 **Butuh Supabase & akun tes** (password lewat variabel lingkungan, tidak disimpan di repo):
 

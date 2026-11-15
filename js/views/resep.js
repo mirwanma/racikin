@@ -35,10 +35,11 @@ function load() {
       harga: r.harga,
       hasil: r.hasil || 1,
       foto: r.foto || null,
+      opsiIds: [...(r.opsiIds || [])],
       rows: r.items.map((it) => ({ nama: map[it.bahanId]?.nama || "", qty: it.qty, satuan: map[it.bahanId]?.satuan || "pcs", harga: "" })),
     };
   } else {
-    draft = { id: null, nama: "", harga: s.profile?.harga || "", hasil: 1, foto: null, rows: [{ nama: "", qty: "", satuan: "pcs", harga: "" }] };
+    draft = { id: null, nama: "", harga: s.profile?.harga || "", hasil: 1, foto: null, opsiIds: [], rows: [{ nama: "", qty: "", satuan: "pcs", harga: "" }] };
   }
 }
 
@@ -192,6 +193,16 @@ export const resep = {
         <button type="button" class="btn ghost block" data-action="addRow">+ Bahan</button>
       </section>
 
+      <section class="card">
+        <h2 class="card-title">Varian & topping <small class="muted">opsional</small></h2>
+        ${
+          (s.opsi || []).length
+            ? `<div class="chips">${s.opsi.map((g) => `<label class="chip"><input type="checkbox" data-change="opsi" value="${g.id}" ${draft.opsiIds.includes(g.id) ? "checked" : ""}><span>${esc(g.nama)}</span></label>`).join("")}</div>
+               <p class="small muted">Dicentang = Kasir & menu QR nanya pilihan ini. <a href="#/stok?tab=varian" class="link">Atur varian</a></p>`
+            : `<p class="small muted">Belum ada grup varian (level pedas, topping, ukuran). <a href="#/varian?id=new" class="link">Bikin varian</a></p>`
+        }
+      </section>
+
       <section class="card accent" id="hpp-box">${preview()}</section>
       ${tips ? `<section class="card"><h2 class="card-title">Tips dari AI</h2>${list(tips, "checks")}<p class="muted small">Harga bahan dari AI adalah estimasi. Update pakai harga belanja aslimu di tab Bahan.</p></section>` : ""}
 
@@ -211,6 +222,9 @@ export const resep = {
         return toast(e.message || "Foto tidak bisa dibaca", "err");
       }
       render();
+    },
+    opsi(el) {
+      draft.opsiIds = el.checked ? [...new Set([...draft.opsiIds, el.value])] : draft.opsiIds.filter((x) => x !== el.value);
     },
     field(el) {
       draft[el.dataset.f] = el.dataset.f === "nama" ? el.value : el.value === "" ? "" : Number(el.value);
@@ -345,6 +359,9 @@ export const resep = {
       const rec = { ...lama, id: draft.id || uid(), nama, harga: Number(draft.harga) || 0, hasil: Math.max(1, Number(draft.hasil) || 1), items };
       if (draft.foto) rec.foto = draft.foto;
       else delete rec.foto;
+      const opsiIds = (draft.opsiIds || []).filter((id) => (s.opsi || []).some((g) => g.id === id));
+      if (opsiIds.length) rec.opsiIds = opsiIds;
+      else delete rec.opsiIds;
       const resepList = s.resep.some((x) => x.id === rec.id) ? s.resep.map((x) => (x.id === rec.id ? rec : x)) : [...s.resep, rec];
       store.set({ bahan, resep: resepList });
       const baru = bahan.length - s.bahan.length;

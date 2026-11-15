@@ -1,6 +1,8 @@
 // E2E Racikin (dapur.js). Lihat tests/README.md untuk cara menjalankan.
 const { chromium } = require('playwright');
 const B = (process.env.RACIKIN_URL || 'http://localhost:8766/'), OUT = process.argv[2];
+// Klik menu di Kasir; menu dengan varian membuka sheet -> langsung Tambah pakai pilihan default.
+const pos = async (p, n) => { await p.click(`.pos-item >> nth=${n}`); if (await p.$('.sheet')) await p.click('.sheet [data-action=pilihTambah]'); };
 const PW = process.env.RACIKIN_TEST_PASSWORD;
 const txt = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').trim();
 const st = (p) => p.evaluate(() => JSON.parse(localStorage.getItem('racikin:v1')));
@@ -58,7 +60,7 @@ async function synced(p) {
 
   // Kasir: pesanan dengan nama & catatan
   await kasir.goto(B + '#/kasir'); await kasir.waitForSelector('.pos-grid');
-  await kasir.click('.pos-item >> nth=0'); await kasir.click('.pos-item >> nth=0'); await kasir.click('.pos-item >> nth=11');
+  await pos(kasir, 0); await pos(kasir, 0); await pos(kasir, 11);
   await kasir.click('[data-action=checkout]'); await kasir.waitForSelector('.dapur-form');
   await kasir.fill('input[data-change=atasNama]', 'Budi meja 3'); await kasir.press('input[data-change=atasNama]', 'Tab');
   await kasir.fill('input[data-change=catatanDapur]', 'pedas level 3, tanpa daun bawang'); await kasir.press('input[data-change=catatanDapur]', 'Tab');
@@ -95,7 +97,7 @@ async function synced(p) {
   log('setelah diambil: dapur siap kosong', true, '|', await txt(dapur, '.kds + p'));
 
   // Order kedua lalu dibatalkan -> hilang dari dapur
-  await kasir.click('.pos-item >> nth=2'); await kasir.click('[data-action=checkout]'); await kasir.click('[data-action=uang] >> nth=0');
+  await pos(kasir, 2); await kasir.click('[data-action=checkout]'); await kasir.click('[data-action=uang] >> nth=0');
   await kasir.click('[data-action=selesai]'); await kasir.waitForSelector('.struk');
   await dapur.waitForSelector('.kds-col.baru .kt', { timeout: 20000 });
   await kasir.click('[data-action=baru]');

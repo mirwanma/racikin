@@ -11,11 +11,13 @@ import { dapurAktif, kirimTiket, tiketDari, ubahStatus as statusDapur, daftarTik
 import { mejaAktif, pesananMasuk, dengarPesanan, ubahPesanan } from "../meja.js";
 import { shiftAktif, ringkasan as ringkasanShift, wajibShift } from "../shift.js";
 import { activeChannels, channelCfg, channelNama, hargaDi, isOnline, komisiRp } from "../online.js";
+import { grupMenu, punyaOpsi, pilihanAwal, pilihanHabis, cekPilihan, hargaItem, kunciItem, labelOpsi, namaLengkap, aturan, tambahanDi } from "../varian.js";
 
 // State layar kasir (tidak disimpan; keranjang hilang kalau app ditutup).
 let tab = "jual"; // jual | rekap
 let step = "menu"; // menu | bayar | struk
-let cart = []; // { key, resepId, nama, harga, qty }
+let cart = []; // { key, resepId, nama, harga, qty, opsi? }
+let pilih = null; // sheet varian yang terbuka { resepId, ids: [pilihanId], error }
 let form = { diskon: 0, metode: "tunai", bayar: 0, pelangganId: "", atasNama: "", catatanDapur: "" };
 let lepasDapur = null;
 let lepasMeja = null;
@@ -29,7 +31,7 @@ function setChannel(s, id) {
   channel = id;
   cart = cart.map((c) => {
     const r = c.resepId && s.resep.find((x) => x.id === c.resepId);
-    return r ? { ...c, harga: hargaDi(s, r, channel) } : c;
+    return r ? { ...c, harga: hargaItem(s, r, c.opsi, channel) } : c;
   });
 }
 
@@ -37,6 +39,40 @@ const totalNow = () => Math.max(0, subtotal(cart) - Math.min(Number(form.diskon)
 const count = () => cart.reduce((a, i) => a + i.qty, 0);
 const bisnisOf = (s) => s.brand?.terpilih?.nama || s.profile?.nama || "Toko";
 const jam = (w) => (w || "").slice(11, 16);
+
+/** Sheet pilih varian & topping untuk menu yang punya grup pilihan. */
+function pilihSheet(s) {
+  if (!pilih) return "";
+  const r = s.resep.find((x) => x.id === pilih.resepId);
+  if (!r) return "";
+  const map = bahanMap(s.bahan);
+  const ids = new Set(pilih.ids);
+  const cek = cekPilihan(s, r, pilih.ids, map);
+  const harga = hargaItem(s, r, cek.opsi, channel);
+  return `<div class="sheet-bg" data-action="pilihTutup"></div>
+    <section class="sheet" role="dialog" aria-modal="true" aria-label="Pilih varian ${esc(r.nama)}">
+      <header class="row-between"><div><h2 class="card-title" style="margin:0">${esc(r.nama)}</h2><p class="small muted">${rupiah(hargaDi(s, r, channel))}${channel !== "toko" ? ` · ${esc(channelNama(channel))}` : ""}</p></div>
+        <button class="icon-btn sm" data-action="pilihTutup" aria-label="Tutup">${icon("x", 14)}</button></header>
+      <div class="sheet-body">
+      ${grupMenu(s, r)
+        .map(
+          (g) => `<fieldset class="opsi-grup"><legend><b>${esc(g.nama)}</b> <small class="muted">${aturan(g)}</small></legend>
+          <div class="opsi-list">${g.pilihan
+            .map((p) => {
+              const habis = pilihanHabis(p, map);
+              const on = ids.has(p.id);
+              const t = tambahanDi(s, [p], channel);
+              return `<button type="button" class="opsi-btn ${on ? "on" : ""} ${g.tipe === "satu" ? "radio" : ""}" data-action="pilihOpsi" data-g="${g.id}" data-id="${p.id}" ${habis ? "disabled" : ""} aria-pressed="${on}">
+                <span class="opsi-dot">${on ? icon("check", 12) : ""}</span><span>${esc(p.nama)}</span><small class="mono">${habis ? "habis" : t ? `+${rupiah(t)}` : "gratis"}</small></button>`;
+            })
+            .join("")}</div></fieldset>`,
+        )
+        .join("")}
+      </div>
+      ${pilih.error ? `<p class="warn-box small">${esc(pilih.error)}</p>` : ""}
+      <button class="btn primary block lg" data-action="pilihTambah">Tambah · ${rupiah(harga)}</button>
+    </section>`;
+}
 
 function addItem(it) {
   const ada = cart.find((c) => c.key === it.key);
@@ -73,7 +109,7 @@ function mejaInbox() {
       .map(
         (o) => `<div class="mi-row ${mejaRef?.id === o.id ? "on" : ""}">
           <div><b>${esc(o.meja_nama)} · ${esc(o.nama)}</b>
-            <p class="small">${o.items.map((x) => `${x.qty}× ${esc(x.nama)}`).join(", ")}</p>
+            <p class="small">${o.items.map((x) => `${x.qty}× ${esc(namaLengkap(x))}`).join(", ")}</p>
             <p class="small muted">Kode <b class="mono">${esc(o.kode)}</b> · ${rupiah(o.total)} · ${
               o.metode === "digital" ? (o.bayar_status === "lunas" ? `<span class="pos">lunas digital (simulasi)</span>` : `<span class="neg">menunggu bayar digital</span>`) : "bayar di kasir"
             }${o.catatan ? ` · "${esc(o.catatan)}"` : ""}</p></div>
@@ -116,14 +152,14 @@ function menuView(s) {
   const grid = s.resep.length
     ? `<div class="pos-grid">${s.resep
         .map((r) => {
-          const inCart = cart.find((c) => c.key === r.id)?.qty || 0;
+          const inCart = cart.filter((c) => c.resepId === r.id).reduce((a, c) => a + c.qty, 0);
           const bd = bisaDibuat(r, map);
           const habis = bd.porsi === 0;
           return `<button class="pos-item ${inCart ? "in" : ""} ${habis ? "habis" : ""} ${r.foto || adaFoto ? "foto" : ""}" data-action="add" data-id="${r.id}">
             ${inCart ? `<span class="pos-qty">${inCart}</span>` : ""}
             ${r.foto ? `<img class="pos-img" src="${esc(r.foto.url)}" alt="" loading="lazy" decoding="async">` : adaFoto ? `<span class="pos-img ph" aria-hidden="true">${icon("bowl", 26)}</span>` : ""}
             <b>${esc(r.nama)}</b>
-            <span class="pos-price">${rupiah(hargaDi(s, r, channel))}</span>
+            <span class="pos-price">${rupiah(hargaDi(s, r, channel))}${punyaOpsi(s, r) ? `<small class="pos-varian">+ varian</small>` : ""}</span>
             ${bd.porsi !== null ? `<small class="mono">${habis ? "stok habis" : `sisa ±${bd.porsi}`}</small>` : ""}
           </button>`;
         })
@@ -179,7 +215,7 @@ function bayarView(s) {
       ${cart
         .map(
           (c) => `<div class="pos-line">
-            <div><b>${esc(c.nama)}</b><p class="small muted">${rupiah(c.harga)}</p></div>
+            <div><b>${esc(c.nama)}</b>${c.opsi?.length ? `<p class="small pos-opsi">${esc(labelOpsi(c))}</p>` : ""}<p class="small muted">${rupiah(c.harga)}</p></div>
             <div class="stepper">
               <button class="icon-btn sm" data-action="dec" data-key="${esc(c.key)}" aria-label="Kurangi">−</button>
               <b>${c.qty}</b>
@@ -239,7 +275,7 @@ function strukView(s) {
   return `
     <section class="struk">
       <div class="struk-head"><b>${esc(bisnisOf(s))}</b><small class="mono">Order #${o.no} · ${jam(o.waktu)}${o.atasNama ? ` · ${esc(o.atasNama)}` : ""}</small></div>
-      ${o.items.map((i) => `<div class="row-between"><span>${i.qty}× ${esc(i.nama)}</span><span>${rupiah(i.harga * i.qty)}</span></div>`).join("")}
+      ${o.items.map((i) => `<div class="row-between"><span>${i.qty}× ${esc(i.nama)}${i.opsi?.length ? `<small class="struk-opsi">${esc(labelOpsi(i))}</small>` : ""}</span><span>${rupiah(i.harga * i.qty)}</span></div>`).join("")}
       ${o.diskon ? `<div class="row-between muted"><span>Diskon</span><span>−${rupiah(o.diskon)}</span></div>` : ""}
       <div class="row-between struk-total"><span>Total</span><b>${rupiah(o.total)}</b></div>
       ${
@@ -289,6 +325,7 @@ function rekapView(s) {
             }
             <h4>Terlaris hari ini</h4>
             ${r.terlaris.slice(0, 5).map(([nama, q], i) => `<div class="row-between pos-sum"><span><b class="mono">${i + 1}.</b> ${esc(nama)}</span><b>${q} porsi</b></div>`).join("")}
+            ${r.opsiLaris.length ? `<h4>Varian & topping hari ini</h4><div class="chips">${r.opsiLaris.slice(0, 8).map(([nama, q]) => `<span class="tag">${esc(nama)} · ${q}</span>`).join("")}</div>` : ""}
             ${isKasir() ? "" : `<p class="muted small">Penjualan kasir otomatis masuk ke <a href="#/kas" class="link">Kas</a>, digabung per metode bayar per hari.</p>`}
           </section>`
         : `<section class="card"><p class="muted">Belum ada penjualan hari ini.</p></section>`
@@ -308,7 +345,7 @@ function rekapView(s) {
                   ${
                     openOrder === o.id
                       ? `<div class="inline-form">
-                          ${o.items.map((i) => `<div class="row-between small"><span>${i.qty}× ${esc(i.nama)}</span><span>${rupiah(i.harga * i.qty)}</span></div>`).join("")}
+                          ${o.items.map((i) => `<div class="row-between small"><span>${i.qty}× ${esc(namaLengkap(i))}</span><span>${rupiah(i.harga * i.qty)}</span></div>`).join("")}
                           ${o.diskon ? `<div class="row-between small muted"><span>Diskon</span><span>−${rupiah(o.diskon)}</span></div>` : ""}
                           ${o.batalOleh ? `<p class="small muted">Dibatalkan oleh ${esc(o.batalOleh.nama)}</p>` : ""}
                           ${
@@ -375,10 +412,10 @@ export const kasir = {
         : step === "struk" && last
           ? strukView(s)
           : `<section class="card empty pos-empty"><div class="empty-icon">${icon("register", 30)}</div><h3>Keranjang kosong</h3><p>Ketuk menu di kiri untuk mulai pesanan.</p></section>`;
-      return `${head("Kasir", "#/")}${tabs}<div class="pos-split"><div class="pos-left">${menuView(s)}</div><aside class="pos-right">${panel}</aside></div>`;
+      return `${head("Kasir", "#/")}${tabs}<div class="pos-split"><div class="pos-left">${menuView(s)}</div><aside class="pos-right">${panel}</aside></div>${pilihSheet(s)}`;
     }
     const body = tab === "rekap" ? rekapView(s) : step === "struk" && last ? strukView(s) : step === "bayar" && cart.length ? bayarView(s) : menuView(s);
-    return `${head("Kasir", "#/")}${tabs}${body}`;
+    return `${head("Kasir", "#/")}${tabs}${body}${tab === "jual" ? pilihSheet(s) : ""}`;
   },
 
   actions: {
@@ -386,7 +423,51 @@ export const kasir = {
       const r = store.get().resep.find((x) => x.id === el.dataset.id);
       if (!r) return;
       if (step === "struk") step = "menu"; // pesanan baru langsung dari menu
-      addItem({ key: r.id, resepId: r.id, nama: r.nama, harga: hargaDi(store.get(), r, channel) });
+      const s = store.get();
+      if (punyaOpsi(s, r)) {
+        pilih = { resepId: r.id, ids: pilihanAwal(s, r, bahanMap(s.bahan)), error: "" };
+        return render();
+      }
+      addItem({ key: r.id, resepId: r.id, nama: r.nama, harga: hargaDi(s, r, channel) });
+      render();
+    },
+    pilihOpsi(el) {
+      if (!pilih) return;
+      const s = store.get();
+      const r = s.resep.find((x) => x.id === pilih.resepId);
+      const g = grupMenu(s, r).find((x) => x.id === el.dataset.g);
+      if (!g) return;
+      const id = el.dataset.id;
+      const ids = new Set(pilih.ids);
+      if (ids.has(id)) {
+        if (!(g.tipe === "satu" && g.wajib)) ids.delete(id); // pilih-satu wajib: tidak bisa dikosongkan
+      } else {
+        if (g.tipe === "satu") for (const p of g.pilihan) ids.delete(p.id);
+        else if (g.maks && g.pilihan.filter((p) => ids.has(p.id)).length >= g.maks) {
+          pilih.error = `${g.nama}: maksimal ${g.maks}`;
+          return render();
+        }
+        ids.add(id);
+      }
+      pilih = { ...pilih, ids: [...ids], error: "" };
+      render();
+    },
+    pilihTambah() {
+      if (!pilih) return;
+      const s = store.get();
+      const r = s.resep.find((x) => x.id === pilih.resepId);
+      if (!r) return (pilih = null), render();
+      const cek = cekPilihan(s, r, pilih.ids, bahanMap(s.bahan));
+      if (!cek.ok) {
+        pilih.error = cek.error;
+        return render();
+      }
+      addItem({ key: kunciItem(r.id, cek.opsi), resepId: r.id, nama: r.nama, harga: hargaItem(s, r, cek.opsi, channel), opsi: cek.opsi });
+      pilih = null;
+      render();
+    },
+    pilihTutup() {
+      pilih = null;
       render();
     },
     inc(el) {
@@ -468,7 +549,10 @@ export const kasir = {
       channel = "toko";
       cart = o.items.map((x) => {
         const r = s.resep.find((y) => y.id === x.id);
-        return { key: r ? r.id : "x-" + uid(), resepId: r ? r.id : null, nama: x.nama, harga: x.harga, qty: x.qty };
+        const opsi = Array.isArray(x.opsi) && x.opsi.length ? x.opsi : null;
+        const it = { key: r ? kunciItem(r.id, opsi) : "x-" + uid(), resepId: r ? r.id : null, nama: r || !opsi ? x.nama : namaLengkap(x), harga: x.harga, qty: x.qty };
+        if (r && opsi) it.opsi = opsi;
+        return it;
       });
       mejaRef = o;
       form = {

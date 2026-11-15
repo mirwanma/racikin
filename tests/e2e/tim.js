@@ -1,6 +1,8 @@
 // E2E Racikin (tim.js). Lihat tests/README.md untuk cara menjalankan.
 const { chromium } = require('playwright');
 const B = (process.env.RACIKIN_URL || 'http://localhost:8766/'), OUT = process.argv[2];
+// Klik menu di Kasir; menu dengan varian membuka sheet -> langsung Tambah pakai pilihan default.
+const pos = async (p, n) => { await p.click(`.pos-item >> nth=${n}`); if (await p.$('.sheet')) await p.click('.sheet [data-action=pilihTambah]'); };
 const PW = process.env.RACIKIN_TEST_PASSWORD;
 const st = (p) => p.evaluate(() => JSON.parse(localStorage.getItem('racikin:v1')));
 const txt = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').trim();
@@ -33,7 +35,7 @@ async function sync(p) {
 async function jual(p, qty) {
   await p.goto(B + '#/kasir');
   await p.waitForSelector('.pos-grid');
-  for (let i = 0; i < qty; i++) await p.click('.pos-item >> nth=0');
+  for (let i = 0; i < qty; i++) await pos(p, 0);
   await p.click('[data-action=checkout]');
   await p.click('[data-action=uang] >> nth=0');
   await p.click('[data-action=selesai]');

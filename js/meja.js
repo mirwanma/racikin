@@ -5,11 +5,27 @@
 import { store, uid } from "./store.js";
 import { sb, cloud, role, onCloudChange } from "./cloud.js";
 import { bahanMap, bisaDibuat } from "./stok-utils.js";
+import { grupMenu, pilihanHabis } from "./varian.js";
 
 export const mejaAktif = (s) => !!s.posSetting?.pesanMeja;
 export const digitalAktif = (s) => s.posSetting?.mejaDigital !== false;
 export const linkMeja = (token) => `${location.origin}${location.pathname}#/m/${token}`;
 export const tokenBaru = () => (crypto.randomUUID ? crypto.randomUUID() : uid() + uid()).replace(/-/g, "").slice(0, 24);
+
+/** Grup varian yang dipakai menu mana pun (nama, aturan, harga tambahan, habis). */
+function opsiPublik(s, map) {
+  const dipakai = new Set((s.resep || []).flatMap((r) => grupMenu(s, r).map((g) => g.id)));
+  return (s.opsi || [])
+    .filter((g) => dipakai.has(g.id))
+    .map((g) => ({
+      id: g.id,
+      nama: g.nama,
+      tipe: g.tipe === "satu" ? "satu" : "banyak",
+      wajib: !!g.wajib,
+      maks: g.tipe === "satu" ? 1 : Number(g.maks) || 0,
+      pilihan: g.pilihan.map((p) => ({ id: p.id, nama: p.nama, harga: Math.round(Number(p.harga) || 0), habis: pilihanHabis(p, map) })),
+    }));
+}
 
 /** Data menu publik (tanpa HPP, resep, stok detail). */
 export function menuPublik(s) {
@@ -21,7 +37,11 @@ export function menuPublik(s) {
     bisnis: s.brand?.terpilih?.nama || s.profile?.nama || "Menu",
     lokasi: [s.profile?.area, s.profile?.kota].filter(Boolean).join(", "),
     warna: pal.length >= 2 ? { utama: pal[0].hex, aksen: pal[1].hex } : null,
-    menu: (s.resep || []).map((r) => ({ id: r.id, nama: r.nama, harga: Math.round(Number(r.harga) || 0), habis: bisaDibuat(r, map).porsi === 0, ...(r.foto?.url ? { foto: r.foto.url } : {}) })),
+    menu: (s.resep || []).map((r) => {
+      const g = grupMenu(s, r).map((x) => x.id);
+      return { id: r.id, nama: r.nama, harga: Math.round(Number(r.harga) || 0), habis: bisaDibuat(r, map).porsi === 0, ...(r.foto?.url ? { foto: r.foto.url } : {}), ...(g.length ? { opsi: g } : {}) };
+    }),
+    opsi: opsiPublik(s, map),
     meja: (s.meja || []).map((m) => ({ id: m.id, nama: m.nama, token: m.token })),
   };
 }
@@ -154,6 +174,7 @@ async function rpc(fn, args) {
   return data;
 }
 export const ambilMenu = (token) => rpc("get_table_menu", { p_token: token });
+// items = [{ id, qty, opsi?: [pilihanId] }]; harga & validasi pilihan dihitung ulang di server.
 export const kirimPesanan = (token, items, nama, catatan, metode) => rpc("place_table_order", { p_token: token, p_items: items, p_nama: nama, p_catatan: catatan, p_metode: metode });
 export const cekPesanan = (id, secret) => rpc("get_table_order", { p_id: id, p_secret: secret });
 export const bayarSimulasi = (id, secret) => rpc("pay_table_order_dummy", { p_id: id, p_secret: secret });

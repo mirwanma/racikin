@@ -7,7 +7,7 @@
 // - Detail order disimpan 30 hari; rekap harian (omzet, jumlah order, item terjual) disimpan permanen.
 import { uid } from "./store.js";
 import { todayISO } from "./ui.js";
-import { kebutuhan } from "./stok-utils.js";
+import { pakaiItem, namaLengkap } from "./varian.js";
 import { program, patchStempel } from "./loyalty.js";
 import { CHANNELS, isOnline, channelNama, komisiRp } from "./online.js";
 import { laciTransactions } from "./shift.js";
@@ -73,11 +73,7 @@ function kasPatch(transactions, orders, tanggal) {
 /** Ubah stok bahan dari item order (arah: -1 jual, +1 batal). Hanya bahan yang stoknya sudah diisi. */
 function stokPatch(s, items, tanggal, arah) {
   const pakai = {};
-  for (const it of items) {
-    const r = s.resep.find((x) => x.id === it.resepId);
-    if (!r) continue;
-    for (const k of kebutuhan(r, it.qty)) pakai[k.bahanId] = (pakai[k.bahanId] || 0) + k.qty;
-  }
+  for (const it of items) for (const k of pakaiItem(s, it)) pakai[k.bahanId] = (pakai[k.bahanId] || 0) + k.qty;
   const tracked = new Set(s.bahan.filter((b) => b.tracked).map((b) => b.id));
   const ids = Object.keys(pakai).filter((id) => tracked.has(id) && pakai[id]);
   if (!ids.length) return {};
@@ -99,8 +95,15 @@ function stokPatch(s, items, tanggal, arah) {
 function rekapPatch(s, tanggal, orders) {
   const aktif = orders.filter((o) => o.tanggal === tanggal && o.status !== "batal");
   const items = {};
-  for (const o of aktif) for (const it of o.items) items[it.nama] = (items[it.nama] || 0) + it.qty;
-  return { ...(s.posHarian || {}), [tanggal]: { order: aktif.length, omzet: Math.round(sum(aktif, (o) => o.total)), items } };
+  const opsi = {}; // pilihan varian/topping terjual: { pilihanId: porsi }
+  for (const o of aktif)
+    for (const it of o.items) {
+      items[it.nama] = (items[it.nama] || 0) + it.qty;
+      for (const x of it.opsi || []) opsi[x.id] = (opsi[x.id] || 0) + it.qty;
+    }
+  const rekap = { order: aktif.length, omzet: Math.round(sum(aktif, (o) => o.total)), items };
+  if (Object.keys(opsi).length) rekap.opsi = opsi;
+  return { ...(s.posHarian || {}), [tanggal]: rekap };
 }
 
 /** Buang detail order yang lebih tua dari SIMPAN_HARI hari. */
@@ -111,14 +114,21 @@ function prune(orders) {
   return orders.filter((o) => o.tanggal >= b);
 }
 
+/** Salin item keranjang ke order (pilihan varian ikut disimpan kalau ada). */
+function itemOrder(i) {
+  const it = { resepId: i.resepId || null, nama: i.nama, harga: Number(i.harga) || 0, qty: Number(i.qty) };
+  if (i.opsi?.length) it.opsi = i.opsi.map((o) => ({ g: o.g, id: o.id, nama: o.nama, harga: Number(o.harga) || 0 }));
+  return it;
+}
+
 /**
- * Buat order baru. cart = [{ resepId|null, nama, harga, qty }].
+ * Buat order baru. cart = [{ resepId|null, nama, harga, qty, opsi? }].
  * Return { patch, order, stempelInfo }.
  */
 export function buatOrder(s, { cart, diskon = 0, metode = "tunai", bayar = 0, pelangganId = "", channel = "toko", kasir = null, shiftId = null }) {
   if (isOnline(channel)) metode = channel; // order online dibayar lewat platform
   const tanggal = todayISO();
-  const items = cart.filter((i) => i.qty > 0).map((i) => ({ resepId: i.resepId || null, nama: i.nama, harga: Number(i.harga) || 0, qty: Number(i.qty) }));
+  const items = cart.filter((i) => i.qty > 0).map(itemOrder);
   const sub = subtotal(items);
   const disk = Math.min(Math.max(0, Math.round(Number(diskon) || 0)), sub);
   const total = sub - disk;
@@ -226,9 +236,15 @@ export function rekapHari(s, tanggal = todayISO()) {
   }).filter((m) => m.n);
   const komisi = sum(aktif, (o) => o.komisi || 0);
   const items = {};
-  for (const o of aktif) for (const it of o.items) items[it.nama] = (items[it.nama] || 0) + it.qty;
+  const opsi = {};
+  for (const o of aktif)
+    for (const it of o.items) {
+      items[it.nama] = (items[it.nama] || 0) + it.qty;
+      for (const x of it.opsi || []) opsi[x.nama] = (opsi[x.nama] || 0) + it.qty;
+    }
   const terlaris = Object.entries(items).sort((a, b) => b[1] - a[1]);
-  return { semua, aktif, omzet, komisi, bersih: omzet - komisi, n: aktif.length, rata: aktif.length ? omzet / aktif.length : 0, perMetode, terlaris, batal: semua.length - aktif.length };
+  const opsiLaris = Object.entries(opsi).sort((a, b) => b[1] - a[1]);
+  return { semua, aktif, omzet, komisi, bersih: omzet - komisi, n: aktif.length, rata: aktif.length ? omzet / aktif.length : 0, perMetode, terlaris, opsiLaris, batal: semua.length - aktif.length };
 }
 
 /** Teks struk untuk WhatsApp. */
@@ -237,7 +253,7 @@ export function struk(o, bisnis, rp) {
     `*${bisnis}*`,
     `Order #${o.no} · ${o.waktu.replace("T", " ")}`,
     "",
-    ...o.items.map((i) => `${i.qty}× ${i.nama}  ${rp(i.harga * i.qty)}`),
+    ...o.items.map((i) => `${i.qty}× ${namaLengkap(i)}  ${rp(i.harga * i.qty)}`),
     "",
     o.diskon ? `Subtotal ${rp(o.subtotal)}\nDiskon -${rp(o.diskon)}` : null,
     `*Total ${rp(o.total)}*`,

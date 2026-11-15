@@ -1,6 +1,8 @@
 // E2E Racikin (tablet.js). Lihat tests/README.md untuk cara menjalankan.
 const { chromium } = require('playwright');
 const B = (process.env.RACIKIN_URL || 'http://localhost:8766/'), OUT = process.argv[2];
+// Klik menu di Kasir; menu dengan varian membuka sheet -> langsung Tambah pakai pilihan default.
+const pos = async (p, n) => { await p.click(`.pos-item >> nth=${n}`); if (await p.$('.sheet')) await p.click('.sheet [data-action=pilihTambah]'); };
 const W = Number(process.argv[3] || 1180), H = Number(process.argv[4] || 820);
 const ROUTES = (process.argv[5] || 'home,kasir,kasir-cart,kasir-rekap,kas,laporan,bisnis,stok,belanja,pelanggan,konten,rab,ide,brand,aktivasi,studio,mentor,shift,setelan,online,resep').split(',');
 (async () => {
@@ -19,8 +21,8 @@ const ROUTES = (process.argv[5] || 'home,kasir,kasir-cart,kasir-rekap,kas,lapora
     if (r === 'kasir') { const j = await p.$('label:has(input[value=jual])'); if (j) await j.click(); await p.waitForTimeout(200); }
     if (r === 'kasir-cart') {
       const j = await p.$('label:has(input[value=jual])'); if (j) await j.click();
-      for (const n of [0, 1, 2]) await p.click(`.pos-item >> nth=${n}`);
-      await p.click('.pos-item >> nth=0'); await p.waitForTimeout(200);
+      for (const n of [0, 1, 2]) await pos(p, n);
+      await pos(p, 0); await p.waitForTimeout(200);
     }
     if (r === 'kasir-rekap') { await p.click('label:has(input[value=rekap])'); await p.waitForTimeout(200); }
     const over = await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);

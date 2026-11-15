@@ -30,6 +30,16 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - AI task `generate_recipe` menyusun bahan + takaran + estimasi harga (ditandai "estimasi" sampai diganti harga belanja asli).
 - Rata-rata HPP resep dipakai sebagai default HPP di kalkulator BEP, dan ringkasan menu ikut jadi konteks Mentor AI.
 
+## Varian & topping
+- Tab **Varian** di Stok & Resep (`#/stok?tab=varian`), editor `#/varian?id=…` (ada contoh cepat: level pedas, topping, ukuran, tingkat manis).
+- **Grup pilihan** dipakai ulang di banyak menu: nama, cara milih (**pilih satu** / **boleh lebih dari 1** + maksimal), wajib/opsional. Tiap pilihan punya **harga tambahan**, **bahan tambahan per porsi** (buat HPP & stok), dan tanda **lagi habis**. Grup dipasang ke menu dari editor varian atau dari editor resep.
+- **Kasir**: menu yang punya varian membuka sheet pilihan (aturan wajib/maks dicek, harga ter-update langsung). Menu sama dengan pilihan beda = baris keranjang beda. Struk, riwayat order, WA struk & tiket dapur menampilkan pilihannya.
+- **Harga online**: tambahan harga ikut markup saluran (GoFood dkk), dibulatkan ke atas.
+- **Stok**: yang dipotong bahan resep + bahan pilihan; batal order mengembalikan semuanya. Pilihan otomatis "habis" kalau stok bahannya (yang sudah diisi) kurang dari 1 porsi.
+- **Rekap & laporan**: `posHarian[tgl].opsi` = porsi per pilihan; tab Hari ini menampilkan varian terlaris, laporan laba rugi menghitung HPP tambahan pilihan & untung per pilihan.
+- **Pesan meja**: pelanggan juga memilih varian; server mengecek pilihan & menghitung harga (`place_table_order`).
+- Batasan: pilihan hanya **menambah** harga/bahan (belum bisa mengganti bahan atau mengalikan resep). Data `opsi` + `resep[].opsiIds`, logika di `js/varian.js`.
+
 ## Kasir (POS)
 - Tab **Kasir** (`#/kasir`). Menu = daftar resep (harga dari resep, sisa porsi dari stok). Item di luar menu bisa ditambah manual.
 - Bayar: diskon (Rp), pelanggan kartu stempel (opsional), metode Tunai (uang diterima + tombol cepat + kembalian) / QRIS / Transfer, atau pesanan order online. Setelah bayar muncul struk + tombol kirim struk via WhatsApp.
@@ -74,7 +84,7 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 ## Pesan lewat meja / QR (opsional)
 - Aktifkan di Bisnis > **Meja & QR** (`#/meja`, pemilik/manajer). Kalau tidak aktif, Kasir tidak berubah dan link QR menampilkan "pesan lewat meja tidak aktif".
 - Tambah meja (satu-satu atau sekaligus), tiap meja punya **QR unik** (`#/m/<token>`); **cetak semua QR** sebagai kartu meja, ganti QR (token baru), hapus meja. Tampil jumlah pesanan & yang menunggu per meja hari ini.
-- **Pelanggan** (tanpa login/install): lihat menu & harga toko (yang habis ditandai), keranjang, checkout dengan nama & catatan, pilih **Bayar di kasir** atau **Bayar digital (QRIS)**. Bayar digital saat ini **SIMULASI** (tidak ada uang ditarik; bisa disembunyikan). Halaman status: kode pesanan, diterima kasir, dimasak/siap (kalau mode dapur aktif), status bayar.
+- **Pelanggan** (tanpa login/install): lihat menu & harga toko (yang habis ditandai), pilih varian & topping, keranjang, checkout dengan nama & catatan, pilih **Bayar di kasir** atau **Bayar digital (QRIS)**. Bayar digital saat ini **SIMULASI** (tidak ada uang ditarik; bisa disembunyikan). Halaman status: kode pesanan, diterima kasir, dimasak/siap (kalau mode dapur aktif), status bayar.
 - **Kasir**: kotak "Pesanan meja" realtime → **Terima** mengisi keranjang + nama meja/pelanggan & catatan → selesaikan seperti biasa (Kas, stok, shift, stempel, tiket dapur); pesanan lunas digital otomatis memakai metode QRIS. **Tolak** dengan alasan → pelanggan melihatnya.
 - Keamanan: menu publik disalin ke `public_menu` (tanpa HPP/stok detail); pelanggan hanya lewat fungsi `get_table_menu` / `place_table_order` / `get_table_order` / `pay_table_order_dummy`. **Harga & total dihitung server**, validasi menu/qty/nama/metode, batas 5 pesanan per meja per 5 menit, status pesanan hanya bisa dibaca dengan secret milik HP pelanggan. Pesanan meja > 7 hari dihapus tiap malam (data penjualannya tetap di Kasir/Kas). Logika di `js/meja.js`, QR pakai `js/vendor/qrcode-1.4.4.js` (MIT).
 
@@ -161,7 +171,7 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 
 ## Data contoh (demo)
 - Onboarding: **Coba demo lengkap (data 2 bulan)**; atau Setelan > Data kamu > **Isi data contoh TAHGUY (2 bulan)**.
-- Isi (`js/dummy.js`, acak tapi tetap/seeded): 15 menu + resep & HPP, 25 bahan dengan riwayat belanja & pemakaian, ±2.000 order kasir 60 hari (toko + GoFood/GrabFood/ShopeeFood, detail order 30 hari terakhir), Kas lengkap (penjualan, komisi order online, belanja bahan & kemasan, sewa, gas, gaji, iklan, pesanan katering), 35 pelanggan setia + stempel, RAB + realisasi, brand kit, checklist aktivasi, kalender konten, riwayat shift 30 hari (dengan beberapa selisih), 5 supplier & riwayat harga (cabai, telur, bakso naik; minyak turun). Data hari ini hanya sampai jam sekarang (TAHGUY buka ±14.30).
+- Isi (`js/dummy.js`, acak tapi tetap/seeded): 15 menu + resep & HPP, 4 grup varian (level pedas, topping, ukuran, tingkat manis) yang ikut terpakai di order, 25 bahan dengan riwayat belanja & pemakaian, ±2.000 order kasir 60 hari (toko + GoFood/GrabFood/ShopeeFood, detail order 30 hari terakhir), Kas lengkap (penjualan, komisi order online, belanja bahan & kemasan, sewa, gas, gaji, iklan, pesanan katering), 35 pelanggan setia + stempel, RAB + realisasi, brand kit, checklist aktivasi, kalender konten, riwayat shift 30 hari (dengan beberapa selisih), 5 supplier & riwayat harga (cabai, telur, bakso naik; minyak turun). Data hari ini hanya sampai jam sekarang (TAHGUY buka ±14.30).
 - Semua angka saling cocok: Kas = rekap kasir per hari, stok = total riwayat stok, stempel = total log stempel. Beberapa bahan sengaja menipis & beberapa pelanggan "perlu diajak balik" supaya fitur pengingat kelihatan.
 - Mengganti data bisnis di perangkat (dan di cloud kalau sedang login); setelan perangkat tetap.
 
