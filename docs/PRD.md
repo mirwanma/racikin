@@ -95,6 +95,10 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Laba rugi bulanan (pendapatan, HPP dari resep atau belanja, biaya, laba kotor/usaha/bersih, arus kas), pembanding periode yang sama bulan lalu.
 - Grafik laba 6 bulan, menu paling untung/tipis, catatan otomatis, cetak PDF & CSV.
 
+### Fase 12: Belanja & supplier (selesai)
+- Daftar belanja otomatis dari pemakaian & stok, per supplier, kirim via WA, catat hasil belanja (stok, harga, Kas).
+- Data supplier, riwayat harga bahan & dampak kenaikan harga ke HPP menu.
+
 ### Di luar MVP (fase berikutnya)
 Foto produk AI (gambar), integrasi WhatsApp, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
 

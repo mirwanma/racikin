@@ -40,6 +40,14 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - Tab **Hari ini**: omzet, jumlah order, rata-rata, per metode bayar, menu terlaris, daftar order. **Batalkan order** mengembalikan kas, stok & stempel.
 - Data: `orders` (detail order, disimpan 30 hari) + `posHarian` (rekap harian permanen) — supaya dokumen cloud tetap kecil walau ratusan order per hari. Logika di `js/pos.js`.
 
+## Belanja & supplier
+- Halaman `#/belanja` (Bisnis, atau Stok > Bahan & Stok). Khusus pemilik/manajer.
+- **Daftar belanja**: untuk 1/3/7 hari ke depan = rata-rata pemakaian 14 hari terakhir (riwayat stok dari Kasir) × hari + stok minimum − stok sekarang, dibulatkan (gram/ml per 100–500, atau per kemasan `bahan.pack`). Dikelompokkan per supplier dengan perkiraan biaya; jumlah bisa diubah, item bisa dicoret atau ditambah. Tombol **Pesan via WA** mengirim daftar ke nomor supplier.
+- **Sudah belanja**: isi jumlah & total bayar sebenarnya → stok bertambah, harga per satuan diperbarui (HPP & margin menu ikut berubah), riwayat harga tersimpan (`stokLog.harga`, `supplierId`), dan pengeluaran Kas per kategori (Bahan Baku / Kemasan). Kalau harga per satuan berubah > 2× lipat, diminta konfirmasi (cegah salah ketik).
+- **Supplier**: nama, WA, catatan, bahan yang dibeli di sana, total belanja 30 hari.
+- **Harga bahan**: harga naik/turun dibanding ±3 minggu sebelumnya + dampaknya ke HPP per porsi tiap menu; riwayat pembelian per bahan.
+- Form "+ Beli" di Stok juga bisa memilih supplier & menyimpan riwayat harga. Logika di `js/belanja.js`.
+
 ## Laporan laba rugi
 - Halaman `#/laporan` (Kas > "Laporan laba rugi", atau Bisnis). Pilih bulan (6 bulan terakhir).
 - Susunan: Pendapatan (kasir toko, order online, manual, pesanan/katering) − HPP = **laba kotor**; − biaya operasional per kategori = **laba usaha**; + pendapatan lain = **laba bersih**. Di bawahnya arus kas: belanja bahan, belanja peralatan (aset), arus kas bersih (= masuk − keluar di Kas).
@@ -117,7 +125,7 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 
 ## Data contoh (demo)
 - Onboarding: **Coba demo lengkap (data 2 bulan)**; atau Setelan > Data kamu > **Isi data contoh TAHGUY (2 bulan)**.
-- Isi (`js/dummy.js`, acak tapi tetap/seeded): 15 menu + resep & HPP, 25 bahan dengan riwayat belanja & pemakaian, ±2.000 order kasir 60 hari (toko + GoFood/GrabFood/ShopeeFood, detail order 30 hari terakhir), Kas lengkap (penjualan, komisi order online, belanja bahan & kemasan, sewa, gas, gaji, iklan, pesanan katering), 35 pelanggan setia + stempel, RAB + realisasi, brand kit, checklist aktivasi, kalender konten, riwayat shift 30 hari (dengan beberapa selisih). Data hari ini hanya sampai jam sekarang (TAHGUY buka ±14.30).
+- Isi (`js/dummy.js`, acak tapi tetap/seeded): 15 menu + resep & HPP, 25 bahan dengan riwayat belanja & pemakaian, ±2.000 order kasir 60 hari (toko + GoFood/GrabFood/ShopeeFood, detail order 30 hari terakhir), Kas lengkap (penjualan, komisi order online, belanja bahan & kemasan, sewa, gas, gaji, iklan, pesanan katering), 35 pelanggan setia + stempel, RAB + realisasi, brand kit, checklist aktivasi, kalender konten, riwayat shift 30 hari (dengan beberapa selisih), 5 supplier & riwayat harga (cabai, telur, bakso naik; minyak turun). Data hari ini hanya sampai jam sekarang (TAHGUY buka ±14.30).
 - Semua angka saling cocok: Kas = rekap kasir per hari, stok = total riwayat stok, stempel = total log stempel. Beberapa bahan sengaja menipis & beberapa pelanggan "perlu diajak balik" supaya fitur pengingat kelihatan.
 - Mengganti data bisnis di perangkat (dan di cloud kalau sedang login); setelan perangkat tetap.
 
@@ -175,6 +183,7 @@ js/stok-utils.js   hitung HPP, porsi yang bisa dibuat, stok menipis
 js/loyalty.js      program stempel, no. WA, link kartu, template pesan
 js/pos.js          kasir: order -> kas harian gabungan, stok, stempel, batal, rekap, struk
 js/shift.js        shift kasir: buka/tutup, uang laci, ringkasan & selisih
+js/belanja.js      daftar belanja otomatis, supplier, riwayat & perubahan harga bahan
 js/laporan.js      laporan laba rugi bulanan (HPP resep/belanja), pembanding, catatan, CSV
 js/online.js       harga & komisi per saluran online, saran markup, untung per porsi
 js/studio/         theme.js (warna/font/ekspor PNG-SVG) + art.js (logo, mockup, spanduk, poster, dst.)
