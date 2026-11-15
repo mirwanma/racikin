@@ -21,14 +21,15 @@ import { kasir } from "./views/kasir.js";
 import { online } from "./views/online.js";
 import { tim, gabung } from "./views/tim.js";
 import { notif } from "./views/notif.js";
+import { shift } from "./views/shift.js";
 import { initCloud, onCloudChange, cloud, role } from "./cloud.js";
 import { icon } from "./icons.js";
 
-const routes = { "": home, profil, bisnis, ide, rab, brand, aktivasi, kas, konten, mentor, setelan, akun, stok, resep, pelanggan, kartu, studio, kasir, online, tim, gabung, notif };
-const tabOf = { "": "", bisnis: "bisnis", ide: "bisnis", rab: "bisnis", brand: "bisnis", aktivasi: "bisnis", kas: "kas", stok: "bisnis", resep: "bisnis", pelanggan: "bisnis", studio: "bisnis", konten: "konten", kasir: "kasir", online: "kasir", tim: "bisnis", notif: "-" };
+const routes = { "": home, profil, bisnis, ide, rab, brand, aktivasi, kas, konten, mentor, setelan, akun, stok, resep, pelanggan, kartu, studio, kasir, online, tim, gabung, notif, shift };
+const tabOf = { "": "", bisnis: "bisnis", ide: "bisnis", rab: "bisnis", brand: "bisnis", aktivasi: "bisnis", kas: "kas", stok: "bisnis", resep: "bisnis", pelanggan: "bisnis", studio: "bisnis", konten: "konten", kasir: "kasir", online: "kasir", tim: "bisnis", notif: "-", shift: "kasir" };
 // Kasir hanya melihat halaman jualan, pelanggan, dan stok bahan.
-const KASIR_ROUTES = new Set(["kasir", "pelanggan", "stok", "akun", "setelan", "kartu", "tim", "gabung", "notif"]);
-const tabOfKasir = { kasir: "kasir", pelanggan: "pelanggan", stok: "stok", akun: "akun", setelan: "akun", tim: "akun", notif: "akun" };
+const KASIR_ROUTES = new Set(["kasir", "pelanggan", "stok", "akun", "setelan", "kartu", "tim", "gabung", "notif", "shift"]);
+const tabOfKasir = { kasir: "kasir", pelanggan: "pelanggan", stok: "stok", akun: "akun", setelan: "akun", tim: "akun", notif: "akun", shift: "kasir" };
 const FREE_ROUTES = ["profil", "setelan", "akun", "kartu", "gabung", "tim", "notif"];
 
 const view = $("#view");

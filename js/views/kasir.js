@@ -7,6 +7,7 @@ import { bahanMap, bisaDibuat } from "../stok-utils.js";
 import { program, waLink } from "../loyalty.js";
 import { cloud, markCards, isKasir, pelaku, teamActive } from "../cloud.js";
 import { METODE, metodeNama, subtotal, buatOrder, batalOrder, rekapHari, struk, perKasir } from "../pos.js";
+import { shiftAktif, ringkasan as ringkasanShift, wajibShift } from "../shift.js";
 import { activeChannels, channelCfg, channelNama, hargaDi, isOnline, komisiRp } from "../online.js";
 
 // State layar kasir (tidak disimpan; keranjang hilang kalau app ditutup).
@@ -58,7 +59,21 @@ function channelChips(s) {
   </div>`;
 }
 
+/** Bar shift di atas menu: status shift aktif, atau ajakan buka shift. */
+function shiftBar(s) {
+  const sh = shiftAktif(s, pelaku());
+  if (sh) {
+    const r = ringkasanShift(s, sh);
+    return `<a href="#/shift" class="shift-bar on">${icon("register", 16)}<span><b>Shift ${esc(sh.kasir?.nama || "kasir")}</b> · sejak ${jam(sh.buka)} · ${r.order} order</span><span class="mono">laci ${rupiah(r.seharusnya)}</span></a>`;
+  }
+  return `<a href="#/shift" class="shift-bar">${icon("register", 16)}<span><b>Belum buka shift</b> · ${wajibShift(s) ? "wajib sebelum jualan" : "catat modal laci & tutup kasir"}</span><span class="link">Buka</span></a>`;
+}
+
 function menuView(s) {
+  if (wajibShift(s) && !shiftAktif(s, pelaku())) {
+    return `${shiftBar(s)}<section class="card empty"><div class="empty-icon">${icon("register", 30)}</div><h3>Buka shift dulu</h3>
+      <p>Pemilik mengaktifkan "wajib buka shift". Isi modal awal laci, lalu mulai jualan.</p><a href="#/shift" class="btn primary">Buka shift</a></section>`;
+  }
   const map = bahanMap(s.bahan);
   const grid = s.resep.length
     ? `<div class="pos-grid">${s.resep
@@ -80,7 +95,7 @@ function menuView(s) {
         <p>Menu kasir diambil dari resep. Bikin resep dulu biar harga, HPP & stok nyambung otomatis.</p>
         ${isKasir() ? `<p class="small muted">Minta pemilik usaha bikin menu dulu.</p>` : `<a href="#/resep?id=new" class="btn primary">+ Bikin menu</a>`}
       </section>`;
-  return `${channelChips(s)}${grid}
+  return `${shiftBar(s)}${channelChips(s)}${grid}
     <details class="card">
       <summary><b>Item lain (di luar menu)</b></summary>
       <form class="row3 pos-custom" data-form="custom">
@@ -201,7 +216,7 @@ function rekapView(s) {
   const tim = teamActive() || new Set(r.semua.map((o) => o.kasir?.id || "-")).size > 1;
   const tgl = new Date(todayISO() + "T00:00:00").toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" });
   return `
-    <p class="muted small">${esc(tgl)}</p>
+    <div class="row-between"><p class="muted small" style="margin:0">${esc(tgl)}</p><a href="#/shift" class="link small">Shift & tutup kasir</a></div>
     <div class="stats3">
       <div><small>Omzet</small><b class="pos">${rupiah(r.omzet)}</b></div>
       <div><small>Order</small><b>${r.n}</b></div>
@@ -315,7 +330,8 @@ export const kasir = {
     },
     selesai() {
       const s = store.get();
-      const { patch, order, stempelInfo } = buatOrder(s, { cart, ...form, channel, kasir: pelaku() });
+      if (wajibShift(s) && !shiftAktif(s, pelaku())) return toast("Buka shift dulu sebelum jualan", "err");
+      const { patch, order, stempelInfo } = buatOrder(s, { cart, ...form, channel, kasir: pelaku(), shiftId: shiftAktif(s, pelaku())?.id || null });
       store.set(patch);
       if (order.stempel) markCards({ ids: [order.pelangganId] });
       last = { order, stempelInfo };

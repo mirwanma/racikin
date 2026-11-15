@@ -139,6 +139,8 @@ export const kas = {
               ${txs.map((t) => `<div class="tx ${t.jenis}"><div><b>${esc(t.kategori)}</b>${t.catatan ? `<p class="muted small">${esc(t.catatan)}</p>` : ""}</div><b>${t.jenis === "masuk" ? "+" : "−"}${rupiah(t.nominal)}</b>${
                 t.ref === "pos"
                   ? `<a href="#/kasir?tab=rekap" class="tag" title="Otomatis dari Kasir">Kasir</a>`
+                  : t.ref === "laci"
+                  ? `<a href="#/shift" class="tag" title="Pengeluaran dari laci kasir">Laci</a>`
                   : `<button class="icon-btn sm" data-action="del" data-id="${t.id}" aria-label="Hapus">${icon("x", 14)}</button>`
               }</div>`).join("")}`,
                 )

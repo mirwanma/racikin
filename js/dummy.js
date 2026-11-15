@@ -9,6 +9,7 @@ import { reconcile, SIMPAN_HARI } from "./pos.js";
 import { hargaDi, komisiRp } from "./online.js";
 import { newToken } from "./loyalty.js";
 import { demo } from "./demo.js";
+import { ringkasan } from "./shift.js";
 
 export const HARI = 60;
 
@@ -117,6 +118,10 @@ export function buatDataDummy({ today = todayISO(), settings } = {}) {
     return list[list.length - 1];
   };
   const start = addDays(today, -(HARI - 1));
+  const jamSekarang = (() => {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  })();
 
   // ---------- Bahan & resep ----------
   const idB = Object.fromEntries(BAHAN.map(([k]) => [k, uid() + k]));
@@ -174,7 +179,9 @@ export function buatDataDummy({ today = todayISO(), settings } = {}) {
     const jamList = Array.from({ length: n }, () => {
       const jam = weighted([15, 16, 17, 18, 19, 20, 21], (h) => ({ 15: 2, 16: 4, 17: 7, 18: 8, 19: 7, 20: 4, 21: 2 })[h]);
       return `${String(jam).padStart(2, "0")}:${String(between(0, 59)).padStart(2, "0")}`;
-    }).sort();
+    })
+      .sort()
+      .filter((j) => tanggal < today || j <= jamSekarang); // hari ini: hanya order yang jamnya sudah lewat
     const tersedia = (list) => list.filter((m) => d >= m.mulai);
     pakaiHarian[tanggal] = {};
     jamList.forEach((jam, i) => {
@@ -368,8 +375,32 @@ export function buatDataDummy({ today = todayISO(), settings } = {}) {
       .filter((x) => x.kunjungan > 0)
       .map(({ _w, _sampai, ...x }) => x),
     stempelLog,
+    shifts: [],
+    posSetting: { wajibShift: false },
     settings: settings || { aiMode: "demo", endpoint: "", anonKey: "" },
   };
+  // Shift kasir 30 hari terakhir: satu shift per hari, hari ini masih buka.
+  const sr = rng(777);
+  for (let d = SIMPAN_HARI - 1; d >= 0; d--) {
+    const tanggal = addDays(today, -d);
+    const buka = `14:${String(20 + Math.floor(sr() * 20)).padStart(2, "0")}`;
+    if (d === 0 && jamSekarang < buka) continue; // hari ini belum buka
+    const sh = { id: uid() + "s", kasir: null, buka: `${tanggal}T${buka}`, tutup: null, modal: 200000, laci: [], setor: null, hasil: null, catatan: "" };
+    for (const o of state.orders) if (o.tanggal === tanggal) o.shiftId = sh.id;
+    const lewat = (w) => d > 0 || w.slice(11) <= jamSekarang;
+    if (sr() < 0.35) sh.laci.push({ id: uid(), waktu: `${tanggal}T18:${String(Math.floor(sr() * 50) + 10)}`, jenis: "keluar", nominal: 20000, kategori: "Bahan Baku", catatan: "Beli es batu tambahan" });
+    sh.laci = sh.laci.filter((l) => lewat(l.waktu));
+    if (sr() < 0.25 && lewat(`${tanggal}T19:30`)) sh.laci.push({ id: uid(), waktu: `${tanggal}T19:30`, jenis: "ambil", nominal: 300000, kategori: "", catatan: "Setor ke Raka" });
+    if (d > 0) {
+      const r = ringkasan(state, sh);
+      const selisih = sr() < 0.72 ? 0 : [-2000, -5000, -1000, 1000, 2000, -10000][Math.floor(sr() * 6)];
+      sh.tutup = `${tanggal}T22:${String(5 + Math.floor(sr() * 40)).padStart(2, "0")}`;
+      sh.setor = r.seharusnya + selisih;
+      sh.hasil = { ...r, setor: sh.setor, selisih };
+      if (selisih < 0) sh.catatan = "Kembalian kurang, kemungkinan salah kasih";
+    }
+    state.shifts.push(sh);
+  }
   state = reconcile(state, { kas: true });
   // Detail order disimpan 30 hari (sama seperti kasir); rekap harian & Kas tetap 60 hari.
   const batas = addDays(today, -SIMPAN_HARI);
