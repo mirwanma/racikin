@@ -1000,3 +1000,31 @@ body[data-route="m"] .view { max-width: 640px; padding-bottom: 120px; }
 .meja-bayar { border: 1.5px solid var(--ink); background: var(--yellow-tint); }
 .meja-bayar.lunas { border-color: var(--leaf); }
 .meja-bayar p { margin: 4px 0 0; }
+
+/* ---------- Foto menu ---------- */
+.foto-card .chips { gap: 6px; }
+.foto-compare { display: grid; grid-template-columns: 1fr; gap: 10px; margin: 10px 0; }
+.foto-compare.dua { grid-template-columns: 1fr 1fr; }
+.foto-compare figure { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.foto-compare img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; border: 1.5px solid var(--line-2); background: var(--paper); }
+.foto-compare .hasil img { border-color: var(--ink); }
+.foto-compare figcaption { font-family: var(--mono); font-size: 11px; color: var(--muted); text-transform: uppercase; text-align: center; }
+.foto-loading { aspect-ratio: 1; align-items: center; justify-content: center; border: 1.5px dashed var(--line-2); border-radius: 10px; }
+.foto-now { position: relative; margin: 10px 0; }
+.foto-now img { width: 100%; max-height: 320px; object-fit: cover; border-radius: 12px; border: 1.5px solid var(--ink); }
+.foto-now .tag { position: absolute; top: 8px; left: 8px; }
+.foto-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 18px 10px; margin: 10px 0 4px; border: 1.5px dashed var(--line-2); border-radius: 12px; color: var(--muted); text-align: center; }
+label.btn.disabled { opacity: .5; pointer-events: none; }
+.pos-item.foto { padding-top: 0; }
+.pos-img { display: block; width: calc(100% + 24px); margin: 0 -12px 8px; aspect-ratio: 16 / 10; object-fit: cover; border-bottom: 1px solid var(--line); border-radius: 8.5px 8.5px 0 0; }
+.resep-head { gap: 10px; }
+.resep-head h3 { flex: 1; margin: 0; }
+.resep-thumb { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; border: 1px solid var(--line-2); flex: none; }
+.pm-item { gap: 12px; }
+.pm-img { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; flex: none; border: 1px solid var(--line); }
+.pm-info { flex: 1; min-width: 0; }
+.pos-img.ph { display: grid; place-items: center; color: var(--muted); background: var(--yellow-tint); }
+.foto-btn { flex-direction: column; gap: 2px; line-height: 1.15; }
+.foto-btn > span { display: inline-flex; align-items: center; gap: 6px; }
+.foto-btn small { font-weight: 500; font-size: 11px; color: var(--muted); }
+@media (max-width: 699px) { .pos-img { aspect-ratio: 2 / 1; } }

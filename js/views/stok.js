@@ -30,7 +30,7 @@ function menuTab(s) {
         const bd = bisaDibuat(r, map);
         const marginCls = h.margin >= 50 ? "pos" : h.margin >= 30 ? "" : "neg";
         return `<section class="card resep-card">
-          <div class="row-between"><h3>${esc(r.nama)}</h3><a href="#/resep?id=${r.id}" class="btn ghost sm">Edit</a></div>
+          <div class="row-between resep-head">${r.foto ? `<img class="resep-thumb" src="${esc(r.foto.url)}" alt="" loading="lazy">` : ""}<h3>${esc(r.nama)}</h3><a href="#/resep?id=${r.id}" class="btn ghost sm">Edit</a></div>
           <div class="stats3">
             <div><small>Harga jual</small><b>${rupiah(r.harga)}</b></div>
             <div><small>HPP/porsi</small><b>${rupiah(h.hpp)}</b></div>

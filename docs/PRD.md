@@ -108,6 +108,10 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Pesanan masuk realtime ke Kasir (terima/tolak), lanjut ke Kas, stok, shift & dapur. Harga dihitung server.
 - Berikutnya: hubungkan pembayaran digital ke payment gateway sungguhan (mis. QRIS via Midtrans/Xendit) lewat webhook.
 
+### Fase 15: Foto menu (selesai, opsional)
+- Upload foto per menu, percantik otomatis (gratis) atau pakai AI (Gemini, butuh billing), bandingkan sebelum simpan.
+- Foto tampil di Kasir, Stok & menu pelanggan QR meja.
+
 ### Di luar MVP (fase berikutnya)
 Foto produk AI (gambar), integrasi WhatsApp, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
 

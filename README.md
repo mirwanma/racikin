@@ -63,6 +63,14 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - Grafik laba bersih 6 bulan (satu seri, bulan rugi di bawah garis nol + tanda minus; tooltip saat hover), menu paling untung & margin paling tipis, catatan otomatis (margin, komisi online, marketing, tren, stok/susut).
 - **Cetak / simpan PDF** (tampilan cetak khusus) dan **unduh CSV**. Logika di `js/laporan.js`.
 
+## Foto menu (opsional)
+- Di halaman Edit resep ada bagian **Foto menu**: upload / ambil foto → foto dikecilkan di HP (maks 1024 px, WebP ±40 KB).
+- **Percantik otomatis (gratis)**: diproses di HP (rentang terang-gelap, kurva kontras, warna, sedikit hangat, pertajam). Tanpa AI, tanpa biaya.
+- **Percantik pakai AI** (Gemini, Edge Function `racikin-foto`): pilihan gaya Studio terang / Meja kayu hangat / Latar polos / Natural; AI diminta mempertahankan isi makanan. Model `gemini-3.1-flash-image` (cadangan `gemini-2.5-flash-image`, `gemini-3.1-flash-lite-image`; bisa diganti lewat secret `GEMINI_IMAGE_MODEL`). Kuota terpisah: `RACIKIN_FOTO_PER_DAY` (default 15/hari) & 3/menit. **Butuh billing aktif di Google AI Studio** — model gambar tidak tersedia di paket gratis (tanpa billing, app menampilkan pesan & menyarankan percantik otomatis).
+- Asli & hasil tampil berdampingan; tidak ada yang tersimpan sampai dipilih (simpan asli / simpan hasil). Bisa ganti, percantik ulang, atau hapus foto.
+- Disimpan di Supabase Storage bucket publik `menu-foto` (`<owner_id>/<resep_id>-<waktu>.webp`); hanya pemilik/manajer yang bisa upload/ganti/hapus (`foto_boleh`), file lama ikut dihapus saat diganti. Perlu login.
+- Foto tampil di kartu Kasir (menu tanpa foto pakai placeholder supaya grid rata), Stok & Resep, dan menu pelanggan QR meja. Logika di `js/foto.js`.
+
 ## Pesan lewat meja / QR (opsional)
 - Aktifkan di Bisnis > **Meja & QR** (`#/meja`, pemilik/manajer). Kalau tidak aktif, Kasir tidak berubah dan link QR menampilkan "pesan lewat meja tidak aktif".
 - Tambah meja (satu-satu atau sekaligus), tiap meja punya **QR unik** (`#/m/<token>`); **cetak semua QR** sebagai kartu meja, ganti QR (token baru), hapus meja. Tampil jumlah pesanan & yang menunggu per meja hari ini.
@@ -210,6 +218,7 @@ js/ai.js           klien AI (online pakai token login / demo)
 js/stok-utils.js   hitung HPP, porsi yang bisa dibuat, stok menipis
 js/loyalty.js      program stempel, no. WA, link kartu, template pesan
 js/pos.js          kasir: order -> kas harian gabungan, stok, stempel, batal, rekap, struk
+js/foto.js         foto menu: kecilkan, percantik otomatis/AI, upload & hapus di Storage
 js/meja.js         pesan lewat meja: menu publik, pesanan meja realtime, API pelanggan, QR
 js/dapur.js        mode dapur: tiket ke dapur, status, realtime, antrean offline
 js/shift.js        shift kasir: buka/tutup, uang laci, ringkasan & selisih
@@ -222,6 +231,7 @@ js/demo.js         generator Mode Demo (shape = schema di tasks.ts)
 js/views/*.js      satu file per halaman
 docs/PRD.md        Product Requirements Document
 supabase/migrations/   user_data, ai_usage + consume_ai_quota, stamp_cards + get_stamp_card, mode tim (rev, team_members, team_invites, doc_get/doc_save)
+supabase/functions/racikin-foto/   percantik foto menu pakai Gemini (kuota terpisah)
 supabase/functions/racikin-push/   pengingat terjadwal: index.ts (key/test/run), notif.ts (jadwal), webpush.ts (enkripsi + VAPID)
 supabase/functions/racikin-ai/
   index.ts         endpoint (wajib login + kuota) → Gemini API / Claude API
