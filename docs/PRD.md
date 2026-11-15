@@ -91,6 +91,10 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Buka shift dengan modal laci, catat uang keluar/masuk laci, tutup shift dengan hitung uang fisik → selisih per shift & per kasir.
 - Opsi wajib buka shift sebelum jualan; pemilik bisa menutup shift kasir lain.
 
+### Fase 11: Laporan laba rugi (selesai)
+- Laba rugi bulanan (pendapatan, HPP dari resep atau belanja, biaya, laba kotor/usaha/bersih, arus kas), pembanding periode yang sama bulan lalu.
+- Grafik laba 6 bulan, menu paling untung/tipis, catatan otomatis, cetak PDF & CSV.
+
 ### Di luar MVP (fase berikutnya)
 Foto produk AI (gambar), integrasi WhatsApp, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
 

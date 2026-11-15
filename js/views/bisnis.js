@@ -37,6 +37,11 @@ export const bisnis = {
           <div><h3>Kasir (POS)</h3><p class="muted small">Jual dari daftar menu, langsung masuk Kas, stok & stempel</p></div>
           <span class="chev">${icon("chevron", 18)}</span>
         </a>
+        <a href="#/laporan" class="card module">
+          <span class="module-num">${icon("calc", 18)}</span>
+          <div><h3>Laporan Laba Rugi</h3><p class="muted small">Pendapatan, HPP, biaya & laba bersih per bulan, menu paling untung, cetak PDF</p></div>
+          <span class="chev">${icon("chevron", 18)}</span>
+        </a>
         <a href="#/online" class="card module">
           <span class="module-num">${icon("megaphone", 18)}</span>
           <div><h3>Harga Online</h3><p class="muted small">Harga & komisi GoFood, GrabFood, ShopeeFood + untung per porsi</p></div>

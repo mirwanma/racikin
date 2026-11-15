@@ -40,6 +40,14 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - Tab **Hari ini**: omzet, jumlah order, rata-rata, per metode bayar, menu terlaris, daftar order. **Batalkan order** mengembalikan kas, stok & stempel.
 - Data: `orders` (detail order, disimpan 30 hari) + `posHarian` (rekap harian permanen) — supaya dokumen cloud tetap kecil walau ratusan order per hari. Logika di `js/pos.js`.
 
+## Laporan laba rugi
+- Halaman `#/laporan` (Kas > "Laporan laba rugi", atau Bisnis). Pilih bulan (6 bulan terakhir).
+- Susunan: Pendapatan (kasir toko, order online, manual, pesanan/katering) − HPP = **laba kotor**; − biaya operasional per kategori = **laba usaha**; + pendapatan lain = **laba bersih**. Di bawahnya arus kas: belanja bahan, belanja peralatan (aset), arus kas bersih (= masuk − keluar di Kas).
+- **HPP dari resep** (default kalau ada data Kasir): porsi terjual per menu (rekap kasir harian) × HPP resep; belanja bahan & kemasan tidak dihitung dua kali. **HPP dari belanja**: total belanja Bahan Baku + Kemasan bulan itu (untuk usaha yang belum pakai Kasir).
+- Laba bersih vs bulan lalu: bulan berjalan dibandingkan dengan periode yang sama (tgl 1–N) bulan lalu; bulan dengan data tidak penuh tidak dibandingkan.
+- Grafik laba bersih 6 bulan (satu seri, bulan rugi di bawah garis nol + tanda minus; tooltip saat hover), menu paling untung & margin paling tipis, catatan otomatis (margin, komisi online, marketing, tren, stok/susut).
+- **Cetak / simpan PDF** (tampilan cetak khusus) dan **unduh CSV**. Logika di `js/laporan.js`.
+
 ## Shift & tutup kasir
 - Halaman `#/shift` (dari bar shift di Kasir, atau Kasir > Hari ini > "Shift & tutup kasir").
 - **Buka shift**: isi modal awal laci. Order yang dicatat selama shift diberi `shiftId`.
@@ -167,6 +175,7 @@ js/stok-utils.js   hitung HPP, porsi yang bisa dibuat, stok menipis
 js/loyalty.js      program stempel, no. WA, link kartu, template pesan
 js/pos.js          kasir: order -> kas harian gabungan, stok, stempel, batal, rekap, struk
 js/shift.js        shift kasir: buka/tutup, uang laci, ringkasan & selisih
+js/laporan.js      laporan laba rugi bulanan (HPP resep/belanja), pembanding, catatan, CSV
 js/online.js       harga & komisi per saluran online, saran markup, untung per porsi
 js/studio/         theme.js (warna/font/ekspor PNG-SVG) + art.js (logo, mockup, spanduk, poster, dst.)
 js/vendor/         supabase-js (UMD, disimpan lokal supaya jalan offline)
