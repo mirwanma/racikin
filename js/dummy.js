@@ -107,7 +107,24 @@ const NAMA = [
 /**
  * Bikin state lengkap. today = tanggal hari ini (YYYY-MM-DD), settings = setelan perangkat (dipertahankan).
  */
-export function buatDataDummy({ today = todayISO(), settings } = {}) {
+/** Kasir yang jaga per hari: Rina (kasir) hari kerja, Dodi (manajer) akhir pekan, Pemilik sesekali. */
+export const TIM_CONTOH = [
+  { id: "contoh-pemilik", nama: "Pemilik" },
+  { id: "contoh-rina", nama: "Rina" },
+  { id: "contoh-dodi", nama: "Dodi" },
+];
+function kasirHari(tim, tanggal) {
+  const dow = new Date(tanggal + "T00:00:00").getDay();
+  const tgl = Number(tanggal.slice(8));
+  if (tgl % 9 === 0) return tim[0]; // pemilik jaga sesekali
+  return dow === 0 || dow === 6 ? tim[2] || tim[0] : tim[1] || tim[0];
+}
+
+/**
+ * tim (opsional) = [{id,nama}] untuk [pemilik, kasir, manajer]; kalau tidak diisi pakai nama contoh.
+ * Order & shift dicatat atas nama orang yang jaga hari itu, supaya rekap per kasir terlihat.
+ */
+export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH } = {}) {
   const r = rng(20261111);
   const chance = (p) => r() < p;
   const between = (a, b) => a + Math.floor(r() * (b - a + 1));
@@ -214,6 +231,7 @@ export function buatDataDummy({ today = todayISO(), settings } = {}) {
         pelangganId: null,
         stempel: 0,
         status: "selesai",
+        kasir: kasirHari(tim, tanggal),
       };
       // Pelanggan setia (hanya di toko)
       if (channel === "toko" && chance(0.22)) {
@@ -426,7 +444,7 @@ export function buatDataDummy({ today = todayISO(), settings } = {}) {
     const tanggal = addDays(today, -d);
     const buka = `14:${String(20 + Math.floor(sr() * 20)).padStart(2, "0")}`;
     if (d === 0 && jamSekarang < buka) continue; // hari ini belum buka
-    const sh = { id: uid() + "s", kasir: null, buka: `${tanggal}T${buka}`, tutup: null, modal: 200000, laci: [], setor: null, hasil: null, catatan: "" };
+    const sh = { id: uid() + "s", kasir: kasirHari(tim, tanggal), buka: `${tanggal}T${buka}`, tutup: null, modal: 200000, laci: [], setor: null, hasil: null, catatan: "" };
     for (const o of state.orders) if (o.tanggal === tanggal) o.shiftId = sh.id;
     const lewat = (w) => d > 0 || w.slice(11) <= jamSekarang;
     if (sr() < 0.35) sh.laci.push({ id: uid(), waktu: `${tanggal}T18:${String(Math.floor(sr() * 50) + 10)}`, jenis: "keluar", nominal: 20000, kategori: "Bahan Baku", catatan: "Beli es batu tambahan" });
