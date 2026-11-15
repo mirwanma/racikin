@@ -1,0 +1,12 @@
+{
+  "name": "racikin-tests",
+  "private": true,
+  "description": "Tes otomatis Racikin (unit + E2E Playwright). App-nya sendiri tidak butuh build/npm.",
+  "scripts": {
+    "unit": "node unit/merge.test.mjs && node unit/merge-shift.test.mjs && node unit/kas-filter.test.mjs && node --experimental-strip-types unit/notif.test.mts && node --experimental-strip-types unit/webpush.test.mts"
+  },
+  "devDependencies": {
+    "http_ece": "1.2.0",
+    "playwright": "1.63.0"
+  }
+}

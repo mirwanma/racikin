@@ -218,6 +218,9 @@ supabase functions deploy racikin-ai
 
 Opsional (secret di Supabase): `GEMINI_MODEL`, `RACIKIN_MODEL` (model Claude, default `claude-opus-5-5`), `RACIKIN_ALLOWED_ORIGIN` (default `*`, isi domain app kamu biar lebih aman).
 
+## Tes
+Unit test & skrip E2E Playwright ada di `tests/` (lihat `tests/README.md`). Panduan untuk asisten AI/kontributor ada di `CLAUDE.md`.
+
 ## Struktur
 ```
 index.html, manifest.webmanifest, sw.js, icons/
