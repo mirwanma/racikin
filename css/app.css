@@ -1056,7 +1056,7 @@ label.btn.disabled { opacity: .5; pointer-events: none; }
 }
 
 /* ---------- Tahap usaha (profil) ---------- */
-[data-only][hidden] { display: none !important; }
+[data-only][hidden], .masalah-lain[hidden] { display: none !important; }
 .tahap-pilih { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .tahap-opt { position: relative; cursor: pointer; }
 .tahap-opt input { position: absolute; opacity: 0; }

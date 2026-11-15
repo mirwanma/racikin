@@ -22,6 +22,15 @@ function terapkanTahap(form) {
   }
 }
 
+/** Kolom "masalah lainnya" hanya muncul (dan wajib diisi) kalau pilihan Lainnya dicentang. */
+function terapkanLain(form) {
+  const el = form.querySelector(".masalah-lain");
+  if (!el) return;
+  const on = form.dataset.tahap === "jalan" && !!form.querySelector("input[name=masalah][value=lain]:checked");
+  el.hidden = !on;
+  el.querySelector("textarea").disabled = !on;
+}
+
 const chips = (name, options, selected = [], type = "checkbox") =>
   `<div class="chips">${options
     .map(
@@ -83,8 +92,8 @@ export const profil = {
           <div class="field"><span>Masalah yang paling mau diberesin <small>(pilih maks. ${MAKS_MASALAH})</small></span>
             <div class="chips">${MASALAH.map((m) => `<label class="chip"><input type="checkbox" name="masalah" value="${m.id}" data-change="masalah" ${(p.masalah || []).includes(m.id) ? "checked" : ""}><span>${esc(m.nama)}</span></label>`).join("")}</div>
           </div>
-          <label class="field"><span>Masalah lain <small>(opsional, tulis bebas)</small></span>
-            <textarea name="masalahLain" rows="2" maxlength="${MAKS_MASALAH_LAIN}" placeholder="cth: sering kehabisan kuah pas jam makan siang, susah cari karyawan yang awet">${esc(p.masalahLain || "")}</textarea></label>
+          <label class="field masalah-lain"><span>Masalah lainnya apa?</span>
+            <textarea name="masalahLain" rows="2" required maxlength="${MAKS_MASALAH_LAIN}" placeholder="cth: sering kehabisan kuah pas jam makan siang, susah cari karyawan yang awet">${esc(p.masalahLain || "")}</textarea></label>
         </div>
 
         <div class="card stack">
@@ -129,12 +138,16 @@ export const profil = {
 
   after(root) {
     const form = root.querySelector("form[data-form=save]");
-    if (form) terapkanTahap(form);
+    if (form) {
+      terapkanTahap(form);
+      terapkanLain(form);
+    }
   },
 
   changes: {
     tahap(el) {
       terapkanTahap(el.form);
+      terapkanLain(el.form);
     },
     masalah(el) {
       const dipilih = el.form.querySelectorAll("input[name=masalah]:checked");
@@ -142,6 +155,8 @@ export const profil = {
         el.checked = false;
         toast(`Pilih maksimal ${MAKS_MASALAH} dulu ya, biar fokus`, "err");
       }
+      terapkanLain(el.form);
+      if (el.value === "lain" && el.checked) el.form.querySelector("textarea[name=masalahLain]")?.focus();
     },
   },
 
@@ -173,7 +188,7 @@ export const profil = {
           karyawan: Number(fd.get("karyawan")) || 0,
           saluran: fd.getAll("saluran"),
           masalah: fd.getAll("masalah").slice(0, MAKS_MASALAH),
-          masalahLain: String(fd.get("masalahLain") || "").trim().slice(0, MAKS_MASALAH_LAIN),
+          masalahLain: fd.getAll("masalah").includes("lain") ? String(fd.get("masalahLain") || "").trim().slice(0, MAKS_MASALAH_LAIN) : "",
         });
       } else {
         // Data "udah jalan" tetap disimpan kalau sempat diisi (bisa balik ke tahap itu tanpa isi ulang).

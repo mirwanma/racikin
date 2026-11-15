@@ -15,15 +15,16 @@ export const MASALAH = [
   { id: "karyawan", nama: "Susah kontrol kasir / karyawan" },
   { id: "sepi", nama: "Pembeli sepi / omzet stagnan" },
   { id: "online", nama: "Ribet atur harga GoFood dkk" },
+  { id: "lain", nama: "Lainnya" }, // isi sendiri di profile.masalahLain
 ];
 export const MAKS_MASALAH = 2;
-export const MAKS_MASALAH_LAIN = 200; // isian bebas "Masalah lain" (opsional)
+export const MAKS_MASALAH_LAIN = 200; // isian pilihan "Lainnya"
 
-/** Teks fokus untuk Beranda: masalah yang dipilih + isian bebas. */
+/** Teks fokus untuk Beranda: masalah yang dipilih ("Lainnya" diganti isiannya). */
 export function fokus(p) {
-  const list = (p?.masalah || []).map((m) => MASALAH.find((x) => x.id === m)?.nama || m);
-  if (p?.masalahLain?.trim()) list.push(p.masalahLain.trim());
-  return list;
+  return (p?.masalah || [])
+    .map((m) => (m === "lain" ? String(p.masalahLain || "").trim() : MASALAH.find((x) => x.id === m)?.nama || m))
+    .filter(Boolean);
 }
 export const HARI_NAIK = 14; // hari jualan di Kasir sebelum ditawari pindah ke tampilan "udah jalan"
 
