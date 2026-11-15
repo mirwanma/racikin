@@ -48,6 +48,13 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - **Harga bahan**: harga naik/turun dibanding ±3 minggu sebelumnya + dampaknya ke HPP per porsi tiap menu; riwayat pembelian per bahan.
 - Form "+ Beli" di Stok juga bisa memilih supplier & menyimpan riwayat harga. Logika di `js/belanja.js`.
 
+## Kas: daftar transaksi
+- Default hanya menampilkan **transaksi hari ini** (halaman Kas langsung ringan walau ada ribuan transaksi). Ringkasan bulanan di atas (masuk/keluar/laba, grafik, per kategori) tetap per bulan.
+- Periode: Hari ini · 7 hari · Bulan (ikut navigasi ‹ bulan ›) · Semua · Pilih tanggal (rentang).
+- **Cari** langsung saat mengetik: kata di kategori/catatan ("gas", "tahu", "GoFood"), nominal ("22000", "22rb", "1,5jt").
+- **Filter**: masuk/keluar, kategori, sumber (Kasir / laci shift / manual).
+- Ringkasan hasil (jumlah transaksi, total masuk, keluar, selisih); tampil 50 transaksi, tombol "Tampilkan 50 lagi"; **CSV** sesuai filter. Logika di `js/kas-filter.js`.
+
 ## Laporan laba rugi
 - Halaman `#/laporan` (Kas > "Laporan laba rugi", atau Bisnis). Pilih bulan (6 bulan terakhir).
 - Susunan: Pendapatan (kasir toko, order online, manual, pesanan/katering) − HPP = **laba kotor**; − biaya operasional per kategori = **laba usaha**; + pendapatan lain = **laba bersih**. Di bawahnya arus kas: belanja bahan, belanja peralatan (aset), arus kas bersih (= masuk − keluar di Kas).
