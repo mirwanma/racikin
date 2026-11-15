@@ -38,6 +38,13 @@ const PROFILE = {
   harga: 12_000,
   waktu: "Full-time",
   skill: ["Masak", "Sosmed / konten"],
+  // Data contoh = usaha yang sudah jalan 2 bulan (tampilan "udah jalan").
+  tahap: "jalan",
+  lama: "< 6 bulan",
+  omzetHarian: 1_000_000,
+  karyawan: 2,
+  saluran: ["Jualan langsung", "GoFood", "GrabFood", "ShopeeFood"],
+  masalah: ["untung", "stok"],
 };
 
 // [kode, nama, satuan, harga per satuan, kemasan?, ukuran belanja]

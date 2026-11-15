@@ -1,6 +1,15 @@
 import { icon } from "../icons.js";
 import { cloud, isMember } from "../cloud.js";
 import { journey } from "./home.js";
+import { isJalan } from "../tahap.js";
+
+// Usaha yang sudah jalan: modul perencanaan jadi alat tambahan dengan sudut pandang berbeda.
+const RENCANA_JALAN = [
+  { key: "ide", label: "Cek ulang konsep", href: "#/ide", desc: "Analisa AI: pasar, kompetitor, harga & margin, risiko" },
+  { key: "rab", label: "Rencana renovasi / cabang", href: "#/rab", desc: "RAB pengembangan, realisasi, kalkulator BEP" },
+  { key: "brand", label: "Rebranding", href: "#/brand", desc: "Nama, tagline, warna, logo baru biar naik kelas" },
+  { key: "aktivasi", label: "Checklist online", href: "#/aktivasi", desc: "IG, TikTok, Google Maps, GoFood & promo" },
+];
 
 const desc = {
   ide: "Skor kelayakan, SWOT, persona, harga & HPP",
@@ -11,12 +20,23 @@ const desc = {
 
 export const bisnis = {
   render(s) {
+    const jalan = isJalan(s);
     const steps = journey(s).filter((x) => desc[x.key]);
+    const studio = `<a href="#/studio" class="card module">
+          <span class="module-num">${icon("palette", 18)}</span>
+          <div><h3>Studio Brand</h3><p class="muted small">Logo, stiker kemasan, mockup, booth, spanduk, poster, menu & konten sosmed siap cetak</p></div>
+          <span class="chev">${icon("chevron", 18)}</span>
+        </a>`;
+    const rencana = jalan
+      ? `<h4>Alat pengembangan</h4>${studio}${RENCANA_JALAN.map(
+          (x) => `<a href="${x.href}" class="card module"><span class="module-num">${icon("bulb", 18)}</span><div><h3>${x.label}</h3><p class="muted small">${x.desc}</p></div><span class="chev">${icon("chevron", 18)}</span></a>`,
+        ).join("")}`
+      : "";
     return `
-      <header class="page-head"><h1>Bangun Bisnis</h1></header>
-      <p class="muted">Ikutin urutannya biar ide kamu siap jalan. Semua hasil disesuaikan sama profil bisnismu.</p>
+      <header class="page-head"><h1>${jalan ? "Usahamu" : "Bangun Bisnis"}</h1></header>
+      <p class="muted">${jalan ? "Semua alat buat ngerapihin & ngembangin usaha yang udah jalan." : "Ikutin urutannya biar ide kamu siap jalan. Semua hasil disesuaikan sama profil bisnismu."}</p>
       <div class="stack">
-        ${steps
+        ${jalan ? "" : steps
           .map(
             (x, i) => `
           <a href="${x.href}" class="card module ${x.done ? "done" : ""}">
@@ -26,12 +46,8 @@ export const bisnis = {
           </a>`,
           )
           .join("")}
-        <a href="#/studio" class="card module">
-          <span class="module-num">${icon("palette", 18)}</span>
-          <div><h3>Studio Brand</h3><p class="muted small">Logo, stiker kemasan, mockup, booth, spanduk, poster, menu & konten sosmed siap cetak</p></div>
-          <span class="chev">${icon("chevron", 18)}</span>
-        </a>
-        <h4>Operasional harian</h4>
+        ${jalan ? "" : studio}
+        ${jalan ? "" : `<h4>Operasional harian</h4>`}
         <a href="#/kasir" class="card module">
           <span class="module-num">${icon("register", 18)}</span>
           <div><h3>Kasir (POS)</h3><p class="muted small">Jual dari daftar menu, langsung masuk Kas, stok & stempel</p></div>
@@ -77,6 +93,7 @@ export const bisnis = {
           <div><h3>Tim & Karyawan</h3><p class="muted small">${cloud.team?.role === "owner" && cloud.team.anggota ? `${cloud.team.anggota} anggota tim` : isMember() ? `Kamu ${cloud.team.role} di tim ini` : "Undang kasir & manajer, jualan dari banyak HP"}</p></div>
           <span class="chev">${icon("chevron", 18)}</span>
         </a>
+        ${rencana}
         <a href="#/mentor" class="card module">
           <span class="module-num">${icon("chat", 18)}</span>
           <div><h3>Mentor AI</h3><p class="muted small">Tanya apa saja soal bisnismu</p></div>

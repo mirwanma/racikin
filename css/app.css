@@ -1054,3 +1054,13 @@ label.btn.disabled { opacity: .5; pointer-events: none; }
 @media (min-width: 900px) {
   .sheet { bottom: auto; top: 50%; transform: translateY(-50%); border-bottom: 1.5px solid var(--ink); border-radius: 14px; box-shadow: 6px 6px 0 var(--shadow-c); }
 }
+
+/* ---------- Tahap usaha (profil) ---------- */
+[data-only][hidden], .masalah-lain[hidden] { display: none !important; }
+.tahap-pilih { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tahap-opt { position: relative; cursor: pointer; }
+.tahap-opt input { position: absolute; opacity: 0; }
+.tahap-opt > span { display: flex; flex-direction: column; gap: 4px; height: 100%; padding: 12px; border: 1.5px solid var(--line-2); border-radius: 10px; background: var(--paper); }
+.tahap-opt small { color: var(--muted); font-size: 12.5px; line-height: 1.35; }
+.tahap-opt input:checked + span { border-color: var(--ink); background: var(--yellow-tint); box-shadow: 3px 3px 0 var(--shadow-c); }
+.tahap-opt input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 2px; }

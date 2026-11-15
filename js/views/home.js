@@ -7,17 +7,19 @@ import { syncBadge } from "./akun.js";
 import { cloud } from "../cloud.js";
 import { program, siapTukar, perluDiajak } from "../loyalty.js";
 import { menipis, belumDiisi, bahanMap, bisaDibuat, fmtQty } from "../stok-utils.js";
+import { langkah, isJalan, tawarNaik, hariJualan, fokus } from "../tahap.js";
 
-export function journey(s) {
-  const steps = [
-    { key: "ide", label: "Analisa ide", done: !!s.idea, href: "#/ide" },
-    { key: "rab", label: "RAB & modal", done: !!s.rab, href: "#/rab" },
-    { key: "brand", label: "Brand kit", done: !!s.brand?.terpilih, href: "#/brand" },
-    { key: "aktivasi", label: "Aktivasi jualan", done: !!s.activation, href: "#/aktivasi" },
-    { key: "kas", label: "Mulai nyatet kas", done: s.transactions.length > 0, href: "#/kas" },
-    { key: "konten", label: "Jadwal konten", done: !!s.calendar, href: "#/konten" },
-  ];
-  return steps;
+/** Langkah di Beranda (beda untuk usaha baru vs yang sudah jalan, lihat js/tahap.js). */
+export const journey = (s) => langkah(s, { anggotaTim: cloud.team?.role === "owner" ? cloud.team.anggota || 0 : 0 });
+
+/** Tawaran pindah ke tampilan "udah jalan" setelah rutin jualan. */
+function naikCard(s) {
+  if (!tawarNaik(s)) return "";
+  return `<section class="card accent">
+    <h2 class="card-title">Usahamu udah jalan nih</h2>
+    <p class="small">Udah ${hariJualan(s)} hari jualan pakai Kasir. Mau pindah ke tampilan usaha berjalan? Langkahnya fokus ke HPP, stok, tim & untung, bukan lagi persiapan buka.</p>
+    <div class="row2"><button class="btn ghost" data-action="tolakNaik">Nanti aja</button><button class="btn primary" data-action="naikTahap">Pindah</button></div>
+  </section>`;
 }
 
 export function todayContent(s) {
@@ -91,16 +93,18 @@ export const home = {
         </div>
       </section>
 
+      ${naikCard(s)}
       <section class="card journey">
         <div class="row-between">
-          <h2 class="card-title">Perjalanan bisnismu</h2>
+          <h2 class="card-title">${isJalan(s) ? "Beresin usahamu" : "Perjalanan bisnismu"}</h2>
           <span class="pill">${done}/${steps.length}</span>
         </div>
+        ${isJalan(s) && fokus(p).length ? `<p class="small muted">Fokus: ${fokus(p).map(esc).join(" · ")}</p>` : ""}
         <div class="progress"><span style="width:${(done / steps.length) * 100}%"></span></div>
         <div class="steps">
           ${steps.map((x, i) => `<a href="${x.href}" class="step ${x.done ? "done" : ""} ${x === next ? "next" : ""}"><span class="step-icon">${x.done ? icon("check", 15) : i + 1}</span><span>${x.label}</span></a>`).join("")}
         </div>
-        ${next ? `<a href="${next.href}" class="btn primary block">Lanjut: ${next.label}</a>` : `<p class="center">Semua langkah awal beres! Sekarang konsisten nyatet & posting ya</p>`}
+        ${next ? `<a href="${next.href}" class="btn primary block">Lanjut: ${next.label}</a>` : `<p class="center">${isJalan(s) ? "Semua langkah beres! Sekarang tinggal jualan rutin & cek laporan tiap minggu" : "Semua langkah awal beres! Sekarang konsisten nyatet & posting ya"}</p>`}
       </section>
 
       <section class="card">
@@ -147,6 +151,16 @@ export const home = {
       </section>`;
   },
   actions: {
+    naikTahap() {
+      const s = store.get();
+      store.set({ profile: { ...s.profile, tahap: "jalan" } });
+      location.hash = "#/profil?lengkapi=1";
+    },
+    tolakNaik() {
+      const s = store.get();
+      store.set({ profile: { ...s.profile, tolakNaik: true } });
+      render();
+    },
     toggle(el) {
       const hari = Number(el.dataset.hari);
       const cal = store.get().calendar;
