@@ -23,6 +23,7 @@ const DEFAULT = {
   pelanggan: [],          // { id, nama, wa, stempel, kunjungan, hadiahDiambil, terakhir, dibuat, token }
   stempelLog: [],         // { id, tanggal, pelangganId, delta, alasan: beli|tukar|koreksi, catatan }
   shifts: [],             // shift kasir (lihat js/shift.js)
+  supplier: [],           // { id, nama, wa, catatan } (lihat js/belanja.js)
   posSetting: null,       // { wajibShift }
   settings: { aiMode: "demo", endpoint: "", anonKey: "" },
 };

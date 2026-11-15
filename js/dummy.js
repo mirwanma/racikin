@@ -260,6 +260,36 @@ export function buatDataDummy({ today = todayISO(), settings } = {}) {
   const kurangDiBelanja = new Set([idB.keju, idB.aren]); // dibiarkan menipis di akhir (biar ada pengingat stok)
   const stok = {};
   const round2 = (n) => Math.round(n * 100) / 100;
+
+  // Supplier langganan & pergerakan harga (cabai naik, telur & bakso naik sedikit, minyak turun).
+  const SUP = [
+    ["tahu", "Pabrik Tahu Pak Darto", "081200000101", "Ambil pagi jam 6–8, bisa titip kirim"],
+    ["pasar", "Bu Euis (Pasar Atas Cimahi)", "081200000102", "Sayur & bumbu, buka jam 4 pagi"],
+    ["sembako", "Agen Sembako Jaya", "081200000103", "Gratis antar min. Rp 300rb"],
+    ["frozen", "Prima Frozen Food", "081200000104", "Bakso, keju & ayam; order H-1"],
+    ["kemasan", "Toko Kemasan Sinar", "081200000105", "Grosir mangkok, cup & plastik"],
+  ];
+  const supId = Object.fromEntries(SUP.map(([k]) => [k, uid() + k]));
+  const supplier = SUP.map(([k, nama, wa, catatan]) => ({ id: supId[k], nama, wa: "62" + wa.slice(1), catatan }));
+  const SUP_BAHAN = {
+    tahu: ["tahu"],
+    pasar: ["bput", "bmer", "cabai", "dbawang", "jeruk", "es"],
+    sembako: ["kaldu", "kecap", "bgoreng", "telur", "tapioka", "minyak", "teh", "gula", "skm", "aren", "air"],
+    frozen: ["bakso", "keju", "ayam"],
+    kemasan: ["mangkok", "sendok", "cup", "kresek"],
+  };
+  const supOf = {};
+  for (const [k, list] of Object.entries(SUP_BAHAN)) for (const kb of list) supOf[idB[kb]] = supId[k];
+  const kodeOf = Object.fromEntries(Object.entries(idB).map(([k, id]) => [id, k]));
+  const GERAK = { cabai: [38, 0.35], telur: [45, 0.1], bakso: [50, 0.06], minyak: [30, -0.06] }; // [mulai hari ke-, perubahan]
+  const hargaPada = (b, d) => {
+    const g = GERAK[kodeOf[b.id]];
+    if (!g || d < g[0]) return b.harga;
+    const t = Math.min(1, (d - g[0]) / Math.max(1, HARI - 1 - g[0]));
+    return round2(b.harga * (1 + g[1] * (0.4 + 0.6 * t)));
+  };
+  const hargaAkhir = {};
+  const supNama = Object.fromEntries(supplier.map((x) => [x.id, x.nama]));
   for (const b of bahan) {
     const pack = BAHAN.find(([k]) => idB[k] === b.id)[5];
     b.min = Math.max(1, Math.ceil(rata[b.id] * 1.5));
@@ -276,8 +306,10 @@ export function buatDataDummy({ today = todayISO(), settings } = {}) {
         const butuh = rata[b.id] * 4 - stok[b.id];
         const qty = Math.max(pack, Math.ceil(butuh / pack) * pack);
         stok[b.id] += qty;
-        stokLog.push({ id: uid(), tanggal, bahanId: b.id, delta: qty, alasan: "beli", catatan: kemasan ? "Toko grosir kemasan" : "Pasar Atas Cimahi" });
-        (kemasan ? belanja.kemasan : belanja.food).push({ nama: b.nama, total: qty * b.harga });
+        const harga = hargaPada(b, d);
+        hargaAkhir[b.id] = harga;
+        stokLog.push({ id: uid(), tanggal, bahanId: b.id, delta: qty, alasan: "beli", catatan: supNama[supOf[b.id]], harga, supplierId: supOf[b.id] });
+        (kemasan ? belanja.kemasan : belanja.food).push({ nama: b.nama, total: qty * harga });
       }
       const pakai = pakaiHarian[tanggal][b.id] || 0;
       if (pakai) {
@@ -304,7 +336,14 @@ export function buatDataDummy({ today = todayISO(), settings } = {}) {
     stokLog.push({ id: uid(), tanggal: today, bahanId: id, delta: round2(target - stok[id]), alasan: "opname", catatan: "Hitung ulang stok" });
     stok[id] = target;
   }
-  for (const b of bahan) b.stok = round2(Math.max(0, stok[b.id]));
+  for (const b of bahan) {
+    b.stok = round2(Math.max(0, stok[b.id]));
+    b.harga = hargaAkhir[b.id] ?? b.harga; // harga sekarang = harga belanja terakhir
+    b.supplierId = supOf[b.id] || null;
+    if (BAHAN.find(([k]) => idB[k] === b.id)[4]) b.kemasan = true;
+    const pack = { air: 24, telur: 30, teh: 25 }[kodeOf[b.id]]; // beli per dus / tray / kotak
+    if (pack) b.pack = pack;
+  }
 
   // ---------- Biaya rutin & pemasukan lain ----------
   const tx = (tanggal, jenis, kategori, nominal, catatan) => transactions.push({ id: uid(), tanggal, jenis, kategori, nominal, catatan });
@@ -377,6 +416,7 @@ export function buatDataDummy({ today = todayISO(), settings } = {}) {
     stempelLog,
     shifts: [],
     posSetting: { wajibShift: false },
+    supplier,
     settings: settings || { aiMode: "demo", endpoint: "", anonKey: "" },
   };
   // Shift kasir 30 hari terakhir: satu shift per hari, hari ini masih buka.

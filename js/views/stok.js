@@ -80,6 +80,7 @@ function bahanRow(b) {
           <label class="field"><span>Jumlah beli (${esc(b.satuan)})</span><input name="qty" type="number" min="0" step="any" required autofocus></label>
           <label class="field"><span>Total bayar (Rp)</span><input name="total" type="number" min="0" placeholder="opsional"></label>
         </div>
+        ${(store.get().supplier || []).length ? `<label class="field"><span>Beli di</span><select name="supplier"><option value="">Tidak dicatat</option>${store.get().supplier.map((x) => `<option value="${x.id}" ${b.supplierId === x.id ? "selected" : ""}>${esc(x.nama)}</option>`).join("")}</select></label>` : ""}
         ${isKasir() ? "" : `<label class="todo"><input type="checkbox" name="kas" checked><span>Catat pengeluaran ke Kas</span></label>`}
         <div class="row2"><button type="button" class="btn ghost" data-action="close">Batal</button><button class="btn primary">Tambah stok</button></div>
       </form>`,
@@ -157,7 +158,7 @@ function bahanTab(s) {
           </section>`
         : ""
     }
-    ${low.length ? `<section class="card warn-card"><b class="neg">${low.length} bahan menipis:</b> ${low.map((b) => esc(b.nama)).join(", ")}</section>` : ""}
+    ${low.length ? `<section class="card warn-card"><b class="neg">${low.length} bahan menipis:</b> ${low.map((b) => esc(b.nama)).join(", ")}${isKasir() ? "" : `<a href="#/belanja" class="btn primary block" style="margin-top:10px">${icon("box", 16)} Bikin daftar belanja</a>`}</section>` : isKasir() ? "" : `<a href="#/belanja" class="lr-link">${icon("box", 16)}<span><b>Belanja & supplier</b><small class="muted">Daftar belanja otomatis, supplier & riwayat harga bahan</small></span>${icon("chevron", 16)}</a>`}
     <section class="card">
       ${sorted.length ? sorted.map(bahanRow).join("") : `<p class="muted">Belum ada bahan. Tambah di bawah, atau bikin resep pakai AI biar bahannya terisi otomatis.</p>`}
     </section>
@@ -264,7 +265,19 @@ export const stok = {
         bahan: s.bahan.map((x) =>
           x.id === id ? { ...x, stok: (x.tracked ? Number(x.stok) || 0 : 0) + qty, tracked: true, harga, estimasi: total > 0 ? false : x.estimasi } : x,
         ),
-        stokLog: [...s.stokLog, { id: uid(), tanggal, bahanId: id, delta: qty, alasan: "beli", catatan: total ? rupiah(total) : "" }],
+        stokLog: [
+          ...s.stokLog,
+          {
+            id: uid(),
+            tanggal,
+            bahanId: id,
+            delta: qty,
+            alasan: "beli",
+            catatan: [s.supplier?.find((x) => x.id === fd.get("supplier"))?.nama, total ? rupiah(total) : ""].filter(Boolean).join(" · "),
+            ...(total > 0 ? { harga } : {}),
+            ...(fd.get("supplier") ? { supplierId: fd.get("supplier") } : {}),
+          },
+        ],
       };
       if (fd.get("kas") && total > 0) {
         patch.transactions = [...s.transactions, { id: uid(), tanggal, jenis: "keluar", kategori: "Bahan Baku", nominal: Math.round(total), catatan: `Beli ${fmtQty(qty)} ${b.satuan} ${b.nama}` }];
