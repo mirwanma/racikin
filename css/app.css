@@ -883,3 +883,52 @@ body[data-role="kasir"] .tabbar a.only-kasir { display: flex; }
   .tx-filter-body { grid-template-columns: 1fr 1fr; }
   .tx-filter-body select:first-child { grid-column: 1 / -1; }
 }
+
+/* ---------- Peran dapur: tab bar hanya Dapur & Akun ---------- */
+.tabbar a.only-dapur { display: none; }
+body[data-role="dapur"] .tabbar { grid-template-columns: repeat(2, 1fr); }
+body[data-role="dapur"] .tabbar a { display: none; }
+body[data-role="dapur"] .tabbar a.only-dapur, body[data-role="dapur"] .tabbar a[data-tab="akun"] { display: flex; }
+@media (min-width: 900px) { body[data-role="dapur"] .tabbar { grid-template-columns: none; } }
+
+/* ---------- Layar dapur (Kitchen Display) ---------- */
+body[data-route="dapur"] .view { max-width: 1400px; }
+.kds-bar { flex-wrap: wrap; gap: 8px; }
+.kds-tabs { margin-bottom: 4px; }
+.kds-n { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; margin-left: 4px; border-radius: 11px; background: var(--ink); color: var(--paper); font-size: 12px; }
+.kds { display: block; }
+.kds-col { display: none; flex-direction: column; gap: 12px; }
+.kds-col.on { display: flex; }
+.kds-h { display: none; }
+.kds-empty { padding: 24px 0; text-align: center; }
+.kt { background: var(--card); border: 1.5px solid var(--ink); border-radius: 12px; padding: 12px; box-shadow: 3px 3px 0 var(--shadow-c); display: flex; flex-direction: column; gap: 8px; }
+.kt.baru { border-left: 8px solid var(--yellow); }
+.kt.dimasak { border-left: 8px solid var(--ink); }
+.kt.siap { border-left: 8px solid var(--leaf); background: var(--yellow-tint); }
+.kt header { display: flex; align-items: center; gap: 8px; font-size: 20px; }
+.kt header b { font-size: 24px; }
+.kt-nama { flex: 1; font-weight: 750; font-size: 17px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kt-min { margin-left: auto; font-family: var(--mono); font-size: 13px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: var(--yellow-tint); }
+.kt.lama .kt-min { background: var(--yellow); color: #1b1916; }
+.kt.telat .kt-min { background: var(--chili); color: #fff; }
+.kt-meta { color: var(--muted); display: flex; gap: 6px; align-items: center; }
+.kt-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.kt-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); font: inherit; font-size: 17px; font-weight: 650; color: var(--ink); text-align: left; cursor: pointer; }
+.kt-item .kt-qty { font-family: var(--mono); font-weight: 700; min-width: 30px; }
+.kt-item span:nth-child(2) { flex: 1; }
+.kt-item.ok { text-decoration: line-through; color: var(--muted); background: transparent; }
+.kt-item.ok .ico { color: var(--leaf); }
+.kt-note { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--yellow-soft); font-weight: 650; font-size: 15px; }
+.kt-actions { display: flex; gap: 8px; }
+.kt-actions .btn.block { flex: 1; font-size: 16px; padding: 12px; }
+.siap-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 12px; margin-bottom: 12px; border: 1.5px solid var(--leaf); border-radius: 10px; background: var(--card); }
+.siap-strip > b { display: flex; align-items: center; gap: 6px; margin-right: 4px; color: var(--leaf); }
+.dapur-form { padding-top: 10px; padding-bottom: 10px; }
+@media (min-width: 900px) {
+  .kds-tabs { display: none; }
+  .kds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+  .kds-col { display: flex; min-height: 60vh; padding: 10px; border-radius: 12px; background: var(--yellow-tint); }
+  .kds-col.siap { background: color-mix(in srgb, var(--leaf) 10%, var(--paper)); }
+  .kds-h { display: flex; align-items: center; justify-content: space-between; font-size: 16px; margin: 2px 2px 0; }
+}
+.siap-strip .chip-btn { display: inline-flex; align-items: center; gap: 6px; }

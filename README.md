@@ -63,6 +63,14 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - Grafik laba bersih 6 bulan (satu seri, bulan rugi di bawah garis nol + tanda minus; tooltip saat hover), menu paling untung & margin paling tipis, catatan otomatis (margin, komisi online, marketing, tren, stok/susut).
 - **Cetak / simpan PDF** (tampilan cetak khusus) dan **unduh CSV**. Logika di `js/laporan.js`.
 
+## Mode dapur (opsional)
+- Untuk usaha yang dapurnya jauh dari kasir. Aktifkan di halaman `#/dapur` (Bisnis > Dapur, pemilik/manajer). Kalau tidak aktif, Kasir tidak berubah.
+- Kasir: saat bayar ada kolom **Atas nama / no. meja** & **Catatan untuk dapur**; setelah selesai, tiket terkirim ke dapur (offline → antre & dikirim ulang otomatis). Struk menunjukkan status kirim.
+- Layar dapur: kolom **Baru → Dimasak → Siap** (tablet landscape 3 kolom; HP pakai tab), nomor order, nama/meja, lama menunggu (kuning ≥ 10 menit, merah ≥ 20), saluran, item (bisa dicentang per item), catatan, bunyi saat pesanan baru.
+- Kasir dapat kabar "Order #12 siap diambil" + daftar pesanan siap di atas menu; ketuk untuk menandai sudah diambil. Order yang dibatalkan hilang dari dapur.
+- Peran tim baru **Dapur**: hanya layar dapur; server hanya mengirim nama usaha, brand & setelan kasir, dan menolak perubahan dokumen dari akun dapur.
+- Teknis: tabel `kitchen_tickets` (RLS lewat `team_role`, tanpa harga) + **Supabase Realtime** (tiket muncul ±1 detik) dengan cadangan polling 20 detik; tiket > 3 hari dihapus tiap malam (pg_cron). Logika di `js/dapur.js`.
+
 ## Shift & tutup kasir
 - Halaman `#/shift` (dari bar shift di Kasir, atau Kasir > Hari ini > "Shift & tutup kasir").
 - **Buka shift**: isi modal awal laci. Order yang dicatat selama shift diberi `shiftId`.
@@ -195,6 +203,7 @@ js/ai.js           klien AI (online pakai token login / demo)
 js/stok-utils.js   hitung HPP, porsi yang bisa dibuat, stok menipis
 js/loyalty.js      program stempel, no. WA, link kartu, template pesan
 js/pos.js          kasir: order -> kas harian gabungan, stok, stempel, batal, rekap, struk
+js/dapur.js        mode dapur: tiket ke dapur, status, realtime, antrean offline
 js/shift.js        shift kasir: buka/tutup, uang laci, ringkasan & selisih
 js/belanja.js      daftar belanja otomatis, supplier, riwayat & perubahan harga bahan
 js/laporan.js      laporan laba rugi bulanan (HPP resep/belanja), pembanding, catatan, CSV

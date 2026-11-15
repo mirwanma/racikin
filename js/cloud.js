@@ -44,6 +44,7 @@ export const cloud = {
 /** Peran user di perangkat ini. Belum login = pemilik (pakai sendiri). */
 export const role = () => cloud.team?.role || "owner";
 export const isKasir = () => role() === "kasir";
+export const isDapur = () => role() === "dapur";
 export const isMember = () => role() !== "owner";
 /** Ada orang lain yang ikut memakai data usaha ini? */
 export const teamActive = () => !!cloud.team && (cloud.team.role !== "owner" || cloud.team.anggota > 0);
@@ -204,6 +205,16 @@ async function syncOnce() {
   const local = kasir ? omit(fullLocal, KASIR_HIDDEN) : fullLocal;
   const remoteData = remote?.data || null;
   const remoteRev = remote?.rev ?? 0;
+
+  // Akun dapur: hanya membaca identitas usaha (nama, brand, setelan kasir); tidak pernah menulis dokumen.
+  if (cloud.team.role === "dapur") {
+    if (remoteData && !same(norm(remoteData), norm({ profile: fullLocal.profile, brand: fullLocal.brand, posSetting: fullLocal.posSetting }))) {
+      store.applyCloud(remoteData);
+    }
+    writeMeta({ userId: cloud.user.id, docOwner: owner, rev: remoteRev, dirty: false, syncedAt: remote?.updated_at || null });
+    writeBase(null);
+    return true;
+  }
 
   let base = meta.docOwner === owner ? readBase() : null;
   let merged;

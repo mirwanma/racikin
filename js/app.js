@@ -24,14 +24,17 @@ import { notif } from "./views/notif.js";
 import { shift } from "./views/shift.js";
 import { laporan } from "./views/laporan.js";
 import { belanja } from "./views/belanja.js";
+import { dapur } from "./views/dapur.js";
 import { initCloud, onCloudChange, cloud, role } from "./cloud.js";
 import { icon } from "./icons.js";
 
-const routes = { "": home, profil, bisnis, ide, rab, brand, aktivasi, kas, konten, mentor, setelan, akun, stok, resep, pelanggan, kartu, studio, kasir, online, tim, gabung, notif, shift, laporan, belanja };
-const tabOf = { "": "", bisnis: "bisnis", ide: "bisnis", rab: "bisnis", brand: "bisnis", aktivasi: "bisnis", kas: "kas", stok: "bisnis", resep: "bisnis", pelanggan: "bisnis", studio: "bisnis", konten: "konten", kasir: "kasir", online: "kasir", tim: "bisnis", notif: "-", shift: "kasir", laporan: "kas", belanja: "bisnis" };
+const routes = { "": home, profil, bisnis, ide, rab, brand, aktivasi, kas, konten, mentor, setelan, akun, stok, resep, pelanggan, kartu, studio, kasir, online, tim, gabung, notif, shift, laporan, belanja, dapur };
+const tabOf = { "": "", bisnis: "bisnis", ide: "bisnis", rab: "bisnis", brand: "bisnis", aktivasi: "bisnis", kas: "kas", stok: "bisnis", resep: "bisnis", pelanggan: "bisnis", studio: "bisnis", konten: "konten", kasir: "kasir", online: "kasir", tim: "bisnis", notif: "-", shift: "kasir", laporan: "kas", belanja: "bisnis", dapur: "kasir" };
 // Kasir hanya melihat halaman jualan, pelanggan, dan stok bahan.
-const KASIR_ROUTES = new Set(["kasir", "pelanggan", "stok", "akun", "setelan", "kartu", "tim", "gabung", "notif", "shift"]);
-const tabOfKasir = { kasir: "kasir", pelanggan: "pelanggan", stok: "stok", akun: "akun", setelan: "akun", tim: "akun", notif: "akun", shift: "kasir" };
+const KASIR_ROUTES = new Set(["kasir", "pelanggan", "stok", "akun", "setelan", "kartu", "tim", "gabung", "notif", "shift", "dapur"]);
+const tabOfKasir = { kasir: "kasir", pelanggan: "pelanggan", stok: "stok", akun: "akun", setelan: "akun", tim: "akun", notif: "akun", shift: "kasir", dapur: "dapur" };
+// Akun dapur hanya membuka layar dapur & akun.
+const DAPUR_ROUTES = new Set(["dapur", "akun", "setelan", "tim", "gabung", "notif"]);
 const FREE_ROUTES = ["profil", "setelan", "akun", "kartu", "gabung", "tim", "notif"];
 
 // Halaman yang di layar lebar disusun dua kolom (kartu mengalir kiri-kanan).
@@ -51,6 +54,10 @@ export function render() {
     location.replace("#/kasir");
     return;
   }
+  if (peran === "dapur" && !DAPUR_ROUTES.has(name)) {
+    location.replace("#/dapur");
+    return;
+  }
   if (!store.get().profile && !FREE_ROUTES.includes(name)) {
     if (peran !== "owner") {
       // Anggota tim: data usaha pemilik sedang diambil dari cloud.
@@ -67,7 +74,7 @@ export function render() {
   view.classList.toggle("cols", COLS.has(name || "home"));
   view.innerHTML = current.render(store.get());
   current.after?.(view);
-  const tab = peran === "kasir" ? tabOfKasir[name] : tabOf[name];
+  const tab = peran === "kasir" || peran === "dapur" ? tabOfKasir[name] : tabOf[name];
   document.querySelectorAll(".tabbar a").forEach((a) => a.classList.toggle("active", a.dataset.tab === (tab ?? "")));
   document.body.dataset.route = name || "home";
 }

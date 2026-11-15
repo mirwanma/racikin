@@ -7,6 +7,7 @@ import { bahanMap, bisaDibuat } from "../stok-utils.js";
 import { program, waLink } from "../loyalty.js";
 import { cloud, markCards, isKasir, pelaku, teamActive } from "../cloud.js";
 import { METODE, metodeNama, subtotal, buatOrder, batalOrder, rekapHari, struk, perKasir } from "../pos.js";
+import { dapurAktif, kirimTiket, tiketDari, ubahStatus as statusDapur, daftarTiket, dengar as dengarDapur } from "../dapur.js";
 import { shiftAktif, ringkasan as ringkasanShift, wajibShift } from "../shift.js";
 import { activeChannels, channelCfg, channelNama, hargaDi, isOnline, komisiRp } from "../online.js";
 
@@ -14,7 +15,8 @@ import { activeChannels, channelCfg, channelNama, hargaDi, isOnline, komisiRp } 
 let tab = "jual"; // jual | rekap
 let step = "menu"; // menu | bayar | struk
 let cart = []; // { key, resepId, nama, harga, qty }
-let form = { diskon: 0, metode: "tunai", bayar: 0, pelangganId: "" };
+let form = { diskon: 0, metode: "tunai", bayar: 0, pelangganId: "", atasNama: "", catatanDapur: "" };
+let lepasDapur = null;
 let last = null; // { order, stempelInfo }
 let openOrder = null;
 let channel = "toko"; // toko | gofood | grabfood | shopeefood
@@ -59,6 +61,15 @@ function channelChips(s) {
   </div>`;
 }
 
+/** Pesanan yang sudah siap di dapur (mode dapur). */
+function siapStrip() {
+  const siap = daftarTiket().filter((t) => t.status === "siap");
+  if (!siap.length) return "";
+  return `<section class="siap-strip"><b>${icon("bowl", 16)} Siap diambil</b>
+    ${siap.map((t) => `<button class="chip-btn on" data-action="diambil" data-id="${esc(t.id)}" title="Tandai sudah diambil">#${t.no}${t.data?.nama ? ` ${esc(t.data.nama)}` : ""} ${icon("check", 12)}</button>`).join("")}
+  </section>`;
+}
+
 /** Bar shift di atas menu: status shift aktif, atau ajakan buka shift. */
 function shiftBar(s) {
   const sh = shiftAktif(s, pelaku());
@@ -95,7 +106,7 @@ function menuView(s) {
         <p>Menu kasir diambil dari resep. Bikin resep dulu biar harga, HPP & stok nyambung otomatis.</p>
         ${isKasir() ? `<p class="small muted">Minta pemilik usaha bikin menu dulu.</p>` : `<a href="#/resep?id=new" class="btn primary">+ Bikin menu</a>`}
       </section>`;
-  return `${shiftBar(s)}${channelChips(s)}${grid}
+  return `${shiftBar(s)}${dapurAktif(s) ? `<div id="siap-strip">${siapStrip()}</div>` : ""}${channelChips(s)}${grid}
     <details class="card">
       <summary><b>Item lain (di luar menu)</b></summary>
       <form class="row3 pos-custom" data-form="custom">
@@ -122,7 +133,15 @@ function bayarView(s) {
   const kurang = !online && form.metode === "tunai" && (Number(form.bayar) || 0) < total;
   const kembali = Math.max(0, (Number(form.bayar) || 0) - total);
   const pelanggan = s.loyalty && s.pelanggan.length;
-  return `
+  const dapurForm = dapurAktif(s)
+    ? `<section class="card stack dapur-form">
+        <div class="row2">
+          <label class="field"><span>Atas nama / no. meja</span><input value="${esc(form.atasNama)}" maxlength="40" placeholder="cth: Budi / meja 3" data-change="atasNama"></label>
+          <label class="field"><span>Catatan untuk dapur</span><input value="${esc(form.catatanDapur)}" maxlength="200" placeholder="cth: pedas level 3, tanpa bawang" data-change="catatanDapur"></label>
+        </div>
+      </section>`
+    : "";
+  return `${dapurForm}
     <section class="card">
       <div class="row-between"><h2 class="card-title">Pesanan${online ? ` <span class="tag">${esc(channelNama(channel))}</span>` : ""}</h2>${isWide() ? `<button class="btn ghost sm" data-action="clear">Kosongkan</button>` : `<button class="btn ghost sm" data-action="back">+ Tambah item</button>`}</div>
       ${cart
@@ -187,7 +206,7 @@ function strukView(s) {
   const wa = p?.wa ? waLink(p.wa, text) : `https://wa.me/?text=${encodeURIComponent(text)}`;
   return `
     <section class="struk">
-      <div class="struk-head"><b>${esc(bisnisOf(s))}</b><small class="mono">Order #${o.no} · ${jam(o.waktu)}</small></div>
+      <div class="struk-head"><b>${esc(bisnisOf(s))}</b><small class="mono">Order #${o.no} · ${jam(o.waktu)}${o.atasNama ? ` · ${esc(o.atasNama)}` : ""}</small></div>
       ${o.items.map((i) => `<div class="row-between"><span>${i.qty}× ${esc(i.nama)}</span><span>${rupiah(i.harga * i.qty)}</span></div>`).join("")}
       ${o.diskon ? `<div class="row-between muted"><span>Diskon</span><span>−${rupiah(o.diskon)}</span></div>` : ""}
       <div class="row-between struk-total"><span>Total</span><b>${rupiah(o.total)}</b></div>
@@ -200,6 +219,7 @@ function strukView(s) {
       }
       ${o.metode === "tunai" ? `<div class="row-between struk-kembali"><span>Kembalian</span><b>${rupiah(o.kembali)}</b></div>` : ""}
       ${si?.nama ? `<p class="struk-note">${si.siap ? `${esc(si.nama)} dapat hadiah! (${si.stempel}/${si.target})` : `+1 stempel ${esc(si.nama)} (${si.stempel}/${si.target})`}</p>` : ""}
+      ${last.dapur ? `<p class="struk-note">${last.dapur === "terkirim" ? "Terkirim ke dapur" : last.dapur === "antre" ? "Menunggu internet untuk dikirim ke dapur" : "Mengirim ke dapur…"}</p>` : ""}
       <p class="struk-note small">${isKasir() ? `Tercatat atas nama ${esc(o.kasir?.nama || "kamu")}` : "Tercatat di Kas"}${o.items.some((i) => i.resepId) ? " · stok bahan diperbarui" : ""}</p>
     </section>
     <div class="row2">
@@ -278,6 +298,24 @@ function rekapView(s) {
 }
 
 export const kasir = {
+  after(root) {
+    if (!dapurAktif(store.get())) return;
+    lepasDapur?.();
+    lepasDapur = dengarDapur((e) => {
+      if (!location.hash.startsWith("#/kasir")) {
+        lepasDapur?.();
+        lepasDapur = null;
+        return;
+      }
+      if (e.type === "update" && e.lama?.status !== "siap" && e.baru?.status === "siap") {
+        toast(`Order #${e.baru.no}${e.baru.data?.nama ? ` (${e.baru.data.nama})` : ""} siap diambil!`);
+        navigator.vibrate?.(200);
+      }
+      const el = document.querySelector("#siap-strip");
+      if (el) el.innerHTML = siapStrip();
+    });
+  },
+
   render(s) {
     if (location.hash.includes("tab=rekap")) {
       tab = "rekap";
@@ -342,11 +380,21 @@ export const kasir = {
       const s = store.get();
       if (wajibShift(s) && !shiftAktif(s, pelaku())) return toast("Buka shift dulu sebelum jualan", "err");
       const { patch, order, stempelInfo } = buatOrder(s, { cart, ...form, channel, kasir: pelaku(), shiftId: shiftAktif(s, pelaku())?.id || null });
+      const keDapur = dapurAktif(s);
+      if (form.atasNama.trim()) order.atasNama = form.atasNama.trim().slice(0, 40);
+      if (keDapur && form.catatanDapur.trim()) order.catatanDapur = form.catatanDapur.trim().slice(0, 200);
       store.set(patch);
+      if (keDapur) {
+        kirimTiket(tiketDari(order, { nama: order.atasNama, catatan: order.catatanDapur })).then((ok) => {
+          if (last?.order.id === order.id) last.dapur = ok ? "terkirim" : "antre";
+          if (!ok) toast("Pesanan belum terkirim ke dapur (offline). Dikirim ulang otomatis.", "err");
+          render();
+        });
+      }
       if (order.stempel) markCards({ ids: [order.pelangganId] });
-      last = { order, stempelInfo };
+      last = { order, stempelInfo, dapur: keDapur ? "mengirim" : null };
       cart = [];
-      form = { diskon: 0, metode: "tunai", bayar: 0, pelangganId: "" }; // tiap order baru mulai dari Tunai
+      form = { diskon: 0, metode: "tunai", bayar: 0, pelangganId: "", atasNama: "", catatanDapur: "" }; // tiap order baru mulai dari Tunai
       step = "struk";
       toast(`Order #${order.no} · ${rupiah(order.total)} tercatat`);
       render();
@@ -361,6 +409,9 @@ export const kasir = {
       openOrder = openOrder === el.dataset.id ? null : el.dataset.id;
       render();
     },
+    async diambil(el) {
+      await statusDapur(el.dataset.id, "diambil");
+    },
     batal(el) {
       const s = store.get();
       const o = s.orders.find((x) => x.id === el.dataset.id);
@@ -370,6 +421,7 @@ export const kasir = {
       if (!patch) return;
       store.set(patch);
       if (o.stempel) markCards({ ids: [o.pelangganId] });
+      if (dapurAktif(s)) statusDapur(o.id, "batal").catch(() => {});
       toast(`Order #${o.no} dibatalkan`);
       render();
     },
@@ -395,6 +447,12 @@ export const kasir = {
     bayar(el) {
       form.bayar = Number(el.value) || 0;
       render();
+    },
+    atasNama(el) {
+      form.atasNama = el.value;
+    },
+    catatanDapur(el) {
+      form.catatanDapur = el.value;
     },
     pelanggan(el) {
       form.pelangganId = el.value;
