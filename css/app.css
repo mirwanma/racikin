@@ -1170,3 +1170,26 @@ label.btn.disabled { opacity: .5; pointer-events: none; }
   .adm-row .pos-order-head { grid-template-columns: 1fr auto; }
   .adm-st { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; align-items: center; }
 }
+
+/* ---------- Panduan perizinan ---------- */
+.izin h3 { margin: 0; font-size: 16px; display: flex; align-items: center; gap: 6px; }
+.izin-head { gap: 8px; align-items: flex-start; }
+.izin p { margin: 6px 0; }
+.izin.selesai { border-left: 4px solid var(--leaf); }
+.izin.proses { border-left: 4px solid var(--yellow-deep); }
+.izin-alasan, .izin-catatan { display: flex; gap: 6px; align-items: flex-start; }
+.izin-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 8px 0 10px; color: var(--muted); }
+.izin-meta b { color: var(--ink); font-weight: 600; margin-right: 4px; }
+.izin-detail { margin: 6px 0 10px; }
+.izin-detail summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
+.izin-detail h4 { margin: 10px 0 6px; }
+.izin-dok { display: flex; flex-direction: column; gap: 6px; }
+.izin-dok .chk { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; }
+.izin-dok input { margin-top: 3px; accent-color: var(--ink); }
+.izin-langkah { margin: 0 0 10px; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.izin .warn { color: var(--yellow-deep); }
+.izin .neg, .izin-mini.neg b { color: var(--chili); }
+.izin-mini { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; color: inherit; text-decoration: none; border-left: 4px solid var(--yellow-deep); }
+.izin-mini.neg { border-left-color: var(--chili); }
+.izin-mini small { display: block; }
+.izin-disclaimer { margin-top: 4px; }

@@ -7,6 +7,7 @@ import { busy, runAI, head, monthStats } from "./_shared.js";
 import { bahanMap, hppOf, menipis } from "../stok-utils.js";
 import { cekKesehatan, ringkasSehat } from "../sehat.js";
 import { TANYA_SEHAT } from "./sehat.js";
+import { TANYA_IZIN, konteksIzin } from "../izin.js";
 
 const SARAN = [
   "Gimana cara dapet 100 pelanggan pertama?",
@@ -44,6 +45,11 @@ export const mentor = {
     if (location.hash.includes("tanya=sehat")) {
       history.replaceState(null, "", "#/mentor");
       if (!busy.chat) send(TANYA_SEHAT);
+    }
+    // Dari halaman Panduan Perizinan.
+    if (location.hash.includes("tanya=izin")) {
+      history.replaceState(null, "", "#/mentor");
+      if (!busy.chat) send(TANYA_IZIN);
     }
     window.scrollTo(0, document.body.scrollHeight);
   },
@@ -83,6 +89,7 @@ function send(q) {
         stok_menipis: menipis(s.bahan).map((b) => `${b.nama} (${b.stok} ${b.satuan})`),
         tahap_usaha: s.profile?.tahap === "jalan" ? "sudah jalan" : "baru mulai / ide",
         kesehatan_usaha: ringkasSehat(cekKesehatan(s)),
+        perizinan: konteksIzin(s),
         pelanggan_setia: s.loyalty
           ? { program: `${s.loyalty.target} stempel = ${s.loyalty.hadiah}`, jumlah: s.pelanggan.length, aktif_30_hari: s.pelanggan.filter((p) => p.terakhir && (Date.now() - new Date(p.terakhir)) / 864e5 <= 30).length }
           : null,
