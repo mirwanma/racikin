@@ -34,7 +34,7 @@ import { izin } from "./views/izin.js";
 import { imporJual } from "./views/imporjual.js";
 import { promo } from "./views/promo.js";
 import { wa } from "./views/wa.js";
-import { admin } from "./views/admin.js";
+import { admin, isAdminMode, adminDiketahui, cekAdmin, tabAdmin } from "./views/admin.js";
 import { initMeja } from "./meja.js";
 import { initCloud, onCloudChange, cloud, role } from "./cloud.js";
 import { icon } from "./icons.js";
@@ -46,6 +46,8 @@ const KASIR_ROUTES = new Set(["kasir", "pelanggan", "stok", "akun", "setelan", "
 const tabOfKasir = { kasir: "kasir", pelanggan: "pelanggan", stok: "stok", akun: "akun", setelan: "akun", tim: "akun", notif: "akun", shift: "kasir", dapur: "dapur" };
 // Akun dapur hanya membuka layar dapur & akun.
 const DAPUR_ROUTES = new Set(["dapur", "akun", "setelan", "tim", "gabung", "notif", "m"]);
+// Mode admin platform: hanya dashboard admin & akun (menu usaha disembunyikan).
+const ADMIN_ROUTES = new Set(["admin", "akun"]);
 const FREE_ROUTES = ["profil", "setelan", "akun", "kartu", "gabung", "tim", "notif", "m", "admin"];
 
 // Halaman yang di layar lebar disusun dua kolom (kartu mengalir kiri-kanan).
@@ -61,6 +63,14 @@ export function render() {
   const name = routeName();
   const peran = role();
   document.body.dataset.role = peran;
+  // Admin platform: cek ke server sekali setelah login, lalu render ulang kalau ternyata admin.
+  if (cloud.user && adminDiketahui() === null) cekAdmin().then((ok) => ok && render()).catch(() => {});
+  const adminMode = isAdminMode();
+  document.body.dataset.admin = adminMode ? "1" : "";
+  if (adminMode && !ADMIN_ROUTES.has(name)) {
+    location.replace("#/admin");
+    return;
+  }
   if (peran === "kasir" && !KASIR_ROUTES.has(name)) {
     location.replace("#/kasir");
     return;
@@ -69,7 +79,7 @@ export function render() {
     location.replace("#/dapur");
     return;
   }
-  if (!store.get().profile && !FREE_ROUTES.includes(name)) {
+  if (!adminMode && !store.get().profile && !FREE_ROUTES.includes(name)) {
     if (peran !== "owner") {
       // Anggota tim: data usaha pemilik sedang diambil dari cloud.
       current = { render: () => waitingTeam() };
@@ -85,7 +95,7 @@ export function render() {
   view.classList.toggle("cols", COLS.has(name || "home"));
   view.innerHTML = current.render(store.get());
   current.after?.(view);
-  const tab = peran === "kasir" || peran === "dapur" ? tabOfKasir[name] : tabOf[name];
+  const tab = adminMode ? (name === "admin" ? "admin-" + tabAdmin() : "akun") : peran === "kasir" || peran === "dapur" ? tabOfKasir[name] : tabOf[name];
   document.querySelectorAll(".tabbar a").forEach((a) => a.classList.toggle("active", a.dataset.tab === (tab ?? "")));
   document.body.dataset.route = name || "home";
 }

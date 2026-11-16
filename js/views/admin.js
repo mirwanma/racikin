@@ -9,18 +9,80 @@ import { FITUR, STATUS, statusMerchant, ringkasPlatform, saringMerchant, URUT, t
 let data = { status: "idle", list: [], at: null, error: "" }; // idle | loading | ok | bukan | error
 let f = { q: "", status: "", tahap: "", urut: "aktif", tes: false };
 let buka = null; // id merchant yang detailnya dibuka
+let gulir = null; // id merchant yang perlu di-scroll setelah dibuka dari Ringkasan
 const detail = new Map(); // id -> detail | "loading" | { error }
-let adminCache = null; // hasil is_platform_admin untuk user sekarang { uid, ok }
+// Hasil is_platform_admin untuk user sekarang { uid, ok }. Disimpan di perangkat supaya menu admin langsung
+// tampil saat app dibuka (data tetap dijaga server: fungsi admin_* menolak akun yang bukan admin).
+const KEY_ADMIN = "racikin:admin";
+const KEY_MODE = "racikin:mode-usaha"; // admin yang juga punya usaha bisa pindah ke app usaha
+const lsGet = (k) => {
+  try {
+    return localStorage.getItem(k);
+  } catch {
+    return null;
+  }
+};
+const lsSet = (k, v) => {
+  try {
+    v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v);
+  } catch {}
+};
+let adminCache = (() => {
+  const uid = lsGet(KEY_ADMIN);
+  return uid ? { uid, ok: true, simpan: true } : null;
+})();
+let cekJalan = null;
 
-/** Cek admin (dipakai halaman Akun untuk menampilkan link). */
+/** Cek admin ke server (sekali per user). */
 export async function cekAdmin() {
   if (!cloud.user || !sb()) return false;
-  if (adminCache?.uid === cloud.user.id) return adminCache.ok;
-  const { data: ok, error } = await sb().rpc("is_platform_admin");
-  adminCache = { uid: cloud.user.id, ok: !error && ok === true };
-  return adminCache.ok;
+  if (adminCache?.uid === cloud.user.id && !adminCache.simpan) return adminCache.ok;
+  if (cekJalan) return cekJalan;
+  cekJalan = (async () => {
+    const { data: ok, error } = await sb().rpc("is_platform_admin");
+    // Gagal jaringan: pakai hasil tersimpan dulu, cek lagi nanti.
+    if (error && adminCache?.uid === cloud.user.id) return adminCache.ok;
+    adminCache = { uid: cloud.user.id, ok: !error && ok === true };
+    lsSet(KEY_ADMIN, adminCache.ok ? cloud.user.id : null);
+    return adminCache.ok;
+  })();
+  try {
+    return await cekJalan;
+  } finally {
+    cekJalan = null;
+  }
 }
-export const adminDiketahui = () => (adminCache?.uid === cloud.user?.id ? adminCache.ok : null);
+export const adminDiketahui = () => {
+  // Sesi login belum terbaca (baru buka app): pakai status tersimpan biar menu admin nggak kedip.
+  if (!cloud.user) return cloud.available && !cloud.authSiap && adminCache?.simpan ? true : null;
+  return adminCache?.uid === cloud.user.id ? adminCache.ok : null;
+};
+
+/** Mode admin platform: menu usaha disembunyikan, diganti menu admin. */
+export const modeUsaha = () => lsGet(KEY_MODE) === "1";
+export const isAdminMode = () => adminDiketahui() === true && !modeUsaha();
+export function setModeUsaha(on) {
+  lsSet(KEY_MODE, on ? "1" : null);
+}
+/** Dipanggil saat logout: lupakan status admin di perangkat ini. */
+export function lupakanAdmin() {
+  adminCache = null;
+  lsSet(KEY_ADMIN, null);
+  lsSet(KEY_MODE, null);
+  data = { status: "idle", list: [], at: null, error: "" };
+  detail.clear();
+  buka = null;
+}
+
+export const TAB_ADMIN = [
+  ["ringkasan", "Ringkasan"],
+  ["merchant", "Merchant"],
+  ["tren", "Pertumbuhan"],
+];
+export const tabAdmin = () => {
+  const t = new URLSearchParams(location.hash.split("?")[1] || "").get("tab");
+  return TAB_ADMIN.some(([k]) => k === t) ? t : "ringkasan";
+};
 
 async function muat() {
   if (data.status === "loading") return;
@@ -91,19 +153,33 @@ function detailView(m) {
   </div>`;
 }
 
-function dashboard() {
-  const today = todayISO();
-  const semua = f.tes ? data.list : data.list.filter((m) => !isTes(m));
-  const r = ringkasPlatform(semua, today);
-  const rows = saringMerchant(data.list, f, today);
+const nyala = (m) => (m.st.sepi === null ? "belum jualan" : m.st.sepi === 0 ? "jualan hari ini" : `${m.st.sepi} hari lalu`);
+
+/** Baris merchant (bisa dibuka detailnya). */
+function barisMerchant(m) {
+  return `<div class="pos-order adm-row">
+    <button class="pos-order-head" data-action="detail" data-id="${esc(m.id)}">
+      <span class="adm-nama"><b>${esc(m.nama)}</b><small class="muted">${esc([m.kota, m.jenis].filter(Boolean).join(" · ") || "-")} · ${m.tahap === "jalan" ? "udah jalan" : "baru ide"}${isTes(m) ? " · tes" : ""}</small></span>
+      <span class="adm-angka"><b class="mono">${m.order30}</b><small class="muted">order 30h · ${short(m.omzet30)}</small></span>
+      <span class="adm-st">${pill(m.st.status)}<small class="muted">${nyala(m)}${m.order30 || m.order_prev30 ? ` · ${trenTxt(m.st.tren)}` : ""}</small></span>
+    </button>
+    ${buka === m.id ? detailView(m) : ""}
+  </div>`;
+}
+
+/** Kepala halaman admin: judul tab, waktu data, muat ulang, akun tes. */
+function kepala(judul, sub, aksi = "") {
   const nTes = data.list.filter(isTes).length;
-  return `
+  return `<header class="page-head adm-page-head"><h1>${esc(judul)}</h1><span class="pill adm-badge">${icon("lock", 12)} Admin</span></header>
     <section class="card adm-head">
-      <div class="row-between"><div><h2 class="card-title" style="margin:0">Semua merchant Racikin</h2><p class="small muted">Diperbarui ${data.at ? data.at.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) : "-"} · data read-only</p></div>
-        <span class="row-gap"><button class="btn ghost sm" data-action="muat">${icon("sync", 14)} Muat ulang</button><button class="btn soft sm" data-action="csv">${icon("download", 14)} CSV</button></span></div>
+      <div class="row-between"><div><p class="small" style="margin:0">${esc(sub)}</p><p class="small muted" style="margin:0">Diperbarui ${data.at ? data.at.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) : "-"} · data read-only</p></div>
+        <span class="row-gap"><button class="btn ghost sm" data-action="muat">${icon("sync", 14)} Muat ulang</button>${aksi}</span></div>
       ${nTes ? `<label class="impor-cek"><input type="checkbox" data-change="tes" ${f.tes ? "checked" : ""}><span>Ikutkan ${nTes} akun tes (@racikin.test)</span></label>` : ""}
-    </section>
-    <section class="card">
+    </section>`;
+}
+
+function kpi(r) {
+  return `<section class="card">
       <div class="adm-kpi">
         <div><small>Merchant</small><b>${r.total}</b><span class="small muted">+${r.baru30} baru 30 hari</span></div>
         <div><small>Aktif 7 hari</small><b class="pos">${r.aktif7}</b><span class="small muted">${r.aktif30} aktif 30 hari</span></div>
@@ -112,21 +188,42 @@ function dashboard() {
         <div><small>Omzet merchant 30 hari</small><b>${short(r.omzet30)}</b><span class="small muted">${delta(r.omzet30, r.omzetPrev30)}</span></div>
         <div><small>Pemakaian AI 30 hari</small><b>${r.ai30.toLocaleString("id-ID")}</b><span class="small muted">${r.meja30} pesanan meja</span></div>
       </div>
-    </section>
-    <section class="card">
-      <h2 class="card-title">Adopsi fitur</h2>
-      ${bars(r.fitur, { label: (x) => x.nama, nilai: (x) => x.n, fmt: (n) => `${n}/${r.total}` })}
-    </section>
-    <section class="card">
-      <h2 class="card-title">Pendaftar per minggu</h2>
-      ${bars(r.daftarMinggu, { label: (x) => fmtDate(x.minggu, { day: "numeric", month: "short" }), nilai: (x) => x.n })}
-      <div class="row2">
-        <div><h4>Tahap</h4><p class="small">Baru ide <b>${r.tahap.ide}</b> · Udah jalan <b>${r.tahap.jalan}</b></p>
-          <h4>Status</h4><p class="small">${r.status.map(([k, n]) => `${STATUS[k].nama} <b>${n}</b>`).join(" · ")}</p></div>
-        <div><h4>Kota teratas</h4><p class="small">${r.kota.map(([k, n]) => `${esc(k)} <b>${n}</b>`).join(" · ") || "-"}</p>
-          <h4>Jenis usaha</h4><p class="small">${r.jenis.map(([k, n]) => `${esc(k)} <b>${n}</b>`).join(" · ") || "-"}</p></div>
-      </div>
-    </section>
+    </section>`;
+}
+
+/** Daftar pendek di Ringkasan; klik = buka detail di tab Merchant. */
+function daftarPendek(judul, list, kosong, ket) {
+  return `<section class="card">
+    <h2 class="card-title">${esc(judul)}</h2>
+    ${
+      list.length
+        ? `<div class="adm-mini">${list
+            .map((m) => `<a href="#/admin?tab=merchant&id=${esc(m.id)}" class="adm-mini-row"><span><b>${esc(m.nama)}</b><small class="muted">${esc([m.kota, m.jenis].filter(Boolean).join(" · ") || "-")}</small></span><span class="small">${ket(m)}</span>${icon("chevron", 14)}</a>`)
+            .join("")}</div>`
+        : `<p class="small muted">${esc(kosong)}</p>`
+    }
+  </section>`;
+}
+
+function ringkasanTab() {
+  const today = todayISO();
+  const semua = f.tes ? data.list : data.list.filter((m) => !isTes(m));
+  const r = ringkasPlatform(semua, today);
+  const x = semua.map((m) => ({ ...m, st: statusMerchant(m, today) }));
+  const berisiko = x.filter((m) => m.st.status === "berisiko").sort((a, b) => (b.omzet_prev30 || 0) - (a.omzet_prev30 || 0)).slice(0, 5);
+  const baru = [...x].sort((a, b) => String(b.daftar).localeCompare(String(a.daftar))).slice(0, 5);
+  const top = x.filter((m) => m.omzet30 > 0).sort((a, b) => b.omzet30 - a.omzet30).slice(0, 5);
+  return `${kepala("Ringkasan", "Kondisi platform Racikin hari ini")}
+    ${kpi(r)}
+    ${daftarPendek("Perlu disapa", berisiko, "Aman, nggak ada merchant yang berhenti jualan.", (m) => `${pill("berisiko")} <small class="muted">${nyala(m)}</small>`)}
+    ${daftarPendek("Paling rame 30 hari", top, "Belum ada merchant yang jualan lewat Kasir.", (m) => `<b class="mono">${short(m.omzet30)}</b> <small class="muted">${m.order30} order</small>`)}
+    ${daftarPendek("Pendaftar terbaru", baru, "Belum ada pendaftar.", (m) => `<small class="muted">daftar ${tgl(m.daftar)}</small> ${pill(m.st.status)}`)}`;
+}
+
+function merchantTab() {
+  const today = todayISO();
+  const rows = saringMerchant(data.list, f, today);
+  return `${kepala("Merchant", "Cari, saring & lihat detail tiap usaha", `<button class="btn soft sm" data-action="csv">${icon("download", 14)} CSV</button>`)}
     <section class="card adm-list">
       <div class="adm-filter">
         <input type="search" value="${esc(f.q)}" placeholder="Cari nama usaha, email, kota…" data-change="q" aria-label="Cari merchant">
@@ -135,38 +232,77 @@ function dashboard() {
         <select data-change="urut" aria-label="Urutkan">${URUT.map(([k, n]) => `<option value="${k}" ${f.urut === k ? "selected" : ""}>${n}</option>`).join("")}</select>
       </div>
       <p class="small muted">${rows.length} merchant</p>
-      ${
-        rows.length
-          ? rows
-              .map(
-                (m) => `<div class="pos-order adm-row">
-                  <button class="pos-order-head" data-action="detail" data-id="${esc(m.id)}">
-                    <span class="adm-nama"><b>${esc(m.nama)}</b><small class="muted">${esc([m.kota, m.jenis].filter(Boolean).join(" · ") || "-")} · ${m.tahap === "jalan" ? "udah jalan" : "baru ide"}${isTes(m) ? " · tes" : ""}</small></span>
-                    <span class="adm-angka"><b class="mono">${m.order30}</b><small class="muted">order 30h · ${short(m.omzet30)}</small></span>
-                    <span class="adm-st">${pill(m.st.status)}<small class="muted">${m.st.sepi === null ? "belum jualan" : m.st.sepi === 0 ? "jualan hari ini" : `${m.st.sepi} hari lalu`}${m.order30 || m.order_prev30 ? ` · ${trenTxt(m.st.tren)}` : ""}</small></span>
-                  </button>
-                  ${buka === m.id ? detailView(m) : ""}
-                </div>`,
-              )
-              .join("")
-          : `<p class="muted">Nggak ada merchant yang cocok.</p>`
-      }
+      ${rows.length ? rows.map(barisMerchant).join("") : `<p class="muted">Nggak ada merchant yang cocok.</p>`}
     </section>`;
 }
 
+function trenTab() {
+  const today = todayISO();
+  const semua = f.tes ? data.list : data.list.filter((m) => !isTes(m));
+  const r = ringkasPlatform(semua, today);
+  return `${kepala("Pertumbuhan", "Pendaftar, adopsi fitur & sebaran merchant")}
+    <section class="card">
+      <h2 class="card-title">Pendaftar per minggu</h2>
+      ${bars(r.daftarMinggu, { label: (x) => fmtDate(x.minggu, { day: "numeric", month: "short" }), nilai: (x) => x.n })}
+    </section>
+    <section class="card">
+      <h2 class="card-title">Adopsi fitur</h2>
+      ${bars(r.fitur, { label: (x) => x.nama, nilai: (x) => x.n, fmt: (n) => `${n}/${r.total}` })}
+    </section>
+    <section class="card">
+      <h2 class="card-title">Sebaran merchant</h2>
+      <div class="row2">
+        <div><h4>Tahap</h4><p class="small">Baru ide <b>${r.tahap.ide}</b> · Udah jalan <b>${r.tahap.jalan}</b></p>
+          <h4>Status</h4><p class="small">${r.status.map(([k, n]) => `${STATUS[k].nama} <b>${n}</b>`).join(" · ")}</p></div>
+        <div><h4>Kota teratas</h4><p class="small">${r.kota.map(([k, n]) => `${esc(k)} <b>${n}</b>`).join(" · ") || "-"}</p>
+          <h4>Jenis usaha</h4><p class="small">${r.jenis.map(([k, n]) => `${esc(k)} <b>${n}</b>`).join(" · ") || "-"}</p></div>
+      </div>
+    </section>
+    <section class="card">
+      <h2 class="card-title">Transaksi lewat Racikin</h2>
+      <div class="stats3">
+        <div><small>Order 30 hari</small><b>${r.order30.toLocaleString("id-ID")}</b></div>
+        <div><small>Omzet 30 hari</small><b>${short(r.omzet30)}</b></div>
+        <div><small>Pesanan meja</small><b>${r.meja30.toLocaleString("id-ID")}</b></div>
+      </div>
+      <p class="small muted">Dibanding 30 hari sebelumnya: order ${delta(r.order30, r.orderPrev30) || "-"}, omzet ${delta(r.omzet30, r.omzetPrev30) || "-"}. Pemakaian AI ${r.ai30.toLocaleString("id-ID")} kali.</p>
+    </section>`;
+}
+
+const TAB_VIEW = { ringkasan: ringkasanTab, merchant: merchantTab, tren: trenTab };
+
 export const admin = {
   render() {
-    const h = `<header class="page-head"><a href="#/akun" class="back" aria-label="Kembali">${icon("back", 18)}</a><h1>Dashboard Admin</h1></header>`;
+    const h = `<header class="page-head"><h1>Dashboard Admin</h1></header>`;
     if (!cloud.available) return `${h}<section class="card"><p>Koneksi ke server belum siap. Cek internet lalu muat ulang.</p></section>`;
+    if (!cloud.user && !cloud.authSiap) return `${h}<section class="card"><p class="muted">Memuat…</p></section>`;
     if (!cloud.user) return `${h}<section class="card empty"><div class="empty-icon">${icon("lock", 30)}</div><h3>Khusus admin Racikin</h3><p>Masuk pakai akun admin dulu.</p><a href="#/akun" class="btn primary">Masuk</a></section>`;
     if (data.status === "idle" || (data.status === "ok" && adminCache?.uid !== cloud.user.id)) {
       muat();
       return `${h}<section class="card"><p class="muted">Memuat data merchant…</p></section>`;
     }
     if (data.status === "loading" && !data.list.length) return `${h}<section class="card"><p class="muted">Memuat data merchant…</p></section>`;
-    if (data.status === "bukan") return `${h}<section class="card empty"><div class="empty-icon">${icon("lock", 30)}</div><h3>Khusus admin Racikin</h3><p>Akun ${esc(cloud.user.email)} bukan admin platform.</p></section>`;
+    if (data.status === "bukan") return `${h}<section class="card empty"><div class="empty-icon">${icon("lock", 30)}</div><h3>Khusus admin Racikin</h3><p>Akun ${esc(cloud.user.email)} bukan admin platform.</p><a href="#/" class="btn ghost">Ke Beranda</a></section>`;
     if (data.status === "error") return `${h}<section class="card"><p class="warn-box small">${esc(data.error)}</p><button class="btn primary" data-action="muat">Coba lagi</button></section>`;
-    return `${h}${dashboard()}`;
+    const tab = tabAdmin();
+    // Link dari Ringkasan: buka detail merchant tertentu
+    const id = new URLSearchParams(location.hash.split("?")[1] || "").get("id");
+    if (tab === "merchant" && id && buka !== id && data.list.some((m) => m.id === id)) {
+      buka = id;
+      gulir = id;
+      history.replaceState(null, "", "#/admin?tab=merchant");
+      if (!detail.has(id)) queueMicrotask(() => muatDetail(id));
+    }
+    return TAB_VIEW[tab]();
+  },
+  after(root) {
+    if (gulir && tabAdmin() === "merchant") {
+      const el = root.querySelector(`.adm-row [data-id="${CSS.escape(gulir)}"]`);
+      if (el) {
+        gulir = null;
+        setTimeout(() => el.scrollIntoView({ block: "start" }), 0); // setelah scroll-ke-atas bawaan pindah halaman
+      }
+    }
   },
   changes: {
     q(el) {

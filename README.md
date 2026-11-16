@@ -75,7 +75,8 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - Batasan: pilihan hanya **menambah** harga/bahan (belum bisa mengganti bahan atau mengalikan resep). Data `opsi` + `resep[].opsiIds`, logika di `js/varian.js`.
 
 ## Dashboard admin platform (manajemen Racikin)
-- Halaman **`#/admin`** (tidak ada di menu; link "Dashboard Admin" muncul di halaman Akun hanya untuk admin). **Read-only.**
+- **Mode admin**: akun yang terdaftar di `platform_admins` otomatis masuk mode admin begitu login. Menu usaha (Beranda, Kasir, Kas, Konten, Bisnis) disembunyikan dan diganti menu admin: **Ringkasan** (`#/admin`: angka utama + "Perlu disapa" (merchant berisiko berhenti), "Paling rame 30 hari", "Pendaftar terbaru"; klik untuk buka detail), **Merchant** (`#/admin?tab=merchant`: cari/saring/urut, detail, CSV), **Pertumbuhan** (`#/admin?tab=tren`: pendaftar per minggu, adopsi fitur, sebaran, transaksi), **Akun**. Rute usaha dialihkan ke dashboard, profil usaha tidak wajib. Status admin diingat di perangkat (`racikin:admin`) biar menu nggak kedip, tapi tetap dicek ulang ke server. **Read-only.**
+- Admin yang juga punya usaha: Akun → **Buka app usaha** (`racikin:mode-usaha`), balik lewat link "Dashboard Admin" di Akun.
 - Akses dicek di server: tabel `platform_admins` (RLS tanpa policy = tertutup dari klien) + fungsi `is_platform_admin()`, `admin_merchants()`, `admin_merchant_detail(uuid)` (security definer, menolak akun non-admin). Admin hanya menerima ringkasan: profil usaha, email pemilik, jumlah menu/bahan/pelanggan, order & omzet dari rekap kasir, fitur yang dipakai, tim, pemakaian AI. **Kas, laba, data & nomor WA pelanggan merchant tidak dikirim.**
 - **Mendaftarkan admin** (sekali, oleh pemilik proyek di Supabase → SQL Editor; ganti emailnya):
   ```sql

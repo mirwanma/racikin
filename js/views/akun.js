@@ -4,7 +4,7 @@ import { esc, toast } from "../ui.js";
 import { render, go } from "../app.js";
 import { cloud, signIn, signUp, sendReset, setNewPassword, signOut, syncNow, isMember } from "../cloud.js";
 import { peranNama } from "./tim.js";
-import { cekAdmin, adminDiketahui } from "./admin.js";
+import { cekAdmin, adminDiketahui, isAdminMode, modeUsaha, setModeUsaha, lupakanAdmin } from "./admin.js";
 
 let mode = "masuk"; // masuk | daftar | lupa
 let busy = false;
@@ -61,6 +61,24 @@ export const akun = {
         </form>`;
     }
 
+    // Admin platform: halaman akun versi admin (tanpa menu usaha).
+    if (cloud.user && isAdminMode()) {
+      const punyaUsaha = !!store.get().profile;
+      return `<header class="page-head"><h1>Akun</h1></header>
+        <section class="card stack">
+          <div class="row-between"><div><small class="muted">Masuk sebagai</small><h2 style="margin:0">${esc(cloud.user.email)}</h2></div><span class="avatar">${esc(cloud.user.email[0].toUpperCase())}</span></div>
+          <p class="small"><span class="pill adm-badge">${icon("lock", 12)} Admin platform</span></p>
+          <p class="small muted">Kamu lagi di mode admin: menu usaha (Kasir, Kas, Konten, Bisnis) disembunyiin. Data merchant cuma bisa dilihat, nggak bisa diubah.</p>
+        </section>
+        <section class="card">
+          <h2 class="card-title">Punya usaha sendiri juga?</h2>
+          <p class="small">${punyaUsaha ? "Akun ini juga punya data usaha. Buka app usaha buat jualan & ngatur usahamu." : "Akun ini belum punya data usaha. Kalau mau nyoba app sebagai merchant, buka app usaha lalu isi profil."}</p>
+          <button class="btn soft block" data-action="keUsaha">${icon("home", 16)} Buka app usaha</button>
+          <p class="small muted">Balik ke dashboard admin kapan aja dari halaman Akun.</p>
+        </section>
+        <button class="btn ghost block" data-action="logout">${icon("logout", 16)} Keluar</button>`;
+    }
+
     if (cloud.user) {
       const [ic, label] = STATUS[cloud.status] || STATUS.off;
       const q = cloud.quota;
@@ -97,7 +115,7 @@ export const akun = {
 
         ${
           adminDiketahui()
-            ? `<a href="#/admin" class="card module"><span class="module-num">${icon("grid", 18)}</span><div><h3>Dashboard Admin</h3><p class="muted small">Pantau semua merchant Racikin</p></div><span class="chev">${icon("chevron", 18)}</span></a>`
+            ? `<a href="#/admin" class="card module" data-action="keAdmin"><span class="module-num">${icon("lock", 18)}</span><div><h3>Dashboard Admin</h3><p class="muted small">${modeUsaha() ? "Balik ke mode admin platform" : "Pantau semua merchant Racikin"}</p></div><span class="chev">${icon("chevron", 18)}</span></a>`
             : ""
         }
         <button class="btn ghost block" data-action="logout">${icon("logout", 16)} Keluar</button>`;
@@ -154,6 +172,15 @@ export const akun = {
       render();
     },
     sync: () => syncNow(),
+    keUsaha() {
+      setModeUsaha(true);
+      go(store.get().profile ? "" : "profil");
+    },
+    keAdmin(el, ev) {
+      ev?.preventDefault();
+      setModeUsaha(false);
+      go("admin");
+    },
     logout() {
       const clear = isMember()
         ? (confirm("Keluar dari akun? Data usaha tim akan dihapus dari perangkat ini.") || null)
@@ -161,6 +188,7 @@ export const akun = {
       if (clear === null) return;
       return run(async () => {
         await signOut({ clearLocal: clear });
+        lupakanAdmin();
         mode = "masuk";
         toast("Sudah keluar");
         if (clear) go("profil");
