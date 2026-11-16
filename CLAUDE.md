@@ -11,12 +11,13 @@ Racikin ("Racik ide jadi cuan") = PWA co-founder AI untuk usaha F&B kecil di Ind
 ## Arsitektur
 - **Frontend tanpa build**: vanilla ES modules, router hash (`js/app.js`), event delegation `data-action` (click) / `data-change` / `data-form`. View = objek `{ render(s), after(root), actions, changes, forms }` yang mengembalikan template string.
 - **State**: satu objek di `localStorage` (`racikin:v1`, `js/store.js`). `store.set(patch)` → render ulang. `DEFAULT` di store.js = daftar semua key.
-- **Service worker** `sw.js`: naikkan `VERSION` (saat ini `racikin-v30`) di setiap rilis dan tambahkan file baru ke `SHELL`.
+- **Service worker** `sw.js`: naikkan `VERSION` (saat ini `racikin-v31`) di setiap rilis dan tambahkan file baru ke `SHELL`.
 - **Desain "papan warung"**: kuning marigold `#FFC531`, ink `#1B1916`, paper `#F6EFDC`; font Archivo + IBM Plex Mono; token warna di `:root` + mode gelap. Layar ≥ 900px: rail navigasi kiri, halaman di `COLS` (app.js) dua kolom, Kasir dua panel.
 - **Peran** (`js/cloud.js`): `owner`, `manajer`, `kasir` (hanya Kasir/Pelanggan/Stok), `dapur` (hanya layar dapur). Rute dibatasi di `app.js` (`KASIR_ROUTES`, `DAPUR_ROUTES`), dan server juga membatasi.
 
 ## Supabase (project `racikin`, ref `ujdxslztjcufidhqpmcd`, ap-southeast-1)
 - **Sinkron**: satu dokumen JSON per usaha (`user_data`, kolom `rev`), dibaca/ditulis lewat RPC `doc_get` / `doc_save` (optimistic locking) + **3-way merge** di klien (`js/merge.js`; field penghitung seperti `stok`, `stempel`, `delta` digabung sebagai selisih). Setelah merge, Kas & rekap kasir dihitung ulang dari order (`reconcile` di `js/pos.js`). Kasir tidak menerima & tidak bisa menulis bagian keuangan (`doc_kasir_hidden` / `doc_kasir_writable` di SQL).
+- **Admin platform**: tabel `platform_admins` (diisi manual pemilik via SQL Editor) + fungsi `is_platform_admin` / `admin_merchants` / `admin_merchant_detail` untuk dashboard `#/admin` (read-only, `js/admin.js`). Jangan kirim kas/laba/data pelanggan merchant lewat fungsi admin.
 - **Tabel lain**: `ai_usage`, `stamp_cards`, `team_members`, `team_invites`, `push_subscriptions`, `kitchen_tickets` (Realtime), `public_menu` (termasuk grup varian), `table_orders` (Realtime), Storage bucket `menu-foto`. Akses lewat RLS `team_role(owner_id)`; fungsi publik (anon) hanya untuk kartu stempel & pesan meja, dan harga dihitung di server.
 - **Migrasi** di `supabase/migrations/` (urut timestamp). Terapkan lewat MCP Supabase `apply_migration`, lalu simpan file yang sama di repo.
 - **Edge Functions** (`supabase/functions/`): `racikin-ai` (Gemini teks + foto untuk task ber-`gambar: true` seperti `parse_menu`/`parse_bahan`, fallback Claude; prompt & schema di `tasks.ts`), `racikin-push` (Web Push buatan sendiri + pg_cron 15 menit, `verify_jwt=false`), `racikin-foto` (edit foto Gemini, kuota terpisah). Deploy lewat MCP `deploy_edge_function` dengan **semua file** fungsi.

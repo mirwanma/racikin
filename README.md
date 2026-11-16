@@ -68,6 +68,18 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - **Pesan meja**: pelanggan juga memilih varian; server mengecek pilihan & menghitung harga (`place_table_order`).
 - Batasan: pilihan hanya **menambah** harga/bahan (belum bisa mengganti bahan atau mengalikan resep). Data `opsi` + `resep[].opsiIds`, logika di `js/varian.js`.
 
+## Dashboard admin platform (manajemen Racikin)
+- Halaman **`#/admin`** (tidak ada di menu; link "Dashboard Admin" muncul di halaman Akun hanya untuk admin). **Read-only.**
+- Akses dicek di server: tabel `platform_admins` (RLS tanpa policy = tertutup dari klien) + fungsi `is_platform_admin()`, `admin_merchants()`, `admin_merchant_detail(uuid)` (security definer, menolak akun non-admin). Admin hanya menerima ringkasan: profil usaha, email pemilik, jumlah menu/bahan/pelanggan, order & omzet dari rekap kasir, fitur yang dipakai, tim, pemakaian AI. **Kas, laba, data & nomor WA pelanggan merchant tidak dikirim.**
+- **Mendaftarkan admin** (sekali, oleh pemilik proyek di Supabase → SQL Editor; ganti emailnya):
+  ```sql
+  insert into public.platform_admins (user_id)
+  select id from auth.users where email = 'email-admin@contoh.com';
+  ```
+  Mencabut: `delete from public.platform_admins where user_id = (select id from auth.users where email = '...');`
+- Isi: KPI (merchant, aktif 7/30 hari, baru, berisiko berhenti, order & omzet 30 hari vs 30 hari sebelumnya, pemakaian AI, pesanan meja), adopsi 12 fitur, pendaftar per minggu (8 minggu), tahap/status/kota/jenis usaha, daftar merchant (cari nama/email/kota, filter status & tahap, urut terakhir aktif/omzet/order/terbaru/skor/nama), detail merchant (grafik order 60 hari, omzet 7/30 hari, rata-rata per order, menu terlaris, tim per peran, AI per task, fitur), export CSV. Akun tes `@racikin.test` disembunyikan default.
+- Status merchant: **Aktif** (jualan ≤ 7 hari), **Berisiko berhenti** (pernah jualan, sepi > 14 hari), **Baru** (daftar ≤ 14 hari), **Belum jualan**. Skor aktivitas 0–100 = rutin jualan + fitur dipakai + tren. Logika di `js/admin.js`.
+
 ## WhatsApp (link wa.me)
 - Semua lewat link `wa.me`: gratis, tanpa akun API. Pesan dibuka di WhatsApp HP, pengguna sendiri yang menekan kirim (WhatsApp biasa tidak bisa kirim massal / menerima pesan otomatis; itu butuh WhatsApp Business API resmi = tahap lanjutan).
 - Halaman **WhatsApp** (`#/wa`, modul di Bisnis):

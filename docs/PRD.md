@@ -140,6 +140,10 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Nomor WA usaha & pemilik, link & QR "Pesan via WA", daftar menu siap kirim, broadcast pelanggan per kelompok, order dari chat WA ke Kasir, rekap harian & tutup shift ke pemilik.
 - Berikutnya (opsional): WhatsApp Business API resmi (kirim otomatis & pesan masuk) setelah ada akun Meta Business + monetisasi.
 
+### Fase 23: Dashboard admin platform (selesai)
+- `#/admin` read-only untuk manajemen Racikin: ringkasan platform, adopsi fitur, pendaftar, daftar & detail merchant (termasuk omzet & email pemilik), status berisiko berhenti, CSV. Akses lewat `platform_admins` + fungsi `admin_*` di server.
+- Berikutnya (opsional): aksi admin (catatan/tag merchant, atur kuota AI per merchant, kirim pengumuman), metrik retensi kohort.
+
 ### Di luar MVP (fase berikutnya)
 Foto produk AI (gambar), integrasi WhatsApp, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
 
