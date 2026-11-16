@@ -15,6 +15,7 @@ cd tests && npm run unit
 
 | File | Menguji |
 |---|---|
+| `unit/wa.test.mjs` | WhatsApp: baca chat order, link wa.me, teks menu, broadcast per kelompok, ringkasan rekap & shift |
 | `unit/promo.test.mjs` | promo & voucher: waktu/saluran, potongan 3 jenis, pilih terbaik (tidak numpuk), kode & kuota, order/Kas/rekap/batal, laporan, data contoh |
 | `unit/imporjual.test.mjs` | impor penjualan lama: baca CSV/TSV, tebak kolom, tanggal, saluran, lewati hari yang ada, laporan & batalkan |
 | `unit/sehat.test.mjs` | cek kesehatan usaha: status tiap pemeriksaan, skor, prioritas, data contoh |
@@ -38,7 +39,7 @@ mkdir -p /tmp/shots && node tests/e2e/kasir.js /tmp/shots
 
 `RACIKIN_URL` mengganti alamat app (default `http://localhost:8766/`).
 
-**Tanpa akun** (cukup app lokal): `mvp.js`, `kasir.js`, `online.js`, `tracked.js`, `studio.js`, `dummy.js`, `shift.js`, `laporan.js`, `belanja.js`, `kasfilter.js`, `tablet.js` (argumen opsional: lebar tinggi daftar-rute), `rotate.js`, `varian.js` (halaman pelanggan QR diuji dengan RPC mock), `tahap.js`, `impor.js` (Mode Demo; baca foto lewat AI Online dicoba manual), `sehat.js`, `imporjual.js`, `promo.js`.
+**Tanpa akun** (cukup app lokal): `mvp.js`, `kasir.js`, `online.js`, `tracked.js`, `studio.js`, `dummy.js`, `shift.js`, `laporan.js`, `belanja.js`, `kasfilter.js`, `tablet.js` (argumen opsional: lebar tinggi daftar-rute), `rotate.js`, `varian.js` (halaman pelanggan QR diuji dengan RPC mock), `tahap.js`, `impor.js` (Mode Demo; baca foto lewat AI Online dicoba manual), `sehat.js`, `imporjual.js`, `promo.js`, `wa.js` (link wa.me di-intercept, WhatsApp tidak benar-benar dibuka).
 
 **Butuh Supabase & akun tes** (password lewat variabel lingkungan, tidak disimpan di repo):
 

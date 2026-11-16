@@ -5,6 +5,7 @@ import { render } from "../app.js";
 import { icon } from "../icons.js";
 import { head } from "./_shared.js";
 import { pelaku, role } from "../cloud.js";
+import { linkWa, nomorPemilik, teksShift } from "../wa.js";
 import { shiftAktif, shiftTerbuka, ringkasan, bukaShift, catatLaci, hapusLaci, tutupShift, selisihPerKasir, wajibShift, JENIS_LACI, KATEGORI_LACI, PECAHAN } from "../shift.js";
 
 let jenisLaci = "keluar";
@@ -153,7 +154,8 @@ function riwayat(s) {
                       ? `<div class="inline-form">${rows(x.hasil)}
                           <div class="row-between pos-sum"><span>Uang dihitung</span><b>${x.hasil.setor === null ? "–" : rupiah(x.hasil.setor)}</b></div>
                           ${x.catatan ? `<p class="small">Catatan: ${esc(x.catatan)}</p>` : ""}
-                          ${x.ditutupOleh ? `<p class="small muted">Ditutup oleh ${esc(x.ditutupOleh.nama)}</p>` : ""}</div>`
+                          ${x.ditutupOleh ? `<p class="small muted">Ditutup oleh ${esc(x.ditutupOleh.nama)}</p>` : ""}
+                          <a class="btn soft sm" href="${esc(linkWa(nomorPemilik(s), teksShift(s, x)))}" target="_blank" rel="noopener">${icon("chat", 14)} Kirim ke ${nomorPemilik(s) ? "pemilik" : "WA"}</a></div>`
                       : ""
                   }
                 </div>`,
