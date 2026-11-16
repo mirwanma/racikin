@@ -10,7 +10,8 @@ const DEFAULT = {
   activation: null,       // hasil activation_plan + checked
   calendar: null,         // { start, pilar, jadwal:[...+done] }
   transactions: [],       // { id, tanggal, jenis, kategori, nominal, catatan }
-  kasAwal: null,          // saldo kas awal { tanggal, nominal } (lihat saldoKas di js/impor.js)
+  kasAwal: null,
+  imporJual: [],          // riwayat impor penjualan { id, at, nama, dari, sampai, hari, omzet } (lihat js/imporjual.js)          // saldo kas awal { tanggal, nominal } (lihat saldoKas di js/impor.js)
   insight: null,
   chat: [],               // { role, content }
   bahan: [],              // { id, nama, satuan, harga (per satuan), stok, min, estimasi, tracked }

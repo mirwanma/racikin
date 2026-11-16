@@ -127,7 +127,10 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 
 ### Fase 19: Usaha yang sudah jalan, tahap C bagian 1: Cek kesehatan usaha (selesai)
 - Skor + 10 pemeriksaan dari data asli 30 hari (untung, menu rugi, resep, tren omzet, jam rame/sepi, online vs komisi, stok & susut, arus kas, pelanggan balik, selisih kasir), prioritas sesuai masalah utama, sambung ke Mentor AI.
-- Berikutnya (bagian 2): impor riwayat penjualan dari CSV/Excel (POS lain) atau laporan ojol, supaya tren & laporan langsung terisi.
+- Bagian 2 (selesai, lihat Fase 20).
+
+### Fase 20: Usaha yang sudah jalan, tahap C bagian 2: Impor penjualan lama (selesai)
+- Impor CSV / tempel dari spreadsheet, kolom ditebak otomatis & bisa diubah, ringkasan sebelum simpan, hari yang sudah ada dilewati, Kas + komisi + menu baru opsional, bisa dibatalkan.
 
 ### Di luar MVP (fase berikutnya)
 Foto produk AI (gambar), integrasi WhatsApp, perizinan (NIB/PIRT/Halal), monetisasi/langganan.

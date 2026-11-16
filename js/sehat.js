@@ -26,7 +26,7 @@ function omzetHarian(s, dari, sampai) {
   const out = {};
   for (const [t, r] of Object.entries(s.posHarian || {})) if (dalam(t, dari, sampai)) out[t] = (out[t] || 0) + (Number(r.omzet) || 0);
   for (const t of s.transactions || []) {
-    if (t.ref === "pos" || t.jenis !== "masuk" || t.kategori !== "Penjualan" || !dalam(t.tanggal, dari, sampai)) continue;
+    if (t.ref === "pos" || t.ref === "impor" || t.jenis !== "masuk" || t.kategori !== "Penjualan" || !dalam(t.tanggal, dari, sampai)) continue;
     out[t.tanggal] = (out[t.tanggal] || 0) + (Number(t.nominal) || 0);
   }
   return out;
@@ -127,11 +127,13 @@ export function cekKesehatan(s, today = todayISO()) {
   }
 
   // ---------- 4. Tren omzet: 14 hari terakhir vs 14 hari sebelumnya ----------
-  const om = omzetHarian(s, addDays(today, -27), today);
+  // Sampai kemarin (hari ini belum selesai jualan, jangan bikin tren kelihatan turun).
+  const kemarin = addDays(today, -1);
+  const om = omzetHarian(s, addDays(kemarin, -27), kemarin);
   const hariAda = Object.keys(om).filter((t) => om[t] > 0);
-  const akhir = sum(Object.entries(om).filter(([t]) => t > addDays(today, -14)), ([, v]) => v) / 14;
-  const awal = sum(Object.entries(om).filter(([t]) => t <= addDays(today, -14)), ([, v]) => v) / 14;
-  if (hariAda.length >= 10 && awal > 0 && hariAda.some((t) => t <= addDays(today, -21))) {
+  const akhir = sum(Object.entries(om).filter(([t]) => t > addDays(kemarin, -14)), ([, v]) => v) / 14;
+  const awal = sum(Object.entries(om).filter(([t]) => t <= addDays(kemarin, -14)), ([, v]) => v) / 14;
+  if (hariAda.length >= 10 && awal > 0 && hariAda.some((t) => t <= addDays(kemarin, -21))) {
     const ch = ((akhir - awal) / awal) * 100;
     add({
       id: "tren",
@@ -143,7 +145,7 @@ export function cekKesehatan(s, today = todayISO()) {
       href: "#/laporan",
     });
   } else {
-    add({ id: "tren", judul: "Tren omzet", status: "kosong", nilai: "Belum cukup data", detail: "Butuh ±3 minggu catatan penjualan.", saran: "Catat semua penjualan (Kasir atau Kas) tiap hari.", href: "#/kasir" });
+    add({ id: "tren", judul: "Tren omzet", status: "kosong", nilai: "Belum cukup data", detail: "Butuh ±3 minggu catatan penjualan.", saran: "Punya catatan penjualan lama (Excel / aplikasi kasir lain / laporan ojol)? Impor aja biar langsung kebaca. Mulai sekarang catat lewat Kasir.", href: "#/impor-jual" });
   }
 
   // ---------- 5. Jam rame & sepi (detail order 30 hari) ----------

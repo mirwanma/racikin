@@ -11,7 +11,7 @@ Racikin ("Racik ide jadi cuan") = PWA co-founder AI untuk usaha F&B kecil di Ind
 ## Arsitektur
 - **Frontend tanpa build**: vanilla ES modules, router hash (`js/app.js`), event delegation `data-action` (click) / `data-change` / `data-form`. View = objek `{ render(s), after(root), actions, changes, forms }` yang mengembalikan template string.
 - **State**: satu objek di `localStorage` (`racikin:v1`, `js/store.js`). `store.set(patch)` → render ulang. `DEFAULT` di store.js = daftar semua key.
-- **Service worker** `sw.js`: naikkan `VERSION` (saat ini `racikin-v27`) di setiap rilis dan tambahkan file baru ke `SHELL`.
+- **Service worker** `sw.js`: naikkan `VERSION` (saat ini `racikin-v28`) di setiap rilis dan tambahkan file baru ke `SHELL`.
 - **Desain "papan warung"**: kuning marigold `#FFC531`, ink `#1B1916`, paper `#F6EFDC`; font Archivo + IBM Plex Mono; token warna di `:root` + mode gelap. Layar ≥ 900px: rail navigasi kiri, halaman di `COLS` (app.js) dua kolom, Kasir dua panel.
 - **Peran** (`js/cloud.js`): `owner`, `manajer`, `kasir` (hanya Kasir/Pelanggan/Stok), `dapur` (hanya layar dapur). Rute dibatasi di `app.js` (`KASIR_ROUTES`, `DAPUR_ROUTES`), dan server juga membatasi.
 
@@ -27,10 +27,10 @@ Racikin ("Racik ide jadi cuan") = PWA co-founder AI untuk usaha F&B kecil di Ind
 Lihat `tests/README.md`. Unit: `cd tests && npm run unit`. E2E: jalankan `python3 -m http.server 8766` di root lalu `node tests/e2e/<nama>.js <folder-screenshot>`. Tes yang butuh akun memakai akun `*@racikin.test`, dengan password lewat variabel lingkungan. Kosongkan data akun tes sebelum menjalankan tes cloud. Sebelum PR: jalankan unit test + E2E yang relevan + regresi `mvp.js`, `kasir.js`, `dummy.js`.
 
 ## Tahap usaha
-`profile.tahap` = `ide` (default, alur dari ide) atau `jalan` (usaha sudah berjalan: langkah Beranda & halaman Bisnis beda, lihat `js/tahap.js`). Pindahan data usaha lama: `#/impor?jenis=menu|bahan` (teks/foto) + saldo kas awal (`kasAwal`, `js/impor.js`). Fitur baru sebaiknya cocok untuk dua-duanya.
+`profile.tahap` = `ide` (default, alur dari ide) atau `jalan` (usaha sudah berjalan: langkah Beranda & halaman Bisnis beda, lihat `js/tahap.js`). Pindahan data usaha lama: `#/impor?jenis=menu|bahan` (teks/foto) + saldo kas awal (`kasAwal`, `js/impor.js`) + impor penjualan lama `#/impor-jual` (`js/imporjual.js`, rekap ber-`imporId`, Kas `ref: "impor"`). Cek kesehatan usaha: `#/sehat` (`js/sehat.js`). Fitur baru sebaiknya cocok untuk dua-duanya.
 
 ## Data contoh
 `js/dummy.js` (tombol di Setelan / onboarding), profil tahap `jalan`: 15 menu (sebagian dengan varian: level pedas, topping, ukuran, tingkat manis), 25 bahan, ±2.000 order 60 hari, Kas, stok, 35 pelanggan, 5 supplier, shift 30 hari atas nama tim, 8 meja. Semua angka harus tetap konsisten: Kas = rekap kasir per hari, stok = total `stokLog`, stempel = total `stempelLog`. Data hari ini hanya sampai jam sekarang.
 
 ## Ide berikutnya (belum dikerjakan)
-Usaha udah jalan tahap C bagian 2 (impor riwayat penjualan CSV/Excel/laporan ojol; cek kesehatan usaha sudah ada di `js/sehat.js`); promo & voucher; varian yang mengganti bahan / mengalikan porsi; payment gateway sungguhan untuk pesan meja (QRIS saat ini SIMULASI di `pay_table_order_dummy`); panduan perizinan (NIB/PIRT/Halal); integrasi WhatsApp; monetisasi.
+Promo & voucher; varian yang mengganti bahan / mengalikan porsi; payment gateway sungguhan untuk pesan meja (QRIS saat ini SIMULASI di `pay_table_order_dummy`); panduan perizinan (NIB/PIRT/Halal); integrasi WhatsApp; monetisasi.

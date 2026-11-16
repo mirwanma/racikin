@@ -44,6 +44,13 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - Tiap pemeriksaan: status (Bagus / Waspada / Bahaya / Belum ada data / Info), angka, penjelasan, saran konkret, dan link ke halaman terkait. Skor = rata-rata yang punya data (bagus 100, waspada 60, bahaya 20).
 - **Beresin dulu**: 3 prioritas teratas (bahaya dulu, lalu waspada; yang terkait masalah utama di profil didahulukan) + tombol **Diskusiin sama Mentor AI** (pertanyaan otomatis; ringkasan kesehatan selalu ikut jadi konteks Mentor). Logika di `js/sehat.js`.
 
+### Impor penjualan lama (tahap C, bagian 2)
+- Halaman `#/impor-jual` (modul di Bisnis, link di Kas, Laporan kosong & cek kesehatan "Tren omzet"). Sumber: **file CSV** (Excel: Save As CSV, aplikasi kasir lain, laporan GoFood/Grab) atau **copy tabel dari Excel / Google Sheets lalu tempel** (tanpa library Excel). Ada contoh format CSV yang bisa diunduh.
+- Langkah: baca tabel (pemisah koma/titik koma/tab, tanda kutip) → **cocokkan kolom** (ditebak otomatis: tanggal, menu, qty, harga, total, saluran, no. order; Indonesia & Inggris; tanggal d/m/y, m/d/y, ISO, "1 Okt 2026") → **ringkasan** (hari, omzet, porsi, per saluran, menu terlaris, baris gagal) → simpan.
+- Disimpan sebagai rekap harian (`posHarian`, ditandai `imporId`) + opsional pemasukan Penjualan di Kas per hari per saluran (`ref: "impor"`) + opsional komisi ojol + opsional menu baru (harga rata-rata, tanpa resep). Nama menu dicocokkan dengan menu yang ada.
+- Pengaman: hari yang **sudah punya catatan penjualan** (Kasir, impor sebelumnya, atau Penjualan manual di Kas) dan hari ini dilewati; stok tidak dikurangi; tiap impor bisa **dibatalkan** dari Riwayat impor (`imporJual`). Logika di `js/imporjual.js`.
+- Cek kesehatan: tren omzet dihitung sampai kemarin (hari ini belum selesai) dan penjualan impor tidak dihitung dobel.
+
 ### Pindahan data (tahap B)
 - **Masukin menu cepat** (`#/impor?jenis=menu`): tempel daftar menu (catatan/WA) atau **foto papan menu / buku menu / screenshot GoFood** → dirapihin jadi nama + harga + kategori (+ catatan varian). Layar cek dulu: benerin nama/harga, centang yang disimpan; menu yang sudah ada ditandai (update harga / lewati). Menu baru langsung bisa dijual di Kasir; resep & HPP dilengkapi belakangan.
 - **Bahan & stok cepat** (`#/impor?jenis=bahan`): tulis daftar bahan (cth "cabai rawit 1 kg 80rb", "tahu 200 pcs @600") atau **foto nota belanja / catatan stok** → nama, stok, satuan (kg → gram, liter → ml, tray → butir, dst.), harga per satuan. Stok dicatat sebagai hitung fisik (opname) sehingga stok = total riwayat stok.

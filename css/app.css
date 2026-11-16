@@ -1071,7 +1071,7 @@ label.btn.disabled { opacity: .5; pointer-events: none; }
 .impor-row.bahan { grid-template-columns: 1fr 76px 92px; }
 .impor-row .impor-harga { grid-column: 1 / 3; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px; }
 .impor-cek { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 650; cursor: pointer; }
-.impor-cek input { width: 20px; height: 20px; accent-color: var(--ink); }
+.impor-cek input { width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--ink); }
 .impor-row .impor-info { grid-column: 1 / -1; }
 .impor-row.off > input, .impor-row.off > select:not([data-f=aksi]) { opacity: 0.45; }
 .impor-row select, .impor-row input { min-width: 0; }
@@ -1102,3 +1102,12 @@ label.btn.disabled { opacity: .5; pointer-events: none; }
 .sehat-prioritas a { color: inherit; text-decoration: none; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
 .sehat-prioritas span.small { flex-basis: 100%; }
 .sehat-cek a.link { display: inline-flex; align-items: center; gap: 2px; }
+
+/* ---------- Impor penjualan lama ---------- */
+.kolom-map { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
+.tabel-wrap { overflow-x: auto; max-width: 100%; border: 1px dashed var(--line-2); border-radius: 8px; padding: 4px 8px; }
+.impor-tabel { font-size: 12px; white-space: nowrap; }
+.impor-tabel th, .impor-tabel td { padding-right: 12px; }
+.impor-batch { padding: 8px 0; border-top: 1px dashed var(--line-2); gap: 8px; }
+.impor-batch p { margin: 2px 0 0; }
+.row-gap { display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
