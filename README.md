@@ -38,6 +38,12 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - Usaha tahap ide yang sudah **14 hari jualan** di Kasir ditawari pindah ke tampilan "udah jalan" (bisa "Nanti aja"). Isian "udah jalan" tetap disimpan kalau pindah balik ke tahap ide.
 - Data contoh TAHGUY = usaha udah jalan (fokus: untung & stok). Logika di `js/tahap.js`.
 
+### Cek kesehatan usaha (tahap C, bagian 1)
+- Halaman `#/sehat` (kartu di Beranda untuk usaha udah jalan / yang sudah 7 hari jualan, modul paling atas di "Usahamu"). Skor 0–100 + label (Sehat / Lumayan, ada PR / Perlu perhatian) dari data asli **30 hari terakhir**, tanpa AI.
+- Pemeriksaan: untung kotor (HPP % dari harga, termasuk varian), menu rugi / margin < 30%, kelengkapan resep, tren omzet (2 minggu vs 2 minggu sebelumnya, Kasir + penjualan manual), jam rame & sepi (info), order online vs komisi (markup di bawah saran), stok (menipis, belum diisi, susut dari hitung fisik di luar "stok awal"), arus kas, pelanggan lama nggak balik, selisih kas shift kasir.
+- Tiap pemeriksaan: status (Bagus / Waspada / Bahaya / Belum ada data / Info), angka, penjelasan, saran konkret, dan link ke halaman terkait. Skor = rata-rata yang punya data (bagus 100, waspada 60, bahaya 20).
+- **Beresin dulu**: 3 prioritas teratas (bahaya dulu, lalu waspada; yang terkait masalah utama di profil didahulukan) + tombol **Diskusiin sama Mentor AI** (pertanyaan otomatis; ringkasan kesehatan selalu ikut jadi konteks Mentor). Logika di `js/sehat.js`.
+
 ### Pindahan data (tahap B)
 - **Masukin menu cepat** (`#/impor?jenis=menu`): tempel daftar menu (catatan/WA) atau **foto papan menu / buku menu / screenshot GoFood** → dirapihin jadi nama + harga + kategori (+ catatan varian). Layar cek dulu: benerin nama/harga, centang yang disimpan; menu yang sudah ada ditandai (update harga / lewati). Menu baru langsung bisa dijual di Kasir; resep & HPP dilengkapi belakangan.
 - **Bahan & stok cepat** (`#/impor?jenis=bahan`): tulis daftar bahan (cth "cabai rawit 1 kg 80rb", "tahu 200 pcs @600") atau **foto nota belanja / catatan stok** → nama, stok, satuan (kg → gram, liter → ml, tray → butir, dst.), harga per satuan. Stok dicatat sebagai hitung fisik (opname) sehingga stok = total riwayat stok.

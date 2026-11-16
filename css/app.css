@@ -1076,3 +1076,29 @@ label.btn.disabled { opacity: .5; pointer-events: none; }
 .impor-row.off > input, .impor-row.off > select:not([data-f=aksi]) { opacity: 0.45; }
 .impor-row select, .impor-row input { min-width: 0; }
 .saldo-card .saldo { display: block; font-size: 26px; font-variant-numeric: tabular-nums; }
+
+/* ---------- Cek kesehatan usaha ---------- */
+.sehat-head { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; }
+.sehat-head p { margin: 4px 0 0; }
+.sehat-skor { width: 84px; height: 84px; display: grid; place-items: center; border: 2px solid var(--ink); border-radius: 50%; font-family: var(--mono); font-size: 32px; font-weight: 700; background: var(--card); box-shadow: 3px 3px 0 var(--shadow-c); }
+.sehat-skor.sm { width: 48px; height: 48px; font-size: 18px; box-shadow: 2px 2px 0 var(--shadow-c); }
+.sehat-skor.pos { background: var(--yellow-soft); }
+.sehat-skor.warn { background: var(--yellow); }
+.sehat-skor.neg { background: var(--chili-soft); }
+.sehat-mini { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; color: inherit; text-decoration: none; }
+.sehat-mini small { display: block; }
+.sehat-pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.03em; border: 1px solid currentColor; white-space: nowrap; }
+.sehat-pill.pos { color: var(--leaf); }
+.sehat-pill.warn { color: var(--yellow-deep); }
+.sehat-pill.neg { color: var(--chili); }
+.sehat-pill.muted, .sehat-pill.info { color: var(--muted); }
+.sehat-cek h3 { margin: 0; font-size: 16px; }
+.sehat-cek.bahaya { border-left: 4px solid var(--chili); }
+.sehat-cek.waspada { border-left: 4px solid var(--yellow-deep); }
+.sehat-nilai { display: block; font-size: 20px; margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
+.sehat-cek p { margin: 4px 0; }
+.sehat-saran { display: flex; gap: 6px; align-items: flex-start; }
+.sehat-prioritas { margin: 0 0 12px; padding-left: 20px; display: flex; flex-direction: column; gap: 10px; }
+.sehat-prioritas a { color: inherit; text-decoration: none; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+.sehat-prioritas span.small { flex-basis: 100%; }
+.sehat-cek a.link { display: inline-flex; align-items: center; gap: 2px; }

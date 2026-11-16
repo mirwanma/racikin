@@ -119,11 +119,15 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 
 ### Fase 17: Usaha yang sudah jalan, tahap A (selesai)
 - Pilihan tahap di onboarding (baru ide / udah jalan), profil versi usaha berjalan (lama usaha, omzet, karyawan, saluran, masalah utama), langkah Beranda yang disesuaikan & diurutkan menurut masalah utama, halaman Bisnis versi "Usahamu", tawaran naik tahap setelah 14 hari jualan.
-- Berikutnya: **tahap C** "Cek kesehatan usaha" dari data asli + impor riwayat penjualan (CSV/Excel/laporan ojol).
+- Berikutnya: tahap C (lihat Fase 19).
 
 ### Fase 18: Usaha yang sudah jalan, tahap B (selesai)
 - Input menu cepat & bahan/stok cepat dari teks atau foto (AI Online: task `parse_menu` / `parse_bahan` dengan foto; Mode Demo: parser lokal), layar cek sebelum simpan, menu/bahan yang sudah ada dicocokkan (update, tidak dobel).
 - Saldo kas awal + saldo sekarang di Kas & Beranda; langkah Beranda "udah jalan" diperbarui.
+
+### Fase 19: Usaha yang sudah jalan, tahap C bagian 1: Cek kesehatan usaha (selesai)
+- Skor + 10 pemeriksaan dari data asli 30 hari (untung, menu rugi, resep, tren omzet, jam rame/sepi, online vs komisi, stok & susut, arus kas, pelanggan balik, selisih kasir), prioritas sesuai masalah utama, sambung ke Mentor AI.
+- Berikutnya (bagian 2): impor riwayat penjualan dari CSV/Excel (POS lain) atau laporan ojol, supaya tren & laporan langsung terisi.
 
 ### Di luar MVP (fase berikutnya)
 Foto produk AI (gambar), integrasi WhatsApp, perizinan (NIB/PIRT/Halal), monetisasi/langganan.

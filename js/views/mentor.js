@@ -5,6 +5,8 @@ import { ai } from "../ai.js";
 import { render } from "../app.js";
 import { busy, runAI, head, monthStats } from "./_shared.js";
 import { bahanMap, hppOf, menipis } from "../stok-utils.js";
+import { cekKesehatan, ringkasSehat } from "../sehat.js";
+import { TANYA_SEHAT } from "./sehat.js";
 
 const SARAN = [
   "Gimana cara dapet 100 pelanggan pertama?",
@@ -38,6 +40,11 @@ export const mentor = {
       ${chat.length ? `<button class="btn ghost sm block" data-action="clear">Hapus obrolan</button>` : ""}`;
   },
   after() {
+    // Dari halaman Cek Kesehatan: langsung tanyakan prioritas (sekali).
+    if (location.hash.includes("tanya=sehat")) {
+      history.replaceState(null, "", "#/mentor");
+      if (!busy.chat) send(TANYA_SEHAT);
+    }
     window.scrollTo(0, document.body.scrollHeight);
   },
   actions: {
@@ -74,6 +81,8 @@ function send(q) {
           return { nama: r.nama, harga: r.harga, hpp: Math.round(h.hpp), margin_persen: Math.round(h.margin) };
         }),
         stok_menipis: menipis(s.bahan).map((b) => `${b.nama} (${b.stok} ${b.satuan})`),
+        tahap_usaha: s.profile?.tahap === "jalan" ? "sudah jalan" : "baru mulai / ide",
+        kesehatan_usaha: ringkasSehat(cekKesehatan(s)),
         pelanggan_setia: s.loyalty
           ? { program: `${s.loyalty.target} stempel = ${s.loyalty.hadiah}`, jumlah: s.pelanggan.length, aktif_30_hari: s.pelanggan.filter((p) => p.terakhir && (Date.now() - new Date(p.terakhir)) / 864e5 <= 30).length }
           : null,
