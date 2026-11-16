@@ -132,6 +132,10 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 ### Fase 20: Usaha yang sudah jalan, tahap C bagian 2: Impor penjualan lama (selesai)
 - Impor CSV / tempel dari spreadsheet, kolom ditebak otomatis & bisa diubah, ringkasan sebelum simpan, hari yang sudah ada dilewati, Kas + komisi + menu baru opsional, bisa dibatalkan.
 
+### Fase 21: Promo & voucher (selesai)
+- Diskon order / diskon menu / beli X gratis Y, aturan tanggal-hari-jam-saluran, kode voucher + kuota, otomatis di Kasir (tidak numpuk), statistik per promo, laporan, info promo di menu QR.
+- Berikutnya (belum): promo dihitung di server untuk pesan meja; kuota voucher per pelanggan; paket bundling.
+
 ### Di luar MVP (fase berikutnya)
 Foto produk AI (gambar), integrasi WhatsApp, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
 

@@ -63,6 +63,11 @@ export const bisnis = {
           <div><h3>Kasir (POS)</h3><p class="muted small">Jual dari daftar menu, langsung masuk Kas, stok & stempel</p></div>
           <span class="chev">${icon("chevron", 18)}</span>
         </a>
+        <a href="#/promo" class="card module">
+          <span class="module-num">${icon("spark", 18)}</span>
+          <div><h3>Promo & Voucher</h3><p class="muted small">${(s.promo || []).filter((p) => p.aktif).length ? `${s.promo.filter((p) => p.aktif).length} promo aktif` : "Happy hour, beli 2 gratis 1, diskon min. belanja, kode voucher"}</p></div>
+          <span class="chev">${icon("chevron", 18)}</span>
+        </a>
         <a href="#/laporan" class="card module">
           <span class="module-num">${icon("calc", 18)}</span>
           <div><h3>Laporan Laba Rugi</h3><p class="muted small">Pendapatan, HPP, biaya & laba bersih per bulan, menu paling untung, cetak PDF</p></div>

@@ -18,6 +18,9 @@ const opsiBtn = (p, nama) => p.click(`.sheet .opsi-btn:has-text("${nama}")`);
   const b = await chromium.launch();
   const p = await mk(b, 390, 844);
   await p.goto(B); await p.click('[data-action=dummy]'); await p.waitForSelector('.journey', { timeout: 20000 });
+  // Promo contoh (happy hour / weekend) dimatikan supaya total di tes ini tidak tergantung hari & jam.
+  await p.evaluate(() => { const x = JSON.parse(localStorage.getItem('racikin:v1')); x.promo = x.promo.map((q) => ({ ...q, aktif: false })); localStorage.setItem('racikin:v1', JSON.stringify(x)); });
+  await p.reload(); await p.waitForSelector('.journey');
   let s = await st(p);
   ok(s.opsi.length === 4, `data contoh punya ${s.opsi.length} grup varian`);
   ok(s.orders.some(o => o.items.some(i => i.opsi?.length)), 'order contoh memakai varian');

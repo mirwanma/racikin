@@ -27,6 +27,7 @@ export const bulanSebelum = (ym) => {
 function porsiBulan(s, ym, sampaiHari = 31) {
   const out = {};
   const opsi = {};
+  let promo = 0;
   let hari = 0;
   let omzetKasir = 0;
   for (const [tgl, r] of Object.entries(s.posHarian || {})) {
@@ -35,8 +36,9 @@ function porsiBulan(s, ym, sampaiHari = 31) {
     omzetKasir += Number(r.omzet) || 0;
     for (const [nama, q] of Object.entries(r.items || {})) out[nama] = (out[nama] || 0) + (Number(q) || 0);
     for (const [id, q] of Object.entries(r.opsi || {})) opsi[id] = (opsi[id] || 0) + (Number(q) || 0);
+    for (const x of Object.values(r.promo || {})) promo += Number(x.rp) || 0;
   }
-  return { porsi: out, opsi, hari, omzetKasir };
+  return { porsi: out, opsi, promo, hari, omzetKasir };
 }
 
 /** Metode HPP yang disarankan untuk bulan itu. */
@@ -65,7 +67,7 @@ export function labaRugi(s, ym, metode = metodeDefault(s, ym), sampaiHari = 31) 
   const belanjaHpp = sum(keluar.filter((t) => KAT_HPP.includes(t.kategori)), (t) => t.nominal);
   const map = bahanMap(s.bahan);
   const hppMenu = Object.fromEntries((s.resep || []).map((r) => [r.nama, { hpp: hppOf(r, map).hpp, harga: Number(r.harga) || 0, id: r.id }]));
-  const { porsi, opsi: opsiQ, hari: hariKasir, omzetKasir } = porsiBulan(s, ym, sampaiHari);
+  const { porsi, opsi: opsiQ, promo: potonganPromo, hari: hariKasir, omzetKasir } = porsiBulan(s, ym, sampaiHari);
   let hppResep = 0;
   let porsiTanpaResep = 0;
   const menu = [];
@@ -111,6 +113,7 @@ export function labaRugi(s, ym, metode = metodeDefault(s, ym), sampaiHari = 31) 
     metode,
     pendapatan,
     rincianPendapatan: { kasirToko, kasirOnline, manual, pesanan },
+    potonganPromo: Math.round(potonganPromo), // sudah mengurangi pendapatan kasir (info)
     lain,
     hpp,
     belanjaHpp,

@@ -68,6 +68,15 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - **Pesan meja**: pelanggan juga memilih varian; server mengecek pilihan & menghitung harga (`place_table_order`).
 - Batasan: pilihan hanya **menambah** harga/bahan (belum bisa mengganti bahan atau mengalikan resep). Data `opsi` + `resep[].opsiIds`, logika di `js/varian.js`.
 
+## Promo & voucher
+- Halaman **Promo & Voucher** (`#/promo`, pemilik/manajer; modul di Bisnis). Contoh cepat: happy hour (jam diambil dari jam paling sepi), beli 2 gratis 1, diskon min. belanja, hari spesial, voucher kode.
+- Jenis: **diskon order** (% dengan maks. potongan, atau Rp; min. belanja), **diskon menu** (% / potongan Rp per porsi / harga spesial per porsi; tambahan varian tetap dibayar), **beli X gratis Y** (menu yang dipilih, yang termurah gratis).
+- Aturan berlaku: periode tanggal, hari, jam (jam selesai eksklusif), saluran (default hanya Toko). **Kode voucher** opsional + kuota total.
+- **Kasir**: promo otomatis kepakai kalau syarat terpenuhi, **tidak numpuk** (diambil 1 promo dengan potongan terbesar) + diskon manual tetap bisa. Kolom kode voucher (pesan kenapa ditolak: nggak ada, nonaktif, di luar waktu/saluran, kuota habis, min. belanja, kalah untung). Hint "Tambah Rp… lagi biar dapat …". Promo tercatat di order (`order.promo`), struk & WA struk, rekap Hari ini.
+- Pemakaian per promo dihitung dari rekap harian (`posHarian[tgl].promo = { id: { n, rp, omzet } }`, ikut `reconcile`), jadi kuota & statistik (dipakai, total potongan, omzet order) tetap benar setelah sinkron/batal. Laporan laba rugi menampilkan "sudah dipotong promo".
+- **Pesan meja (QR)**: menu publik menampilkan promo otomatis yang berlaku hari ini (tanpa kode voucher, info saja). Potongan diterapkan kasir saat pesanan diterima; pesanan yang sudah lunas digital tidak dapat promo. Perhitungan promo di server untuk pesan meja: belum.
+- Logika di `js/promo.js`.
+
 ## Kasir (POS)
 - Tab **Kasir** (`#/kasir`). Menu = daftar resep (harga dari resep, sisa porsi dari stok). Item di luar menu bisa ditambah manual.
 - Bayar: diskon (Rp), pelanggan kartu stempel (opsional), metode Tunai (uang diterima + tombol cepat + kembalian) / QRIS / Transfer, atau pesanan order online. Setelah bayar muncul struk + tombol kirim struk via WhatsApp.

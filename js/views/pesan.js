@@ -105,9 +105,20 @@ function header() {
   </header>`;
 }
 
+/** Info promo yang lagi jalan (potongan dihitung kasir). */
+function promoBanner() {
+  const list = (menu?.promo || []).filter((p) => p && p.nama);
+  if (!list.length) return "";
+  return `<section class="card accent pm-promo">
+    ${list.map((p) => `<p>${icon("spark", 14)}<span><b>${esc(p.nama)}</b> · ${esc(p.ket || "")}</span></p>`).join("")}
+    <p class="small muted">Potongan promo dihitung kasir waktu pesananmu diterima (bayar di kasir).</p>
+  </section>`;
+}
+
 function menuView() {
   const list = (menu.menu || []).filter((m) => !cari || m.nama.toLowerCase().includes(cari.toLowerCase()));
   return `${header()}
+    ${promoBanner()}
     ${(menu.menu || []).length > 8 ? `<input type="search" class="pm-cari" placeholder="Cari menu…" value="${esc(cari)}" aria-label="Cari menu">` : ""}
     <div class="pm-list">
       ${list
