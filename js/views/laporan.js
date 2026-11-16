@@ -69,7 +69,7 @@ function statement(r, s) {
     ${p.kasirOnline ? baris("Penjualan order online", rupiah(p.kasirOnline), "", "harga ke pembeli") : ""}
     ${p.manual ? baris("Penjualan dicatat manual", rupiah(p.manual)) : ""}
     ${p.pesanan ? baris("Pesanan / katering", rupiah(p.pesanan)) : ""}
-    ${baris("Total pendapatan", rupiah(r.pendapatan), "sub")}
+    ${baris("Total pendapatan", rupiah(r.pendapatan), "sub", r.potonganPromo ? `sudah dipotong promo ${rupiah(r.potonganPromo)}` : "")}
     ${baris("Harga pokok penjualan (HPP)", "−" + rupiah(r.hpp), "", r.metode === "resep" ? "porsi terjual × HPP resep" : "belanja bahan & kemasan")}
     ${baris("Laba kotor", sign(r.labaKotor), "total", `margin ${r.marginKotor.toFixed(0)}%`)}
     <h4>Biaya operasional</h4>

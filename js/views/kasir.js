@@ -11,6 +11,7 @@ import { dapurAktif, kirimTiket, tiketDari, ubahStatus as statusDapur, daftarTik
 import { mejaAktif, pesananMasuk, dengarPesanan, ubahPesanan } from "../meja.js";
 import { shiftAktif, ringkasan as ringkasanShift, wajibShift } from "../shift.js";
 import { activeChannels, channelCfg, channelNama, hargaDi, isOnline, komisiRp } from "../online.js";
+import { pilihPromo } from "../promo.js";
 import { grupMenu, punyaOpsi, pilihanAwal, pilihanHabis, cekPilihan, hargaItem, kunciItem, labelOpsi, namaLengkap, aturan, tambahanDi } from "../varian.js";
 
 // State layar kasir (tidak disimpan; keranjang hilang kalau app ditutup).
@@ -18,7 +19,7 @@ let tab = "jual"; // jual | rekap
 let step = "menu"; // menu | bayar | struk
 let cart = []; // { key, resepId, nama, harga, qty, opsi? }
 let pilih = null; // sheet varian yang terbuka { resepId, ids: [pilihanId], error }
-let form = { diskon: 0, metode: "tunai", bayar: 0, pelangganId: "", atasNama: "", catatanDapur: "" };
+let form = { diskon: 0, kode: "", metode: "tunai", bayar: 0, pelangganId: "", atasNama: "", catatanDapur: "" };
 let lepasDapur = null;
 let lepasMeja = null;
 let mejaRef = null; // pesanan meja yang sedang dibayar { id, metode, bayar_status, kode, meja_nama }
@@ -35,7 +36,22 @@ function setChannel(s, id) {
   });
 }
 
-const totalNow = () => Math.max(0, subtotal(cart) - Math.min(Number(form.diskon) || 0, subtotal(cart)));
+/** Waktu lokal "YYYY-MM-DDTHH:MM" (untuk aturan jam promo). */
+const waktuNow = () => {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+};
+/** Promo terbaik untuk keranjang sekarang. Pesanan meja yang sudah lunas digital tidak dapat promo (harga sudah dibayar). */
+function promoNow(s = store.get()) {
+  if (mejaRef?.metode === "digital" && mejaRef?.bayar_status === "lunas") return { promo: null, hint: "", kodeError: "" };
+  return pilihPromo(s, cart, { channel, waktu: waktuNow(), kode: form.kode });
+}
+const potonganNow = () => promoNow().promo?.potongan || 0;
+const totalNow = () => {
+  const sisa = subtotal(cart) - potonganNow();
+  return Math.max(0, sisa - Math.min(Number(form.diskon) || 0, sisa));
+};
 const count = () => cart.reduce((a, i) => a + i.qty, 0);
 const bisnisOf = (s) => s.brand?.terpilih?.nama || s.profile?.nama || "Toko";
 const jam = (w) => (w || "").slice(11, 16);
@@ -183,11 +199,37 @@ function menuView(s) {
       cart.length && !isWide()
         ? `<div class="pos-bar">
             <button class="btn ghost sm" data-action="clear" aria-label="Kosongkan">${icon("x", 14)}</button>
-            <div><small class="mono">${count()} item${channel !== "toko" ? ` · ${esc(channelNama(channel))}` : ""}</small><b>${rupiah(subtotal(cart))}</b></div>
+            <div><small class="mono">${count()} item${channel !== "toko" ? ` · ${esc(channelNama(channel))}` : ""}${potonganNow() ? " · promo" : ""}</small><b>${rupiah(subtotal(cart) - potonganNow())}</b></div>
             <button class="btn primary" data-action="checkout">Bayar ${icon("chevron", 16)}</button>
           </div>`
         : ""
     }`;
+}
+
+/** Ringkasan promo yang kepakai hari ini (tab Hari ini). */
+function promoHariIniRekap(aktif) {
+  const m = new Map();
+  for (const o of aktif) {
+    if (!o.promo) continue;
+    const cur = m.get(o.promo.id) || { nama: o.promo.nama, n: 0, rp: 0 };
+    cur.n++;
+    cur.rp += o.promo.potongan;
+    m.set(o.promo.id, cur);
+  }
+  if (!m.size) return "";
+  return `<h4>Promo hari ini</h4>${[...m.values()].map((x) => `<div class="row-between pos-sum"><span>${esc(x.nama)} <small class="muted">· ${x.n}×</small></span><b class="neg">−${rupiah(x.rp)}</b></div>`).join("")}`;
+}
+
+/** Promo yang kepakai + kolom kode voucher di keranjang. */
+function promoBox(s) {
+  const r = promoNow(s);
+  const lunasDigital = mejaRef?.metode === "digital" && mejaRef?.bayar_status === "lunas";
+  const adaPromo = (s.promo || []).some((p) => p.aktif);
+  if (!adaPromo && !form.kode) return "";
+  return `${r.promo ? `<div class="row-between pos-sum promo-line"><span>${icon("spark", 14)} ${esc(r.promo.nama)}${r.promo.kode ? ` <small class="mono">${esc(r.promo.kode)}</small>` : ""}</span><b class="pos">−${rupiah(r.promo.potongan)}</b></div>` : ""}
+    ${r.hint ? `<p class="small muted promo-hint">${esc(r.hint)}</p>` : ""}
+    ${lunasDigital ? `<p class="small muted">Pesanan meja sudah dibayar digital, promo nggak dihitung lagi.</p>` : `<label class="row-between pos-sum"><span>Kode voucher</span><input class="pos-kode" value="${esc(form.kode)}" maxlength="20" placeholder="opsional" autocapitalize="characters" data-change="kode"></label>
+    ${form.kode && r.kodeError ? `<p class="small neg">${esc(r.kodeError)}</p>` : ""}`}`;
 }
 
 function bayarView(s) {
@@ -226,6 +268,7 @@ function bayarView(s) {
         )
         .join("")}
       <div class="row-between pos-sum"><span>Subtotal</span><b>${rupiah(sub)}</b></div>
+      ${promoBox(s)}
       <label class="row-between pos-sum"><span>Diskon (Rp)</span><input class="pos-diskon" type="number" inputmode="numeric" min="0" step="500" value="${form.diskon || ""}" placeholder="0" data-change="diskon"></label>
       <div class="row-between pos-total"><span>Total</span><b>${rupiah(total)}</b></div>
     </section>
@@ -276,6 +319,7 @@ function strukView(s) {
     <section class="struk">
       <div class="struk-head"><b>${esc(bisnisOf(s))}</b><small class="mono">Order #${o.no} · ${jam(o.waktu)}${o.atasNama ? ` · ${esc(o.atasNama)}` : ""}</small></div>
       ${o.items.map((i) => `<div class="row-between"><span>${i.qty}× ${esc(i.nama)}${i.opsi?.length ? `<small class="struk-opsi">${esc(labelOpsi(i))}</small>` : ""}</span><span>${rupiah(i.harga * i.qty)}</span></div>`).join("")}
+      ${o.promo ? `<div class="row-between muted"><span>Promo ${esc(o.promo.nama)}</span><span>−${rupiah(o.promo.potongan)}</span></div>` : ""}
       ${o.diskon ? `<div class="row-between muted"><span>Diskon</span><span>−${rupiah(o.diskon)}</span></div>` : ""}
       <div class="row-between struk-total"><span>Total</span><b>${rupiah(o.total)}</b></div>
       ${
@@ -325,6 +369,7 @@ function rekapView(s) {
             }
             <h4>Terlaris hari ini</h4>
             ${r.terlaris.slice(0, 5).map(([nama, q], i) => `<div class="row-between pos-sum"><span><b class="mono">${i + 1}.</b> ${esc(nama)}</span><b>${q} porsi</b></div>`).join("")}
+            ${promoHariIniRekap(r.aktif)}
             ${r.opsiLaris.length ? `<h4>Varian & topping hari ini</h4><div class="chips">${r.opsiLaris.slice(0, 8).map(([nama, q]) => `<span class="tag">${esc(nama)} · ${q}</span>`).join("")}</div>` : ""}
             ${isKasir() ? "" : `<p class="muted small">Penjualan kasir otomatis masuk ke <a href="#/kas" class="link">Kas</a>, digabung per metode bayar per hari.</p>`}
           </section>`
@@ -346,6 +391,7 @@ function rekapView(s) {
                     openOrder === o.id
                       ? `<div class="inline-form">
                           ${o.items.map((i) => `<div class="row-between small"><span>${i.qty}× ${esc(namaLengkap(i))}</span><span>${rupiah(i.harga * i.qty)}</span></div>`).join("")}
+                          ${o.promo ? `<div class="row-between small muted"><span>Promo ${esc(o.promo.nama)}</span><span>−${rupiah(o.promo.potongan)}</span></div>` : ""}
                           ${o.diskon ? `<div class="row-between small muted"><span>Diskon</span><span>−${rupiah(o.diskon)}</span></div>` : ""}
                           ${o.batalOleh ? `<p class="small muted">Dibatalkan oleh ${esc(o.batalOleh.nama)}</p>` : ""}
                           ${
@@ -504,7 +550,7 @@ export const kasir = {
     selesai() {
       const s = store.get();
       if (wajibShift(s) && !shiftAktif(s, pelaku())) return toast("Buka shift dulu sebelum jualan", "err");
-      const { patch, order, stempelInfo } = buatOrder(s, { cart, ...form, channel, kasir: pelaku(), shiftId: shiftAktif(s, pelaku())?.id || null });
+      const { patch, order, stempelInfo } = buatOrder(s, { cart, ...form, promo: promoNow(s).promo, channel, kasir: pelaku(), shiftId: shiftAktif(s, pelaku())?.id || null });
       if (mejaRef) order.meja = { id: mejaRef.id, nama: mejaRef.meja_nama, kode: mejaRef.kode };
       const keDapur = dapurAktif(s);
       if (form.atasNama.trim()) order.atasNama = form.atasNama.trim().slice(0, 40);
@@ -525,7 +571,7 @@ export const kasir = {
         ubahPesanan(ref.id, { status: "diproses", bayar_status: "lunas", pos_order_id: order.id }).catch((e) => toast("Status pesanan meja gagal diperbarui: " + e.message, "err"));
       }
       cart = [];
-      form = { diskon: 0, metode: "tunai", bayar: 0, pelangganId: "", atasNama: "", catatanDapur: "" }; // tiap order baru mulai dari Tunai
+      form = { diskon: 0, kode: "", metode: "tunai", bayar: 0, pelangganId: "", atasNama: "", catatanDapur: "" }; // tiap order baru mulai dari Tunai
       step = "struk";
       toast(`Order #${order.no} · ${rupiah(order.total)} tercatat`);
       render();
@@ -612,6 +658,10 @@ export const kasir = {
     },
     diskon(el) {
       form.diskon = Number(el.value) || 0;
+      render();
+    },
+    kode(el) {
+      form.kode = el.value.trim().toUpperCase();
       render();
     },
     metode(el) {

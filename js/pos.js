@@ -8,6 +8,7 @@
 import { uid } from "./store.js";
 import { todayISO } from "./ui.js";
 import { pakaiItem, namaLengkap } from "./varian.js";
+import { rekapPromo } from "./promo.js";
 import { program, patchStempel } from "./loyalty.js";
 import { CHANNELS, isOnline, channelNama, komisiRp } from "./online.js";
 import { laciTransactions } from "./shift.js";
@@ -103,6 +104,8 @@ function rekapPatch(s, tanggal, orders) {
     }
   const rekap = { order: aktif.length, omzet: Math.round(sum(aktif, (o) => o.total)), items };
   if (Object.keys(opsi).length) rekap.opsi = opsi;
+  const promo = rekapPromo(aktif); // pemakaian promo: { promoId: { n, rp, omzet } }
+  if (promo) rekap.promo = promo;
   return { ...(s.posHarian || {}), [tanggal]: rekap };
 }
 
@@ -125,13 +128,15 @@ function itemOrder(i) {
  * Buat order baru. cart = [{ resepId|null, nama, harga, qty, opsi? }].
  * Return { patch, order, stempelInfo }.
  */
-export function buatOrder(s, { cart, diskon = 0, metode = "tunai", bayar = 0, pelangganId = "", channel = "toko", kasir = null, shiftId = null }) {
+export function buatOrder(s, { cart, diskon = 0, promo = null, metode = "tunai", bayar = 0, pelangganId = "", channel = "toko", kasir = null, shiftId = null }) {
   if (isOnline(channel)) metode = channel; // order online dibayar lewat platform
   const tanggal = todayISO();
   const items = cart.filter((i) => i.qty > 0).map(itemOrder);
   const sub = subtotal(items);
-  const disk = Math.min(Math.max(0, Math.round(Number(diskon) || 0)), sub);
-  const total = sub - disk;
+  // Promo (satu, dari pilihPromo di js/promo.js) dulu, lalu diskon manual kasir.
+  const pot = promo ? Math.min(Math.max(0, Math.round(Number(promo.potongan) || 0)), sub) : 0;
+  const disk = Math.min(Math.max(0, Math.round(Number(diskon) || 0)), sub - pot);
+  const total = sub - pot - disk;
   const order = {
     id: uid(),
     no: nextNo(s, tanggal),
@@ -141,6 +146,7 @@ export function buatOrder(s, { cart, diskon = 0, metode = "tunai", bayar = 0, pe
     subtotal: sub,
     diskon: disk,
     total,
+    ...(pot ? { promo: { id: promo.id, nama: promo.nama, potongan: pot, ...(promo.kode ? { kode: promo.kode } : {}) } } : {}),
     channel: isOnline(channel) ? channel : "toko",
     komisi: komisiRp(s, channel, total),
     metode,
@@ -255,7 +261,9 @@ export function struk(o, bisnis, rp) {
     "",
     ...o.items.map((i) => `${i.qty}× ${namaLengkap(i)}  ${rp(i.harga * i.qty)}`),
     "",
-    o.diskon ? `Subtotal ${rp(o.subtotal)}\nDiskon -${rp(o.diskon)}` : null,
+    o.diskon || o.promo ? `Subtotal ${rp(o.subtotal)}` : null,
+    o.promo ? `Promo ${o.promo.nama} -${rp(o.promo.potongan)}` : null,
+    o.diskon ? `Diskon -${rp(o.diskon)}` : null,
     `*Total ${rp(o.total)}*`,
     isOnline(o.channel) ? `Pesanan ${channelNama(o.channel)}` : `Bayar ${metodeNama(o.metode)}${o.metode === "tunai" ? ` ${rp(o.bayar)} · Kembali ${rp(o.kembali)}` : ""}`,
     "",

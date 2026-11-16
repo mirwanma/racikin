@@ -6,6 +6,8 @@ import { store, uid } from "./store.js";
 import { sb, cloud, role, onCloudChange } from "./cloud.js";
 import { bahanMap, bisaDibuat } from "./stok-utils.js";
 import { grupMenu, pilihanHabis } from "./varian.js";
+import { promoHariIni, ketPromo } from "./promo.js";
+import { todayISO } from "./ui.js";
 
 export const mejaAktif = (s) => !!s.posSetting?.pesanMeja;
 export const digitalAktif = (s) => s.posSetting?.mejaDigital !== false;
@@ -42,6 +44,8 @@ export function menuPublik(s) {
       return { id: r.id, nama: r.nama, harga: Math.round(Number(r.harga) || 0), habis: bisaDibuat(r, map).porsi === 0, ...(r.foto?.url ? { foto: r.foto.url } : {}), ...(g.length ? { opsi: g } : {}) };
     }),
     opsi: opsiPublik(s, map),
+    // Promo otomatis yang berlaku hari ini (tanpa kode voucher). Hanya info: potongan dihitung kasir saat pesanan diterima.
+    promo: promoHariIni(s, todayISO()).map((p) => ({ nama: p.nama, ket: ketPromo(p, s) })).slice(0, 5),
     meja: (s.meja || []).map((m) => ({ id: m.id, nama: m.nama, token: m.token })),
   };
 }

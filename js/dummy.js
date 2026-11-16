@@ -10,6 +10,7 @@ import { komisiRp } from "./online.js";
 import { newToken } from "./loyalty.js";
 import { demo } from "./demo.js";
 import { ringkasan } from "./shift.js";
+import { pilihPromo } from "./promo.js";
 
 export const HARI = 60;
 
@@ -213,6 +214,15 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH }
   };
   const sOnline = { online, opsi, resep };
 
+  // ---------- Promo ----------
+  const resepK = (k) => resep[MENU.findIndex(([kk]) => kk === k)].id;
+  const promo = [
+    { id: uid() + "ph", nama: "Happy hour sore", aktif: true, jenis: "order", tipe: "persen", nilai: 10, minBelanja: 0, maks: 5000, waktu: { dari: addDays(start, 20), hari: [1, 2, 3, 4, 5], jamDari: "15:00", jamSampai: "16:00" }, saluran: ["toko"], dibuat: addDays(start, 20) },
+    { id: uid() + "pb", nama: "Weekend es teh 3rb", aktif: true, jenis: "menu", tipe: "harga", nilai: 3000, resepIds: [resepK("esteh")], waktu: { hari: [0, 6] }, saluran: ["toko"], dibuat: start },
+    { id: uid() + "pv", nama: "Voucher TAHGUY5", aktif: true, jenis: "order", tipe: "rp", nilai: 5000, minBelanja: 30000, waktu: { dari: addDays(start, 30), sampai: addDays(today, 10) }, saluran: ["toko"], kode: "TAHGUY5", kuota: 200, dibuat: addDays(start, 30) },
+  ];
+  const sPromo = { promo, posHarian: {}, resep };
+
   // ---------- Simulasi penjualan ----------
   const orders = [];
   const pakaiHarian = {}; // tanggal -> { bahanId: qty }
@@ -261,8 +271,12 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH }
       if (chance(channel === "toko" ? 0.55 : 0.4)) for (let j = 0; j < nMakan && chance(0.75); j++) add(weighted(tersedia(minuman), (m) => m.bobot));
       const items = [...cart.values()].map(({ m, qty, opsi: o }) => ({ resepId: m.resep.id, nama: m.resep.nama, harga: hargaItem(sOnline, m.resep, o, channel), qty, ...(o.length ? { opsi: o } : {}) }));
       const sub = items.reduce((a, it) => a + it.harga * it.qty, 0);
-      const diskon = channel === "toko" && chance(0.04) ? 2000 : 0;
-      const total = sub - diskon;
+      // Promo otomatis + sesekali voucher (kode dari brosur/IG)
+      const kode = channel === "toko" && d >= 30 && chance(0.05) ? "TAHGUY5" : "";
+      const pr = pilihPromo(sPromo, items, { channel, waktu: `${tanggal}T${jam}`, kode }).promo;
+      const pot = pr?.potongan || 0;
+      const diskon = channel === "toko" && chance(0.04) ? Math.min(2000, sub - pot) : 0;
+      const total = sub - pot - diskon;
       const metode = channel !== "toko" ? channel : weighted(["tunai", "qris", "transfer"], (m) => ({ tunai: 55, qris: 40, transfer: 5 })[m]);
       const bayar = metode === "tunai" ? weighted([total, Math.ceil(total / 5000) * 5000, Math.ceil(total / 10000) * 10000, Math.max(50000, Math.ceil(total / 50000) * 50000)], (v) => (v === total ? 3 : 2)) : total;
       const order = {
@@ -273,6 +287,7 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH }
         items,
         subtotal: sub,
         diskon,
+        ...(pot ? { promo: { id: pr.id, nama: pr.nama, potongan: pot, ...(pr.kode ? { kode: pr.kode } : {}) } } : {}),
         total,
         channel,
         komisi: komisiRp(sOnline, channel, total),
@@ -474,6 +489,7 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH }
     opsi,
     stokLog,
     online,
+    promo,
     orders,
     posHarian: {},
     studio: null,
