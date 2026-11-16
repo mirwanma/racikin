@@ -16,7 +16,7 @@ cd tests && npm run unit
 | File | Menguji |
 |---|---|
 | `unit/izin.test.mjs` | panduan perizinan: rekomendasi per jenis usaha, masa berlaku, pengingat, progres |
-| `unit/admin.test.mjs` | dashboard admin: status merchant (aktif/berisiko/baru/tidur), ringkasan platform, filter & urut, CSV |
+| `unit/admin.test.mjs` | dashboard admin: status merchant (aktif/berisiko/baru/tidur), ringkasan platform, filter & urut, CSV, periode 7/30/90, perlu disapa |
 | `unit/wa.test.mjs` | WhatsApp: baca chat order, link wa.me, teks menu, broadcast per kelompok, ringkasan rekap & shift |
 | `unit/promo.test.mjs` | promo & voucher: waktu/saluran, potongan 3 jenis, pilih terbaik (tidak numpuk), kode & kuota, order/Kas/rekap/batal, laporan, data contoh |
 | `unit/imporjual.test.mjs` | impor penjualan lama: baca CSV/TSV, tebak kolom, tanggal, saluran, lewati hari yang ada, laporan & batalkan |

@@ -136,3 +136,55 @@ export function toCSV(rows) {
   );
   return "﻿" + [head.join(","), ...lines].join("\n");
 }
+
+// ---------- Desain dashboard (periode 7 / 30 / 90 hari) ----------
+export const PERIODE = [7, 30, 90];
+const jumlah = (arr, k) => arr.reduce((a, x) => a + (Number(x[k]) || 0), 0);
+
+/**
+ * Ringkas deret harian platform (hasil admin_harian, urut lama -> baru, 2 x n hari).
+ * Return periode sekarang (n hari terakhir) vs n hari sebelumnya.
+ */
+export function ringkasHarian(harian, n) {
+  const list = Array.isArray(harian) ? harian : [];
+  const kini = list.slice(-n);
+  const lalu = list.slice(-2 * n, -n);
+  const r = (arr) => ({ order: jumlah(arr, "order"), omzet: jumlah(arr, "omzet"), daftar: jumlah(arr, "daftar"), ai: jumlah(arr, "ai") });
+  const a = r(kini);
+  const b = r(lalu);
+  const hariAda = kini.filter((x) => (Number(x.order) || 0) > 0).length;
+  return {
+    seri: kini,
+    ...a,
+    prev: b,
+    rata: a.order ? a.omzet / a.order : 0,
+    jualanRata: kini.length ? jumlah(kini, "jualan") / kini.length : 0,
+    hariAda,
+    adaPrev: lalu.length === n,
+  };
+}
+
+/** Persentase perubahan (null kalau periode lalu kosong). */
+export const persen = (kini, lalu) => (lalu ? ((kini - lalu) / lalu) * 100 : null);
+
+/** Order & omzet merchant untuk periode (7 / 30 / 90). */
+export function angkaPeriode(m, n) {
+  if (n === 7) return { order: m.order7 || 0, omzet: m.omzet7 || 0 };
+  if (n === 90) return { order: m.order90 ?? m.order30 ?? 0, omzet: m.omzet90 ?? m.omzet30 ?? 0 };
+  return { order: m.order30 || 0, omzet: m.omzet30 || 0 };
+}
+
+/**
+ * Daftar "Perlu disapa": merchant berisiko berhenti, pendaftar baru yang belum isi menu,
+ * dan merchant aktif yang ordernya turun tajam. Urut paling penting dulu.
+ */
+export function perluDisapa(list, today) {
+  const out = [];
+  for (const m of list) {
+    const st = statusMerchant(m, today);
+    if (st.status === "berisiko") out.push({ m, st, jenis: "berisiko", teks: `Berhenti jualan ${st.sepi} hari`, bobot: 3 + (m.omzet_prev30 || 0) / 1e9 });
+    else if (st.umur <= 14 && !m.menu) out.push({ m, st, jenis: "setup", teks: `Daftar ${st.umur} hari lalu, menu masih kosong`, bobot: 2 });
+    else if (st.status === "aktif" && st.tren !== null && st.tren <= -30 && (m.order_prev30 || 0) >= 20) out.push({ m, st, jenis: "turun", teks: `Order turun ${Math.abs(Math.round(st.tren))}% dari bulan lalu`, bobot: 1 + Math.abs(st.tren) / 1000 });
+  }
+  return out.sort((a, b) => b.bobot - a.bobot);
+}

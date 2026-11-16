@@ -1,6 +1,6 @@
 // E2E Racikin (admin.js): Dashboard Admin (#/admin) dengan sesi & RPC Supabase yang di-mock (tidak menyentuh data asli).
-// Cek: akun non-admin ditolak, admin lihat ringkasan, adopsi fitur, daftar merchant (cari/filter/urut), detail, CSV,
-// link di halaman Akun, akun tes disembunyikan secara default.
+// Cek: akun non-admin ditolak, mode admin (menu Ringkasan/Merchant/Pertumbuhan/Akun, menu usaha diblokir), ringkasan,
+// daftar merchant (cari/filter/urut), detail, CSV, pertumbuhan, pindah ke app usaha & balik, akun tes disembunyikan.
 const { chromium } = require('playwright');
 const B = (process.env.RACIKIN_URL || 'http://localhost:8766/'), OUT = process.argv[2];
 const txt = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').trim();
@@ -14,6 +14,10 @@ const MERCHANT = [
   { id: '33333333-3333-3333-3333-333333333333', nama: 'Dimsum Mama', pemilik: 'Rina', email: 'mama@contoh.id', kota: 'Depok', jenis: 'Jajanan / snack', konsep: 'Online / dari rumah', tahap: 'ide', masalah: [], daftar: iso(3) + 'T03:00:00Z', login_terakhir: iso(2) + 'T03:00:00Z', diubah: iso(2) + 'T03:00:00Z', jualan_terakhir: null, order7: 0, omzet7: 0, order30: 0, omzet30: 0, order_prev30: 0, omzet_prev30: 0, hari_jualan30: 0, menu: 0, bahan: 0, pelanggan: 0, tim: 0, ai30: 6, meja_order30: 0, fitur: F([]) },
   { id: '55555555-5555-5555-5555-555555555555', nama: 'Akun Tes', pemilik: 'Tes', email: 'racikin-tim-owner@racikin.test', kota: 'Cimahi', jenis: 'Jajanan / snack', konsep: 'Gerobak / booth', tahap: 'jalan', masalah: [], daftar: iso(5) + 'T03:00:00Z', login_terakhir: iso(1) + 'T03:00:00Z', diubah: iso(1) + 'T03:00:00Z', jualan_terakhir: iso(1), order7: 50, omzet7: 1000000, order30: 50, omzet30: 1000000, order_prev30: 0, omzet_prev30: 0, hari_jualan30: 5, menu: 15, bahan: 25, pelanggan: 35, tim: 3, ai30: 40, meja_order30: 5, fitur: F(['kasir', 'tim']) },
 ];
+const SERI = { '11111111-1111-1111-1111-111111111111': [8,9,10,9,11,10,12,9,11,10,12,11,10,9], '22222222-2222-2222-2222-222222222222': [6,5,4,3,0,0,0,0,0,0,0,0,0,0] };
+for (const m of MERCHANT) { m.seri14 = SERI[m.id] || Array(14).fill(0); m.order90 = m.order30 + m.order_prev30; m.omzet90 = m.omzet30 + m.omzet_prev30; }
+// Total platform per hari, 180 hari (90 sekarang + 90 sebelumnya). 30 hari terakhir: order 10/hari, omzet 200rb/hari; 30 hari sebelumnya: 5/hari.
+const HARIAN = Array.from({ length: 180 }, (_, i) => { const umur = 179 - i; const o = umur < 30 ? 10 : umur < 60 ? 5 : 2; return { tgl: iso(umur), order: o, omzet: o * 20000, jualan: umur < 30 ? 2 : 1, daftar: umur === 3 ? 1 : 0, ai: umur < 30 ? 1 : 0 }; });
 const DETAIL = { harian: Array.from({ length: 60 }, (_, i) => ({ tgl: iso(59 - i), order: 5 + (i % 7), omzet: (5 + (i % 7)) * 20000 })), terlaris: [{ nama: 'Bakso Urat', porsi: 420 }, { nama: 'Es Teh', porsi: 210 }], tim: [{ role: 'kasir', n: 2 }], ai: [{ task: 'mentor_chat', n: 10 }], meja: 30 };
 
 async function halaman(b, { admin }) {
@@ -30,6 +34,7 @@ async function halaman(b, { admin }) {
     if (url.includes('/rpc/is_platform_admin')) return json(admin);
     if (url.includes('/rpc/admin_merchants')) return admin ? json(MERCHANT) : json({ message: 'Khusus admin Racikin' }, 400);
     if (url.includes('/rpc/admin_merchant_detail')) return json(DETAIL);
+    if (url.includes('/rpc/admin_harian')) return json(HARIAN);
     if (url.includes('/auth/v1/user')) return json({ id: uid, email: 'admin@contoh.id', aud: 'authenticated', role: 'authenticated' });
     if (url.includes('/rpc/my_team')) return json(null);
     if (url.includes('/rpc/doc_get')) return json(null);
@@ -49,52 +54,115 @@ async function halaman(b, { admin }) {
   await n.goto(B + '#/admin'); await n.waitForSelector('text=bukan admin platform', { timeout: 20000 });
   ok(true, 'akun non-admin ditolak');
   await n.goto(B + '#/akun'); await n.waitForSelector('text=Keluar'); await n.waitForTimeout(800);
-  ok(!(await n.$('a[href="#/admin"]')), 'non-admin: link dashboard tidak muncul di Akun');
+  ok(!(await n.$('.view a[href="#/admin"]')) && (await n.getAttribute('body', 'data-admin')) === '', 'non-admin: link dashboard tidak muncul di Akun, menu admin nggak aktif');
 
-  // Admin
+  // Admin: app langsung masuk mode admin (menu usaha disembunyikan)
   const p = await halaman(b, { admin: true });
-  await p.goto(B + '#/akun'); await p.waitForSelector('a[href="#/admin"]', { timeout: 20000 });
-  ok(true, 'admin: link Dashboard Admin muncul di Akun');
-  await p.click('a[href="#/admin"]'); await p.waitForSelector('.adm-kpi');
-  const kpi = await txt(p, '.adm-kpi');
-  console.log('kpi:', kpi);
-  const angka = await p.$$eval('.adm-kpi b', (a) => a.map((x) => x.textContent.trim()));
-  ok(angka[0] === '3' && angka[1] === '2' && angka[2] === '1', 'ringkasan: 3 merchant (akun tes disembunyikan), 2 aktif 7 hari, 1 berisiko · ' + angka.join(' | '));
-  ok(/Omzet merchant 30 hari\s*6[.,]2jt/i.test(kpi), 'omzet 30 hari ditampilkan');
-  const rows = await p.$$eval('.adm-row .adm-nama b', (a) => a.map((x) => x.textContent));
-  ok(rows.join() === 'Bakso Bu Sari,Dimsum Mama,Kopi Senja', 'urut terakhir aktif, tanpa akun tes: ' + rows.join());
-  await p.screenshot({ path: OUT + '/a1-dashboard.png', fullPage: true });
+  await p.goto(B); await p.waitForSelector('.a-hero', { timeout: 20000 });
+  ok(p.url().endsWith('#/admin'), 'admin: buka app langsung ke dashboard admin (tanpa isi profil usaha)');
+  const nav = await p.$$eval('.tabbar a', (a) => a.filter((x) => getComputedStyle(x).display !== 'none').map((x) => x.childNodes[1]?.textContent.trim()));
+  ok(nav.join() === 'Ringkasan,Merchant,Pertumbuhan,Akun', 'menu admin: ' + nav.join());
+  ok(await p.isVisible('.adm-brand'), 'sidebar: brand Racikin Admin platform');
+  ok((await p.getAttribute('.tabbar a.active', 'data-tab')) === 'admin-ringkasan', 'tab Ringkasan aktif');
+  ok((await txt(p, '.a-nav-badge')) === '2', 'badge Merchant: 2 perlu disapa');
+  const hero = await txt(p, '.a-hero');
+  console.log('hero:', hero);
+  ok(/Omzet merchant 30 hari\s*Rp 6jt\s*\+100%/.test(hero) && hero.includes('300 order'), 'hero: omzet 30 hari dari deret harian + perbandingan');
+  const tiles = await p.$$eval('.a-bento .a-tile:not(.a-hero)', (a) => a.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+  console.log('tiles:', tiles.join(' | '));
+  ok(/^Merchant\s*3/.test(tiles[0]) && /2\s*\/ 3/.test(tiles[1]) && /Berisiko berhenti\s*1\s*Kopi Senja/.test(tiles[2]), 'kotak angka: 3 merchant (akun tes disembunyikan), 2/3 aktif, 1 berisiko');
+  ok((await p.$$eval('.a-hero .a-line', (a) => a.length)) === 1, 'grafik omzet di hero');
+  const top = await p.$$eval('.a-flush .a-usaha b', (a) => a.map((x) => x.textContent));
+  ok(top[0] === 'Bakso Bu Sari' && top.length === 3, 'Merchant teratas: ' + top.join());
+  ok((await p.$$eval('.a-flush .a-spark .a-line', (a) => a.length)) === 3, 'grafik mini order 14 hari per merchant');
+  const sapa = await p.$$eval('.a-alert', (a) => a.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+  console.log('sapa:', sapa);
+  ok(sapa.length === 2 && sapa[0].includes('Kopi Senja') && sapa[1].includes('Dimsum Mama') && sapa[1].includes('menu masih kosong'), 'Perlu disapa: Kopi Senja (berhenti) & Dimsum Mama (menu kosong)');
+  await p.screenshot({ path: OUT + '/a1-ringkasan.png', fullPage: true });
 
-  // Filter & cari
-  await p.selectOption('select[data-change=status]', 'berisiko'); await p.waitForTimeout(150);
-  ok((await p.$$eval('.adm-row', (a) => a.length)) === 1 && (await txt(p, '.adm-row')).includes('Kopi Senja'), 'filter berisiko');
-  await p.selectOption('select[data-change=status]', '');
+  // Periode 7 hari
+  await p.click('[data-action=periode][data-n="7"]'); await p.waitForTimeout(150);
+  ok(/Omzet merchant 7 hari\s*Rp 1\.4jt\s*\+?0%/.test(await txt(p, '.a-hero')), 'periode 7 hari: 70 order × 20rb, sama dengan minggu lalu');
+  await p.click('[data-action=periode][data-n="30"]');
+
+  // Menu usaha diblokir di mode admin
+  await p.goto(B + '#/kasir'); await p.waitForSelector('.a-hero');
+  ok(p.url().endsWith('#/admin'), 'mode admin: #/kasir dialihkan ke dashboard');
+
+  // Klik Perlu disapa -> tab Merchant dengan detail terbuka
+  await p.click('.a-alert:has-text("Kopi Senja")'); await p.waitForSelector('.adm-detail');
+  ok((await p.getAttribute('.tabbar a.active', 'data-tab')) === 'admin-merchant' && (await txt(p, '.adm-detail')).includes('senja@contoh.id'), 'dari Ringkasan: detail Kopi Senja terbuka di tab Merchant');
+  await p.click('.a-row:has-text("Kopi Senja") button.a-tr'); // tutup
+
+  const rows = await p.$$eval('.a-row .a-usaha b', (a) => a.map((x) => x.textContent));
+  ok(rows.join() === 'Bakso Bu Sari,Dimsum Mama,Kopi Senja', 'urut terakhir aktif, tanpa akun tes: ' + rows.join());
+
+  // Filter chip, cari, akun tes
+  ok((await txt(p, '[data-action=chip][data-k=berisiko]')) === 'Berisiko 1', 'chip berisiko dengan jumlah');
+  await p.click('[data-action=chip][data-k=berisiko]'); await p.waitForTimeout(150);
+  ok((await p.$$eval('.a-row', (a) => a.length)) === 1 && (await txt(p, '.a-row')).includes('Kopi Senja'), 'filter berisiko');
+  await p.click('[data-action=chip][data-k=""]');
   await p.fill('input[data-change=q]', 'depok'); await p.press('input[data-change=q]', 'Tab'); await p.waitForTimeout(150);
-  ok((await p.$$eval('.adm-row', (a) => a.length)) === 1, 'cari kota');
+  ok((await p.$$eval('.a-row', (a) => a.length)) === 1, 'cari kota');
   await p.fill('input[data-change=q]', ''); await p.press('input[data-change=q]', 'Tab');
-  await p.check('input[data-change=tes]'); await p.waitForTimeout(150);
-  ok((await p.$$eval('.adm-row', (a) => a.length)) === 4, 'akun tes bisa diikutkan');
-  await p.uncheck('input[data-change=tes]');
+  await p.check('input[data-change=tes]'); await p.waitForTimeout(300);
+  ok((await p.$$eval('.a-row', (a) => a.length)) === 4, 'akun tes bisa diikutkan');
+  await p.uncheck('input[data-change=tes]'); await p.waitForTimeout(200);
   await p.selectOption('select[data-change=urut]', 'omzet30'); await p.waitForTimeout(150);
 
   // Detail
-  await p.click('.adm-row:has-text("Bakso Bu Sari") .pos-order-head'); await p.waitForSelector('.adm-chart i');
+  await p.click('.a-row:has-text("Bakso Bu Sari") button.a-tr'); await p.waitForSelector('.adm-chart i');
   const det = await txt(p, '.adm-detail');
   console.log('detail:', det.slice(0, 260));
   ok((await p.$$eval('.adm-chart i', (a) => a.length)) === 60 && det.includes('Bakso Urat') && det.includes('sari@contoh.id') && det.includes('2 kasir'), 'detail: grafik 60 hari, terlaris, email, tim');
-  await p.screenshot({ path: OUT + '/a2-detail.png', fullPage: true });
+  await p.screenshot({ path: OUT + '/a2-merchant.png', fullPage: true });
 
   // CSV
   const [dl] = await Promise.all([p.waitForEvent('download'), p.click('[data-action=csv]')]);
   const isi = await (await dl.createReadStream()).toArray().then((c) => Buffer.concat(c).toString('utf8'));
   ok(dl.suggestedFilename().startsWith('racikin-merchant-') && isi.split('\n').length === 4 && isi.includes('Bakso Bu Sari'), 'CSV 3 merchant');
 
+  // Pertumbuhan
+  await p.click('.tabbar a[data-tab="admin-tren"]'); await p.waitForSelector('.a-cols');
+  const tren = await txt(p, '.a-wrap');
+  ok(/Order 30 hari\s*300\s*\+100%/.test(tren) && tren.includes('Pendaftar per minggu') && /Kasir\s*67%/.test(tren), 'Pertumbuhan: order + perbandingan, pendaftar, adopsi fitur (Kasir 2/3)');
+  ok((await p.$$eval('.a-cols', (a) => a.length)) === 3, 'grafik harian order, merchant jualan, pendaftar');
+  await p.screenshot({ path: OUT + '/a3-tren.png', fullPage: true });
+
+  // Akun versi admin + pindah ke app usaha & balik
+  await p.click('.tabbar a[data-tab="akun"]'); await p.waitForSelector('[data-action=keUsaha]');
+  ok((await txt(p, '.view')).includes('Admin platform') && !(await p.$('a[href="#/tim"]')), 'Akun admin: tanpa menu usaha (Tim, Pengingat)');
+  await p.click('[data-action=keUsaha]'); await p.waitForSelector('.hero, form[data-form]', { timeout: 10000 }); await p.waitForTimeout(300);
+  ok(p.url().includes('#/profil') && (await p.getAttribute('body', 'data-admin')) === '', 'Buka app usaha: keluar dari mode admin (ke isi profil)');
+  await p.goto(B + '#/akun'); await p.waitForSelector('[data-action=keAdmin]');
+  await p.click('[data-action=keAdmin]'); await p.waitForSelector('.a-hero');
+  ok((await p.getAttribute('body', 'data-admin')) === '1', 'balik ke mode admin dari Akun');
+
+  // Buka ulang: langsung mode admin
+  await p.reload(); await p.waitForSelector('.a-hero', { timeout: 20000 });
+  ok(p.url().endsWith('#/admin'), 'muat ulang: tetap di dashboard admin');
+
+  // Layar lebar, mode gelap & terang
+  await p.setViewportSize({ width: 1360, height: 900 }); await p.waitForTimeout(300);
+  await p.emulateMedia({ colorScheme: 'dark' }); await p.waitForTimeout(200);
+  ok(await p.evaluate(() => getComputedStyle(document.body).backgroundColor === 'rgb(18, 17, 16)'), 'mode gelap: latar pusat kontrol gelap');
+  await p.screenshot({ path: OUT + '/a4-gelap.png', fullPage: true });
+  await p.emulateMedia({ colorScheme: 'light' }); await p.waitForTimeout(200);
+  ok(await p.evaluate(() => getComputedStyle(document.body).backgroundColor === 'rgb(243, 240, 232)'), 'mode terang: latar terang');
+  await p.screenshot({ path: OUT + '/a5-terang.png', fullPage: true });
+  ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'layar lebar: tidak ada scroll ke samping');
+
   // HP
   const m = await halaman(b, { admin: true });
   await m.setViewportSize({ width: 390, height: 844 });
-  await m.goto(B + '#/admin'); await m.waitForSelector('.adm-kpi', { timeout: 20000 });
-  await m.screenshot({ path: OUT + '/a3-hp.png', fullPage: true });
-  ok(await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'HP: tidak ada scroll ke samping');
+  await m.emulateMedia({ colorScheme: 'dark' });
+  await m.goto(B + '#/admin'); await m.waitForSelector('.a-hero', { timeout: 20000 });
+  await m.screenshot({ path: OUT + '/a6-hp.png', fullPage: true });
+  ok(await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'HP Ringkasan: tidak ada scroll ke samping');
+  await m.goto(B + '#/admin?tab=merchant'); await m.waitForSelector('.a-row');
+  await m.click('.a-row:has-text("Bakso Bu Sari") button.a-tr'); await m.waitForSelector('.adm-chart i');
+  await m.screenshot({ path: OUT + '/a7-hp-merchant.png', fullPage: true });
+  ok(await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'HP Merchant: tidak ada scroll ke samping');
 
   console.log('errors:', [...n.errs, ...p.errs, ...m.errs]);
   await b.close();

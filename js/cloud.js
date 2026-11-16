@@ -34,6 +34,7 @@ const listeners = new Set();
 export const cloud = {
   available: false, // library Supabase termuat?
   user: null, // { id, email }
+  authSiap: false, // sesi login dari perangkat sudah dibaca?
   status: "off", // off | syncing | synced | offline | error
   error: "",
   recovery: false, // sedang reset password (dari link email)
@@ -449,6 +450,7 @@ export function initCloud() {
 
   client.auth.onAuthStateChange((event, session) => {
     const prev = cloud.user?.id;
+    cloud.authSiap = true;
     cloud.user = session?.user ? { id: session.user.id, email: session.user.email } : null;
     if (event === "PASSWORD_RECOVERY") {
       cloud.recovery = true;

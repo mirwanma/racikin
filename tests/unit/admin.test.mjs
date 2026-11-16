@@ -58,4 +58,40 @@ assert.ok(baris[0].startsWith("nama,pemilik,email,kota"));
 assert.match(baris[1], /^Bakso Bu Sari,,sari@contoh\.id,Bandung,Makanan berat,jalan,Aktif,/);
 assert.match(baris[3], /^Kopi Senja,.*Berisiko berhenti/); // urut nama: Bakso, Dimsum, Kopi, Seblak
 
+// --- Periode 7 / 30 / 90 dari deret harian platform
+const H = Array.from({ length: 60 }, (_, i) => ({ tgl: `d${i}`, order: i < 30 ? 5 : 10, omzet: (i < 30 ? 5 : 10) * 20000, jualan: i < 30 ? 1 : 2, daftar: i === 59 ? 2 : 0, ai: i >= 50 ? 3 : 0 }));
+const r30 = A.ringkasHarian(H, 30);
+assert.equal(r30.seri.length, 30);
+assert.equal(r30.order, 300);
+assert.equal(r30.prev.order, 150);
+assert.equal(Math.round(A.persen(r30.order, r30.prev.order)), 100);
+assert.equal(r30.rata, 20000);
+assert.equal(r30.jualanRata, 2);
+assert.equal(r30.daftar, 2);
+assert.equal(r30.ai, 30);
+assert.equal(r30.adaPrev, true);
+const r7 = A.ringkasHarian(H, 7);
+assert.equal(r7.order, 70);
+assert.equal(r7.prev.order, 70);
+assert.equal(A.ringkasHarian(H, 90).adaPrev, false); // data kurang dari 180 hari
+assert.equal(A.ringkasHarian(null, 30).order, 0);
+assert.equal(A.persen(5, 0), null);
+
+// Angka per periode merchant
+const bakso = { ...M[0], order90: 600, omzet90: 12000000 };
+assert.deepEqual(A.angkaPeriode(bakso, 7), { order: 70, omzet: 1400000 });
+assert.deepEqual(A.angkaPeriode(bakso, 30), { order: 300, omzet: 6000000 });
+assert.deepEqual(A.angkaPeriode(bakso, 90), { order: 600, omzet: 12000000 });
+assert.deepEqual(A.angkaPeriode(M[0], 90), { order: 300, omzet: 6000000 }); // data lama tanpa order90
+
+// Perlu disapa: berisiko dulu, lalu pendaftar baru yang menunya kosong, lalu order turun tajam
+const turun = { id: "t", nama: "Es Kopi Turun", email: "t@contoh.id", tahap: "jalan", daftar: "2026-06-01T00:00:00Z", jualan_terakhir: "2026-11-15", order30: 40, order_prev30: 100, hari_jualan30: 20, menu: 5, fitur: {} };
+const kosong = { id: "k", nama: "Baru Banget", email: "k@contoh.id", tahap: "ide", daftar: "2026-11-14T00:00:00Z", jualan_terakhir: null, order30: 0, order_prev30: 0, menu: 0, fitur: {} };
+const sapa = A.perluDisapa([...M, turun, kosong], T);
+console.log("sapa:", sapa.map((x) => `${x.m.nama} (${x.jenis})`).join(", "));
+assert.equal(sapa[0].jenis, "berisiko");
+assert.deepEqual(sapa.map((x) => x.jenis).slice(-2), ["setup", "turun"]);
+assert.match(sapa.find((x) => x.jenis === "turun").teks, /turun 60%/);
+assert.ok(!sapa.some((x) => x.m.nama === "Bakso Bu Sari"));
+
 console.log("admin OK");
