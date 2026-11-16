@@ -4,6 +4,7 @@ import { esc, toast } from "../ui.js";
 import { render, go } from "../app.js";
 import { cloud, signIn, signUp, sendReset, setNewPassword, signOut, syncNow, isMember } from "../cloud.js";
 import { peranNama } from "./tim.js";
+import { cekAdmin, adminDiketahui } from "./admin.js";
 
 let mode = "masuk"; // masuk | daftar | lupa
 let busy = false;
@@ -40,6 +41,10 @@ async function run(fn) {
 const head = `<header class="page-head"><a href="#/" class="back" aria-label="Kembali">${icon("back", 18)}</a><h1>Akun</h1></header>`;
 
 export const akun = {
+  after() {
+    // Tampilkan link Dashboard Admin kalau akun ini admin platform (dicek sekali ke server).
+    if (cloud.user && adminDiketahui() === null) cekAdmin().then((ok) => ok && render()).catch(() => {});
+  },
   render() {
     if (!cloud.available) {
       return `${head}<section class="card"><p>Fitur akun belum bisa dimuat. Cek koneksi internet lalu muat ulang halaman.</p></section>`;
@@ -90,6 +95,11 @@ export const akun = {
           ${q ? `<p class="small muted">Pemakaian hari ini: ${q.used_today}/${q.limit_day}</p>` : `<p class="small muted">Kuota: maks. 60 permintaan AI per hari.</p>`}
         </section>
 
+        ${
+          adminDiketahui()
+            ? `<a href="#/admin" class="card module"><span class="module-num">${icon("grid", 18)}</span><div><h3>Dashboard Admin</h3><p class="muted small">Pantau semua merchant Racikin</p></div><span class="chev">${icon("chevron", 18)}</span></a>`
+            : ""
+        }
         <button class="btn ghost block" data-action="logout">${icon("logout", 16)} Keluar</button>`;
     }
 
