@@ -57,7 +57,7 @@ const steps = (p) => p.$$eval('.journey .step', (a) => a.map((x) => x.textConten
   ok((await txt(p, '.page-head h1')) === 'Usahamu', 'halaman Bisnis -> "Usahamu"');
   const mods = await p.$$eval('.module h3', (a) => a.map((x) => x.textContent));
   console.log('modul:', mods.join(' | '));
-  ok(mods[0] === 'Cek Kesehatan Usaha' && mods[1] === 'Kasir (POS)' && mods.includes('Rencana renovasi / cabang') && !mods.includes('Analisa ide'), 'operasional dulu, perencanaan jadi alat pengembangan');
+  ok(mods[0] === 'Cek Kesehatan Usaha' && mods[1] === 'Impor Penjualan Lama' && mods[2] === 'Kasir (POS)' && mods.includes('Rencana renovasi / cabang') && !mods.includes('Analisa ide'), 'operasional dulu, perencanaan jadi alat pengembangan');
   await p.screenshot({ path: OUT + '/t3-bisnis-jalan.png', fullPage: true });
 
   // Balik ke tahap ide (data "udah jalan" tetap tersimpan)

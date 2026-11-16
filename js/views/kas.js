@@ -173,6 +173,7 @@ export const kas = {
         ${chart(st.harian)}
         <div class="legend small"><span><i class="dot in"></i>Masuk</span><span><i class="dot out"></i>Keluar</span></div>
         <a href="#/laporan" class="lr-link">${icon("receipt", 16)}<span><b>Laporan laba rugi</b><small class="muted">"Laba" di atas = uang masuk − keluar. Laba sebenarnya (setelah HPP) ada di laporan.</small></span>${icon("chevron", 16)}</a>
+        <a href="#/impor-jual" class="lr-link">${icon("download", 16)}<span><b>Impor penjualan lama</b><small class="muted">Dari Excel, aplikasi kasir lain, atau laporan GoFood / Grab (CSV)</small></span>${icon("chevron", 16)}</a>
       </section>
 
       <section class="card accent">

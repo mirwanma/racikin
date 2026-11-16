@@ -32,6 +32,11 @@ export const bisnis = {
           <div><h3>Cek Kesehatan Usaha</h3><p class="muted small">Skor & temuan dari data asli: untung, menu rugi, tren omzet, stok bocor, kas, pelanggan, kasir</p></div>
           <span class="chev">${icon("chevron", 18)}</span>
         </a>`;
+    const imporMod = `<a href="#/impor-jual" class="card module">
+          <span class="module-num">${icon("download", 18)}</span>
+          <div><h3>Impor Penjualan Lama</h3><p class="muted small">${(s.imporJual || []).length ? `${s.imporJual.length} kali impor · ${s.imporJual.reduce((a, b) => a + b.hari, 0)} hari` : "Dari Excel, aplikasi kasir lain, atau laporan GoFood/Grab (CSV)"}</p></div>
+          <span class="chev">${icon("chevron", 18)}</span>
+        </a>`;
     const rencana = jalan
       ? `<h4>Alat pengembangan</h4>${studio}${RENCANA_JALAN.map(
           (x) => `<a href="${x.href}" class="card module"><span class="module-num">${icon("bulb", 18)}</span><div><h3>${x.label}</h3><p class="muted small">${x.desc}</p></div><span class="chev">${icon("chevron", 18)}</span></a>`,
@@ -52,7 +57,7 @@ export const bisnis = {
           )
           .join("")}
         ${jalan ? "" : studio}
-        ${jalan ? sehatMod : `<h4>Operasional harian</h4>`}
+        ${jalan ? sehatMod + imporMod : `<h4>Operasional harian</h4>`}
         <a href="#/kasir" class="card module">
           <span class="module-num">${icon("register", 18)}</span>
           <div><h3>Kasir (POS)</h3><p class="muted small">Jual dari daftar menu, langsung masuk Kas, stok & stempel</p></div>
@@ -98,7 +103,7 @@ export const bisnis = {
           <div><h3>Tim & Karyawan</h3><p class="muted small">${cloud.team?.role === "owner" && cloud.team.anggota ? `${cloud.team.anggota} anggota tim` : isMember() ? `Kamu ${cloud.team.role} di tim ini` : "Undang kasir & manajer, jualan dari banyak HP"}</p></div>
           <span class="chev">${icon("chevron", 18)}</span>
         </a>
-        ${jalan ? "" : sehatMod}
+        ${jalan ? "" : sehatMod + imporMod}
         ${rencana}
         <a href="#/mentor" class="card module">
           <span class="module-num">${icon("chat", 18)}</span>

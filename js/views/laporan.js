@@ -110,7 +110,7 @@ export const laporan = {
   render(s) {
     const months = bulanTersedia(s);
     if (!months.length) {
-      return `${head("Laporan Laba Rugi", "#/kas")}<section class="card empty"><div class="empty-icon">${icon("receipt", 30)}</div><h3>Belum ada transaksi</h3><p>Catat penjualan lewat Kasir atau transaksi di Kas dulu, nanti laporannya muncul di sini.</p><a href="#/kasir" class="btn primary">Buka Kasir</a></section>`;
+      return `${head("Laporan Laba Rugi", "#/kas")}<section class="card empty"><div class="empty-icon">${icon("receipt", 30)}</div><h3>Belum ada transaksi</h3><p>Catat penjualan lewat Kasir atau transaksi di Kas dulu, nanti laporannya muncul di sini.</p><a href="#/kasir" class="btn primary">Buka Kasir</a><a href="#/impor-jual" class="btn ghost">Impor penjualan lama</a></section>`;
     }
     if (!ym || !months.includes(ym)) ym = months[months.length - 1];
     const m = metode || metodeDefault(s, ym);

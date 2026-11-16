@@ -30,12 +30,13 @@ import { pesan } from "./views/pesan.js";
 import { varian } from "./views/varian.js";
 import { impor } from "./views/impor.js";
 import { sehat } from "./views/sehat.js";
+import { imporJual } from "./views/imporjual.js";
 import { initMeja } from "./meja.js";
 import { initCloud, onCloudChange, cloud, role } from "./cloud.js";
 import { icon } from "./icons.js";
 
-const routes = { "": home, profil, bisnis, ide, rab, brand, aktivasi, kas, konten, mentor, setelan, akun, stok, resep, pelanggan, kartu, studio, kasir, online, tim, gabung, notif, shift, laporan, belanja, dapur, meja, varian, impor, sehat, m: pesan };
-const tabOf = { "": "", bisnis: "bisnis", ide: "bisnis", rab: "bisnis", brand: "bisnis", aktivasi: "bisnis", kas: "kas", stok: "bisnis", resep: "bisnis", pelanggan: "bisnis", studio: "bisnis", konten: "konten", kasir: "kasir", online: "kasir", tim: "bisnis", notif: "-", shift: "kasir", laporan: "kas", belanja: "bisnis", dapur: "kasir", meja: "bisnis", varian: "bisnis", impor: "bisnis", sehat: "bisnis", m: "-" };
+const routes = { "": home, profil, bisnis, ide, rab, brand, aktivasi, kas, konten, mentor, setelan, akun, stok, resep, pelanggan, kartu, studio, kasir, online, tim, gabung, notif, shift, laporan, belanja, dapur, meja, varian, impor, sehat, "impor-jual": imporJual, m: pesan };
+const tabOf = { "": "", bisnis: "bisnis", ide: "bisnis", rab: "bisnis", brand: "bisnis", aktivasi: "bisnis", kas: "kas", stok: "bisnis", resep: "bisnis", pelanggan: "bisnis", studio: "bisnis", konten: "konten", kasir: "kasir", online: "kasir", tim: "bisnis", notif: "-", shift: "kasir", laporan: "kas", belanja: "bisnis", dapur: "kasir", meja: "bisnis", varian: "bisnis", impor: "bisnis", sehat: "bisnis", "impor-jual": "bisnis", m: "-" };
 // Kasir hanya melihat halaman jualan, pelanggan, dan stok bahan.
 const KASIR_ROUTES = new Set(["kasir", "pelanggan", "stok", "akun", "setelan", "kartu", "tim", "gabung", "notif", "shift", "dapur", "m"]);
 const tabOfKasir = { kasir: "kasir", pelanggan: "pelanggan", stok: "stok", akun: "akun", setelan: "akun", tim: "akun", notif: "akun", shift: "kasir", dapur: "dapur" };
