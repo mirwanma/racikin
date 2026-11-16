@@ -14,6 +14,11 @@ import { BASE_SYSTEM, TASKS, type TaskDef } from "./tasks.ts";
 
 const ALLOWED_ORIGIN = Deno.env.get("RACIKIN_ALLOWED_ORIGIN") ?? "*";
 const MAX_INPUT_CHARS = 20_000;
+const MAX_IMAGE_BYTES = 1_600_000; // foto (setelah dikecilkan di HP) maks ±1,6 MB
+const IMAGE_MIME = ["image/jpeg", "image/png", "image/webp"];
+
+/** Foto opsional untuk task yang mengizinkan (TaskDef.gambar). */
+type Gambar = { mime: string; data: string };
 
 const cors = {
   "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
@@ -54,10 +59,11 @@ function geminiFetch(model: string, apiKey: string, body: string, deadline: numb
   });
 }
 
-async function callGemini(apiKey: string, def: TaskDef, userText: string): Promise<unknown> {
+async function callGemini(apiKey: string, def: TaskDef, userText: string, gambar: Gambar | null = null): Promise<unknown> {
+  const parts = gambar ? [{ inlineData: { mimeType: gambar.mime, data: gambar.data } }, { text: userText }] : [{ text: userText }];
   const body = JSON.stringify({
     systemInstruction: { parts: [{ text: `${BASE_SYSTEM}\n\nTUGAS:\n${def.instruction}` }] },
-    contents: [{ role: "user", parts: [{ text: userText }] }],
+    contents: [{ role: "user", parts }],
     generationConfig: {
       responseMimeType: "application/json",
       responseJsonSchema: def.schema,
@@ -127,7 +133,7 @@ async function callGemini(apiKey: string, def: TaskDef, userText: string): Promi
 
 // ---------- Claude (cadangan) ----------
 let anthropic: Anthropic | null = null;
-async function callClaude(apiKey: string, def: TaskDef, userText: string): Promise<unknown> {
+async function callClaude(apiKey: string, def: TaskDef, userText: string, gambar: Gambar | null = null): Promise<unknown> {
   anthropic ??= new Anthropic({ apiKey });
   // deno-lint-ignore no-explicit-any
   const params: any = {
@@ -140,7 +146,12 @@ async function callClaude(apiKey: string, def: TaskDef, userText: string): Promi
       { type: "text", text: BASE_SYSTEM },
       { type: "text", text: `TUGAS:\n${def.instruction}`, cache_control: { type: "ephemeral" } },
     ],
-    messages: [{ role: "user", content: userText }],
+    messages: [{
+      role: "user",
+      content: gambar
+        ? [{ type: "image", source: { type: "base64", media_type: gambar.mime, data: gambar.data } }, { type: "text", text: userText }]
+        : userText,
+    }],
   };
   try {
     const response = await anthropic.beta.messages.create(params);
@@ -229,13 +240,29 @@ Deno.serve(async (req) => {
   const userId = await getUserId(req);
   if (!userId) return json({ error: "Login dulu buat pakai AI Online ya.", code: "auth_required" }, 401);
 
-  const context = JSON.stringify({ profil_bisnis: body.profile ?? {}, input: body.input ?? {} });
+  // Foto dipisah dari input (tidak ikut dihitung batas teks), hanya untuk task yang mengizinkan.
+  let input: unknown = body.input ?? {};
+  let gambar: Gambar | null = null;
+  if (input && typeof input === "object" && !Array.isArray(input) && "gambar" in input) {
+    const { gambar: g, ...rest } = input as Record<string, unknown>;
+    input = rest;
+    if (g) {
+      if (!def.gambar) return json({ error: "Task ini tidak menerima foto" }, 400);
+      const { mime, data } = (g ?? {}) as { mime?: unknown; data?: unknown };
+      if (typeof mime !== "string" || !IMAGE_MIME.includes(mime)) return json({ error: "Format foto harus JPG, PNG, atau WebP" }, 400);
+      if (typeof data !== "string" || !data || (data.length * 3) / 4 > MAX_IMAGE_BYTES) return json({ error: "Foto terlalu besar" }, 413);
+      if (!/^[A-Za-z0-9+/]+={0,2}$/.test(data)) return json({ error: "Data foto rusak" }, 400);
+      gambar = { mime, data };
+    }
+  }
+
+  const context = JSON.stringify({ profil_bisnis: body.profile ?? {}, input });
   if (context.length > MAX_INPUT_CHARS) return json({ error: "Input terlalu panjang" }, 413);
   const userText = `Data user (JSON):\n${context}\n\nKerjakan tugasnya dan jawab sesuai schema.`;
 
   try {
     const quota = await consumeQuota(userId, body.task!);
-    const data = geminiKey ? await callGemini(geminiKey, def, userText) : await callClaude(claudeKey!, def, userText);
+    const data = geminiKey ? await callGemini(geminiKey, def, userText, gambar) : await callClaude(claudeKey!, def, userText, gambar);
     return json({ data, quota });
   } catch (err) {
     if (err instanceof UserError) return json({ error: err.message }, err.status);

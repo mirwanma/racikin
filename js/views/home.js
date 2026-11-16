@@ -8,6 +8,7 @@ import { cloud } from "../cloud.js";
 import { program, siapTukar, perluDiajak } from "../loyalty.js";
 import { menipis, belumDiisi, bahanMap, bisaDibuat, fmtQty } from "../stok-utils.js";
 import { langkah, isJalan, tawarNaik, hariJualan, fokus } from "../tahap.js";
+import { saldoKas } from "../impor.js";
 
 /** Langkah di Beranda (beda untuk usaha baru vs yang sudah jalan, lihat js/tahap.js). */
 export const journey = (s) => langkah(s, { anggotaTim: cloud.team?.role === "owner" ? cloud.team.anggota || 0 : 0 });
@@ -117,6 +118,7 @@ export const home = {
           <div><small>Keluar</small><b class="neg">${rupiah(st.keluar)}</b></div>
           <div><small>Laba</small><b class="${st.laba >= 0 ? "pos" : "neg"}">${rupiah(st.laba)}</b></div>
         </div>
+        ${s.kasAwal ? `<p class="small">Saldo kas sekarang <b class="${saldoKas(s) < 0 ? "neg" : ""}">${rupiah(saldoKas(s))}</b> <small class="muted">(perkiraan)</small></p>` : ""}
         <div class="row2">
           <a href="#/kasir" class="btn primary">${icon("register", 16)} Buka kasir</a>
           <a href="#/kas?add=1" class="btn soft">+ Catat manual</a>

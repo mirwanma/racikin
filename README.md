@@ -38,6 +38,13 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - Usaha tahap ide yang sudah **14 hari jualan** di Kasir ditawari pindah ke tampilan "udah jalan" (bisa "Nanti aja"). Isian "udah jalan" tetap disimpan kalau pindah balik ke tahap ide.
 - Data contoh TAHGUY = usaha udah jalan (fokus: untung & stok). Logika di `js/tahap.js`.
 
+### Pindahan data (tahap B)
+- **Masukin menu cepat** (`#/impor?jenis=menu`): tempel daftar menu (catatan/WA) atau **foto papan menu / buku menu / screenshot GoFood** → dirapihin jadi nama + harga + kategori (+ catatan varian). Layar cek dulu: benerin nama/harga, centang yang disimpan; menu yang sudah ada ditandai (update harga / lewati). Menu baru langsung bisa dijual di Kasir; resep & HPP dilengkapi belakangan.
+- **Bahan & stok cepat** (`#/impor?jenis=bahan`): tulis daftar bahan (cth "cabai rawit 1 kg 80rb", "tahu 200 pcs @600") atau **foto nota belanja / catatan stok** → nama, stok, satuan (kg → gram, liter → ml, tray → butir, dst.), harga per satuan. Stok dicatat sebagai hitung fisik (opname) sehingga stok = total riwayat stok.
+- **Saldo kas awal** (kartu Saldo kas di `#/kas`): uang usaha yang ada (laci + rekening) per tanggal tertentu → saldo sekarang = saldo awal + masuk − keluar sejak itu (tampil juga di Beranda). `kasAwal` disembunyikan dari akun kasir.
+- Mode Demo membaca teks pakai parser lokal (`js/impor.js`); **foto butuh AI Online** (task `parse_menu` / `parse_bahan` di `racikin-ai`, foto dikecilkan ke maks 1600 px & dikirim sebagai `input.gambar`, maks ±1,6 MB, 1 kuota AI).
+- Beranda "udah jalan": Masukin daftar menu → Isi bahan & stok awal → Isi saldo kas awal → Kasir → … (masalah "catatan berantakan" mendahulukan saldo & Kasir).
+
 ## Varian & topping
 - Tab **Varian** di Stok & Resep (`#/stok?tab=varian`), editor `#/varian?id=…` (ada contoh cepat: level pedas, topping, ukuran, tingkat manis).
 - **Grup pilihan** dipakai ulang di banyak menu: nama, cara milih (**pilih satu** / **boleh lebih dari 1** + maksimal), wajib/opsional. Tiap pilihan punya **harga tambahan**, **bahan tambahan per porsi** (buat HPP & stok), dan tanda **lagi habis**. Grup dipasang ke menu dari editor varian atau dari editor resep.

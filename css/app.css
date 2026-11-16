@@ -1064,3 +1064,15 @@ label.btn.disabled { opacity: .5; pointer-events: none; }
 .tahap-opt small { color: var(--muted); font-size: 12.5px; line-height: 1.35; }
 .tahap-opt input:checked + span { border-color: var(--ink); background: var(--yellow-tint); box-shadow: 3px 3px 0 var(--shadow-c); }
 .tahap-opt input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* ---------- Input cepat (menu & bahan) + saldo kas ---------- */
+.impor-foto { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 150px; padding: 18px; border: 1.5px dashed var(--line-2); border-radius: 10px; background: var(--paper); text-align: center; cursor: pointer; font-weight: 650; }
+.impor-row { display: grid; grid-template-columns: 1fr 104px auto; gap: 6px; align-items: center; padding: 8px 0; border-top: 1px dashed var(--line-2); }
+.impor-row.bahan { grid-template-columns: 1fr 76px 92px; }
+.impor-row .impor-harga { grid-column: 1 / 3; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px; }
+.impor-cek { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 650; cursor: pointer; }
+.impor-cek input { width: 20px; height: 20px; accent-color: var(--ink); }
+.impor-row .impor-info { grid-column: 1 / -1; }
+.impor-row.off > input, .impor-row.off > select:not([data-f=aksi]) { opacity: 0.45; }
+.impor-row select, .impor-row input { min-width: 0; }
+.saldo-card .saldo { display: block; font-size: 26px; font-variant-numeric: tabular-nums; }

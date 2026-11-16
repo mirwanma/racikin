@@ -466,6 +466,7 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH }
     activation,
     calendar,
     transactions,
+    kasAwal: { tanggal: start, nominal: 2_500_000 }, // uang usaha di awal data contoh
     insight: null,
     chat: [],
     bahan,

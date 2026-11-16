@@ -13,18 +13,21 @@ assert.deepEqual(keys(kosong), ["ide", "rab", "brand", "aktivasi", "kas", "konte
 // Udah jalan, tanpa karyawan, tanpa ojol, tanpa masalah: langkah inti saja
 const jalan = { ...kosong, profile: { tahap: "jalan", karyawan: 0, saluran: ["Jualan langsung"], masalah: [] } };
 assert.equal(T.isJalan(jalan), true);
-assert.deepEqual(keys(jalan), ["menu", "stok", "kasir", "laporan"]);
+assert.deepEqual(keys(jalan), ["menu", "stok", "saldo", "kasir", "laporan"]);
+assert.equal(T.langkah(jalan)[0].href, "#/impor?jenis=menu"); // belum ada menu -> input menu cepat
+assert.equal(T.langkah(jalan)[1].href, "#/impor?jenis=bahan"); // belum ada bahan -> input bahan cepat
 
 // Ada karyawan + GoFood -> langkah tim & harga online ikut
 const j2 = { ...jalan, profile: { ...jalan.profile, karyawan: 2, saluran: ["Jualan langsung", "GoFood"] } };
-assert.deepEqual(keys(j2), ["menu", "stok", "kasir", "online", "tim", "laporan"]);
+assert.deepEqual(keys(j2), ["menu", "stok", "saldo", "kasir", "online", "tim", "laporan"]);
 
 // Masalah utama mendahulukan langkahnya (menu tetap pertama)
 const j3 = { ...jalan, profile: { ...jalan.profile, masalah: ["untung", "sepi"] } };
-assert.deepEqual(keys(j3), ["menu", "pelanggan", "konten", "laporan", "stok", "kasir"]);
+assert.deepEqual(keys(j3), ["menu", "pelanggan", "konten", "laporan", "stok", "saldo", "kasir"]);
 assert.equal(T.langkah(j3).find((x) => x.key === "laporan").utama, true);
 const j4 = { ...jalan, profile: { ...jalan.profile, masalah: ["karyawan"] } };
-assert.deepEqual(keys(j4), ["menu", "kasir", "tim", "stok", "laporan"]);
+assert.deepEqual(keys(j4), ["menu", "kasir", "tim", "stok", "saldo", "laporan"]);
+assert.deepEqual(keys({ ...jalan, profile: { ...jalan.profile, masalah: ["catat"] } }), ["menu", "saldo", "kasir", "stok", "laporan"]);
 
 // Status selesai
 const isi = {
@@ -33,10 +36,11 @@ const isi = {
   bahan: [{ id: "b", tracked: true }],
   orders: [{ id: "o" }],
   online: { channels: { gofood: { aktif: true } } },
+  kasAwal: { tanggal: "2026-11-01", nominal: 500000 },
   posHarian: Object.fromEntries(Array.from({ length: 7 }, (_, i) => [`2026-11-0${i + 1}`, { order: 3 }])),
 };
 const done = Object.fromEntries(T.langkah(isi, { anggotaTim: 1 }).map((x) => [x.key, x.done]));
-assert.deepEqual(done, { menu: true, stok: true, kasir: true, online: true, tim: true, laporan: true });
+assert.deepEqual(done, { menu: true, stok: true, saldo: true, kasir: true, online: true, tim: true, laporan: true });
 assert.equal(T.langkah(isi).find((x) => x.key === "tim").done, false);
 
 // Naik tahap: ditawarkan setelah 14 hari jualan, tidak lagi kalau ditolak / sudah jalan

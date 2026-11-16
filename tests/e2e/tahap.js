@@ -48,7 +48,7 @@ const steps = (p) => p.$$eval('.journey .step', (a) => a.map((x) => x.textConten
   console.log('langkah:', await steps(p));
   ok((await txt(p, '.journey h2')) === 'Beresin usahamu', 'judul beranda "Beresin usahamu"');
   const st1 = await steps(p);
-  ok(st1[0].includes('Masukin menu') && st1[1].includes('stok awal') && st1[2].includes('Kasir'), 'urutan: menu, stok (masalah utama didahulukan), kasir');
+  ok(st1[0].includes('Masukin daftar menu') && st1[1].includes('stok awal') && st1[2].includes('saldo') && st1[3].includes('Kasir'), 'urutan: menu, stok (masalah utama didahulukan), saldo, kasir');
   ok(st1.some((x) => x.includes('harga online')), 'jualan di GoFood -> langkah harga online');
   await p.screenshot({ path: OUT + '/t2-beranda-jalan.png', fullPage: true });
 

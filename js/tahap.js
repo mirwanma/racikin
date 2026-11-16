@@ -49,7 +49,7 @@ function langkahIde(s) {
 // Masalah utama -> langkah yang didahulukan.
 const PRIORITAS = {
   untung: ["laporan"],
-  catat: ["kasir"],
+  catat: ["kasir", "saldo"],
   stok: ["stok"],
   karyawan: ["tim", "kasir"],
   sepi: ["pelanggan", "konten"],
@@ -64,8 +64,9 @@ function langkahJalan(s, { anggotaTim = 0 } = {}) {
   const ojol = saluran.some((x) => ["GoFood", "GrabFood", "ShopeeFood"].includes(x));
   const adaJualan = (s.orders || []).length > 0 || hariJualan(s) > 0;
   const semua = [
-    { key: "menu", label: "Masukin menu & resep", done: s.resep.length > 0, href: s.resep.length ? "#/stok" : "#/resep?id=new" },
-    { key: "stok", label: "Isi stok awal", done: s.bahan.some((b) => b.tracked), href: "#/stok?tab=bahan&isi=1" },
+    { key: "menu", label: "Masukin daftar menu", done: s.resep.length > 0, href: s.resep.length ? "#/stok" : "#/impor?jenis=menu" },
+    { key: "stok", label: "Isi bahan & stok awal", done: s.bahan.some((b) => b.tracked), href: s.bahan.length ? "#/stok?tab=bahan&isi=1" : "#/impor?jenis=bahan" },
+    { key: "saldo", label: "Isi saldo kas awal", done: !!s.kasAwal, href: "#/kas?saldo=1" },
     { key: "kasir", label: "Jualan pakai Kasir", done: adaJualan, href: "#/kasir" },
     { key: "online", label: "Atur harga online", done: activeChannels(s).length > 0, href: "#/online", ikut: ojol || masalah.includes("online") },
     { key: "tim", label: "Ajak tim ke Racikin", done: anggotaTim > 0, href: "#/tim", ikut: (Number(p.karyawan) || 0) > 0 || masalah.includes("karyawan") },
