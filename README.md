@@ -38,6 +38,11 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - Usaha tahap ide yang sudah **14 hari jualan** di Kasir ditawari pindah ke tampilan "udah jalan" (bisa "Nanti aja"). Isian "udah jalan" tetap disimpan kalau pindah balik ke tahap ide.
 - Data contoh TAHGUY = usaha udah jalan (fokus: untung & stok). Logika di `js/tahap.js`.
 
+### Panduan perizinan
+- Halaman `#/izin` (modul di Bisnis untuk dua tahap usaha): NIB, PIRT (SPP-IRT), sertifikat halal, SLHS, pendaftaran merek. Tiap izin: label **Wajib / Disarankan / Opsional / Belum perlu** + alasannya (dari jenis usaha, konsep & menu di profil, misal PIRT baru perlu untuk produk kemasan, menu daging → catatan halal reguler), biaya, lama, masa berlaku, langkah, checklist dokumen, tombol ke situs resmi (oss.go.id, ptsp.halal.go.id, merek.dgip.go.id).
+- Catat status (Belum / Lagi diurus / Sudah punya), nomor izin, tanggal terbit & berlaku. Masa berlaku dihitung otomatis (PIRT 5 tahun, SLHS 3 tahun, merek 10 tahun) → pengingat di Beranda kalau tinggal ≤ 90 hari atau sudah habis. Status izin ikut jadi konteks Mentor AI (`#/mentor?tanya=izin`). Logika di `js/izin.js`, data di `izin`.
+- Isinya panduan umum (terakhir dicek Nov 2026, `DICEK` di `js/izin.js`): perbarui kalau aturan berubah (misal batas wajib halal UMK sekarang 17 Okt 2028).
+
 ### Cek kesehatan usaha (tahap C, bagian 1)
 - Halaman `#/sehat` (kartu di Beranda untuk usaha udah jalan / yang sudah 7 hari jualan, modul paling atas di "Usahamu"). Skor 0–100 + label (Sehat / Lumayan, ada PR / Perlu perhatian) dari data asli **30 hari terakhir**, tanpa AI.
 - Pemeriksaan: untung kotor (HPP % dari harga, termasuk varian), menu rugi / margin < 30%, kelengkapan resep, tren omzet (2 minggu vs 2 minggu sebelumnya, Kasir + penjualan manual), jam rame & sepi (info), order online vs komisi (markup di bawah saran), stok (menipis, belum diisi, susut dari hitung fisik di luar "stok awal"), arus kas, pelanggan lama nggak balik, selisih kas shift kasir.

@@ -10,10 +10,11 @@ const DEFAULT = {
   activation: null,       // hasil activation_plan + checked
   calendar: null,         // { start, pilar, jadwal:[...+done] }
   transactions: [],       // { id, tanggal, jenis, kategori, nominal, catatan }
-  kasAwal: null,
-  imporJual: [],
-  promo: [],
-  wa: null,               // { usaha, pemilik } nomor WhatsApp (lihat js/wa.js)              // promo & voucher (lihat js/promo.js)          // riwayat impor penjualan { id, at, nama, dari, sampai, hari, omzet } (lihat js/imporjual.js)          // saldo kas awal { tanggal, nominal } (lihat saldoKas di js/impor.js)
+  kasAwal: null,          // saldo kas awal { tanggal, nominal } (lihat saldoKas di js/impor.js)
+  imporJual: [],          // riwayat impor penjualan { id, at, nama, dari, sampai, hari, omzet } (lihat js/imporjual.js)
+  promo: [],              // promo & voucher (lihat js/promo.js)
+  wa: null,               // { usaha, pemilik } nomor WhatsApp (lihat js/wa.js)
+  izin: {},               // status perizinan { [nib|pirt|halal|slhs|merek]: { status, nomor, terbit, berlaku, catatan, dok } } (lihat js/izin.js)
   insight: null,
   chat: [],               // { role, content }
   bahan: [],              // { id, nama, satuan, harga (per satuan), stok, min, estimasi, tracked }

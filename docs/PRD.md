@@ -144,8 +144,12 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - `#/admin` read-only untuk manajemen Racikin: ringkasan platform, adopsi fitur, pendaftar, daftar & detail merchant (termasuk omzet & email pemilik), status berisiko berhenti, CSV. Akses lewat `platform_admins` + fungsi `admin_*` di server.
 - Berikutnya (opsional): aksi admin (catatan/tag merchant, atur kuota AI per merchant, kirim pengumuman), metrik retensi kohort.
 
+### Fase 24: Panduan perizinan (selesai)
+- `#/izin`: NIB, PIRT, halal, SLHS, merek. Rekomendasi per jenis usaha & menu, langkah, dokumen, link resmi, status & nomor izin, masa berlaku + pengingat di Beranda, konteks Mentor AI. Tanpa server baru (data di dokumen usaha).
+- Berikutnya (opsional): panduan per daerah, pengingat push untuk izin yang mau habis.
+
 ### Di luar MVP (fase berikutnya)
-Foto produk AI (gambar), integrasi WhatsApp, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
+Monetisasi/langganan, WhatsApp Business API resmi, payment gateway sungguhan.
 
 ## 6. Arsitektur MVP
 - **Frontend**: PWA statis (HTML + CSS + JS modules, tanpa build) di root repo ini, di-host di GitHub Pages. Data disimpan di `localStorage` (offline-first).

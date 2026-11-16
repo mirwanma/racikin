@@ -2,6 +2,8 @@ import { icon } from "../icons.js";
 import { cloud, isMember } from "../cloud.js";
 import { journey } from "./home.js";
 import { isJalan } from "../tahap.js";
+import { ringkasIzin } from "../izin.js";
+import { todayISO } from "../ui.js";
 
 // Usaha yang sudah jalan: modul perencanaan jadi alat tambahan dengan sudut pandang berbeda.
 const RENCANA_JALAN = [
@@ -35,6 +37,12 @@ export const bisnis = {
     const imporMod = `<a href="#/impor-jual" class="card module">
           <span class="module-num">${icon("download", 18)}</span>
           <div><h3>Impor Penjualan Lama</h3><p class="muted small">${(s.imporJual || []).length ? `${s.imporJual.length} kali impor · ${s.imporJual.reduce((a, b) => a + b.hari, 0)} hari` : "Dari Excel, aplikasi kasir lain, atau laporan GoFood/Grab (CSV)"}</p></div>
+          <span class="chev">${icon("chevron", 18)}</span>
+        </a>`;
+    const iz = ringkasIzin(s, todayISO());
+    const izinMod = `<a href="#/izin" class="card module">
+          <span class="module-num">${icon("doc", 18)}</span>
+          <div><h3>Panduan Perizinan</h3><p class="muted small">${iz.selesai || iz.proses ? `${iz.selesai}/${iz.total} izin beres${iz.pengingat.length ? " · ada yang mau habis" : ""}` : "NIB, PIRT, sertifikat halal, SLHS & merek: mana yang perlu, cara & dokumennya"}</p></div>
           <span class="chev">${icon("chevron", 18)}</span>
         </a>`;
     const rencana = jalan
@@ -114,6 +122,7 @@ export const bisnis = {
           <span class="chev">${icon("chevron", 18)}</span>
         </a>
         ${jalan ? "" : sehatMod + imporMod}
+        ${izinMod}
         ${rencana}
         <a href="#/mentor" class="card module">
           <span class="module-num">${icon("chat", 18)}</span>
