@@ -5,6 +5,7 @@ import { ai } from "../ai.js";
 import { render } from "../app.js";
 import { busy, runAI, head, monthStats } from "./_shared.js";
 import { PERIODE, SUMBER, filterTx, ringkas, adaFilter, sumberOf } from "../kas-filter.js";
+import { saldoKas } from "../impor.js";
 
 export const KATEGORI = {
   masuk: ["Penjualan", "Pre-order", "Katering/pesanan", "Lainnya"],
@@ -19,6 +20,36 @@ let f = { periode: "hari", dari: "", sampai: "", q: "", jenis: "", kategori: "",
 const PER_HALAMAN = 50;
 let limit = PER_HALAMAN;
 let filterOpen = false; // panel filter tetap terbuka sampai ditutup sendiri
+let saldoOpen = false; // form saldo awal
+
+/** Saldo kas: saldo awal + masuk − keluar sejak tanggal itu. */
+function saldoCard(s) {
+  if (location.hash.includes("saldo=1")) {
+    saldoOpen = true;
+    history.replaceState(null, "", "#/kas");
+  }
+  const a = s.kasAwal;
+  const form = `<form data-form="saldo" class="inline-form stack">
+      <div class="row2">
+        <label class="field"><span>Uang yang ada (Rp)</span><input name="nominal" type="number" inputmode="numeric" min="0" step="1000" value="${a ? a.nominal : ""}" placeholder="cth: 2500000" required autofocus></label>
+        <label class="field"><span>Per tanggal</span><input name="tanggal" type="date" value="${a ? a.tanggal : todayISO()}" max="${todayISO()}" required></label>
+      </div>
+      <p class="small muted">Hitung semua uang usaha: laci kasir + rekening/e-wallet usaha, sebelum jualan hari itu.</p>
+      <div class="row2"><button type="button" class="btn ghost" data-action="saldoTutup">Batal</button><button class="btn primary">Simpan saldo</button></div>
+    </form>`;
+  if (!a) {
+    return `<section class="card saldo-card">
+      <div class="row-between"><h2 class="card-title" style="margin:0">Saldo kas</h2>${saldoOpen ? "" : `<button class="btn soft sm" data-action="saldoBuka">Isi saldo awal</button>`}</div>
+      ${saldoOpen ? form : `<p class="small muted">Isi uang yang ada sekarang biar saldo usahamu keitung otomatis dari kasir & catatan Kas.</p>`}
+    </section>`;
+  }
+  const saldo = saldoKas(s);
+  return `<section class="card saldo-card">
+    <div class="row-between"><div><small class="muted">Saldo kas sekarang (perkiraan)</small><b class="saldo ${saldo < 0 ? "neg" : ""}">${rupiah(saldo)}</b></div>${saldoOpen ? "" : `<button class="btn ghost sm" data-action="saldoBuka">Ubah</button>`}</div>
+    <p class="small muted">Saldo awal ${rupiah(a.nominal)} per ${esc(fmtDate(a.tanggal))} + uang masuk − keluar sejak itu.</p>
+    ${saldoOpen ? form : ""}
+  </section>`;
+}
 const namaBulan = () => new Date(ym + "-01T00:00:00").toLocaleDateString("id-ID", { month: "long", year: "numeric" });
 
 function txRow(t) {
@@ -132,6 +163,7 @@ export const kas = {
         <button class="icon-btn" data-action="next" aria-label="Bulan berikutnya">›</button>
       </div>
 
+      ${saldoCard(s)}
       <section class="card">
         <div class="stats3">
           <div><small>Masuk</small><b class="pos">${rupiah(st.masuk)}</b></div>
@@ -217,6 +249,14 @@ export const kas = {
   },
 
   actions: {
+    saldoBuka() {
+      saldoOpen = true;
+      render();
+    },
+    saldoTutup() {
+      saldoOpen = false;
+      render();
+    },
     prev() { shiftMonth(-1); f.periode = "bulan"; limit = PER_HALAMAN; render(); },
     next() { shiftMonth(1); f.periode = "bulan"; limit = PER_HALAMAN; render(); },
     periode(el) {
@@ -314,6 +354,15 @@ export const kas = {
     },
   },
   forms: {
+    saldo(form) {
+      const fd = new FormData(form);
+      const nominal = Math.max(0, Math.round(Number(fd.get("nominal")) || 0));
+      const tanggal = String(fd.get("tanggal") || todayISO()).slice(0, 10);
+      store.set({ kasAwal: { tanggal: tanggal > todayISO() ? todayISO() : tanggal, nominal } });
+      saldoOpen = false;
+      toast("Saldo awal disimpan");
+      render();
+    },
     parse(form) {
       const text = new FormData(form).get("text").trim();
       return runAI("parse", async () => {

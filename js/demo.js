@@ -1,6 +1,7 @@
 // Generator lokal untuk Mode Demo. Output-nya WAJIB sama shape-nya dengan
 // schema di supabase/functions/racikin-ai/tasks.ts.
 // Bukan AI beneran — cuma template yang dipersonalisasi dari profil.
+import { parseMenuLokal, parseBahanLokal } from "./impor.js";
 
 const pick = (arr, seed = 0) => arr[Math.abs(seed) % arr.length];
 const hash = (s) => [...String(s)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7);
@@ -216,6 +217,16 @@ export const demo = {
         { hook: "Jujur, ini favorit kami", caption: `${t} diracik fresh tiap hari. Kalau suka, jangan lupa kasih ulasan di Google Maps ya!`, hashtag: `#kuliner${(p.kota || "").replace(/\s+/g, "")} #umkm` },
       ],
     };
+  },
+
+  // Mode Demo: baca teks pakai parser lokal. Foto butuh AI Online.
+  parse_menu(_p, input) {
+    if (input.gambar) throw new Error("Baca foto butuh AI Online. Masuk akun lalu nyalain AI Online di Setelan, atau ketik/tempel daftarnya aja.");
+    return parseMenuLokal(input.text);
+  },
+  parse_bahan(_p, input) {
+    if (input.gambar) throw new Error("Baca foto butuh AI Online. Masuk akun lalu nyalain AI Online di Setelan, atau ketik/tempel daftarnya aja.");
+    return parseBahanLokal(input.text);
   },
 
   parse_transactions(_p, input) {

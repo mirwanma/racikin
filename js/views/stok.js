@@ -23,6 +23,7 @@ function menuTab(s) {
       <h3>Belum ada resep</h3>
       <p>Masukkan komposisi bahan tiap menu, nanti HPP per porsi & margin dihitung otomatis dari harga bahan.</p>
       <a href="#/resep?id=new" class="btn primary">+ Bikin resep pertama</a>
+      <a href="#/impor?jenis=menu" class="btn soft">${icon("spark", 16)} Udah punya daftar menu? Masukin sekaligus</a>
     </section>`;
   }
   return `
@@ -72,7 +73,7 @@ function menuTab(s) {
         </section>`;
       })
       .join("")}
-    <a href="#/resep?id=new" class="btn primary block">+ Menu / resep baru</a>`;
+    <div class="row2"><a href="#/resep?id=new" class="btn primary">+ Menu / resep baru</a><a href="#/impor?jenis=menu" class="btn soft">${icon("spark", 16)} Tambah banyak sekaligus</a></div>`;
 }
 
 function bahanRow(b) {
@@ -152,7 +153,9 @@ function bahanTab(s) {
   const sorted = [...s.bahan].sort((a, b) => a.nama.localeCompare(b.nama, "id"));
   const map = bahanMap(s.bahan);
   const log = [...s.stokLog].slice(-15).reverse();
+  const cepat = isKasir() ? "" : `<a href="#/impor?jenis=bahan" class="lr-link">${icon("spark", 16)}<span><b>Bahan & stok cepat</b><small class="muted">Tulis daftar bahan atau foto nota belanja, sekaligus jadi stok awal</small></span>${icon("chevron", 16)}</a>`;
   return `
+    ${cepat}
     ${
       kosong.length
         ? `<section class="card info-card">

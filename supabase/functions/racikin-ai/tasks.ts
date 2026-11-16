@@ -32,7 +32,11 @@ export interface TaskDef {
   instruction: string;
   schema: Schema;
   effort: "low" | "medium" | "high";
+  /** Task boleh menerima satu foto (input.gambar = { mime, data base64 }). */
+  gambar?: boolean;
 }
+
+const SATUAN = ["gram", "ml", "pcs", "butir", "lembar", "bungkus", "ikat", "sdm", "porsi"];
 
 export const TASKS: Record<string, TaskDef> = {
   analyze_idea: {
@@ -163,6 +167,43 @@ Beri juga 2-3 tips menjaga rasa konsisten / hemat HPP.`,
         harga_per_satuan: num("harga beli untuk 1 satuan, BUKAN total"),
       })),
       tips: strs(),
+    }),
+  },
+
+  parse_menu: {
+    effort: "low",
+    gambar: true,
+    instruction: `Baca daftar menu dari input.text dan/atau foto yang dilampirkan (papan menu, buku menu, screenshot GoFood/GrabFood) lalu ubah jadi daftar menu terstruktur.
+- nama: nama menu yang rapi (huruf besar di awal kata), tanpa harga.
+- harga: harga jual dalam Rupiah utuh ("15rb", "15k", "15.000" = 15000). Kalau satu menu punya beberapa harga (ukuran/varian), pakai harga termurah dan tulis sisanya di catatan. 0 kalau harga tidak tercantum.
+- kategori: makanan, minuman, atau lainnya.
+- catatan: varian/topping/level/ukuran yang tertulis (mis. "level pedas 1-5", "jumbo +3rb"). Kosongkan kalau tidak ada.
+Jangan mengarang menu atau harga yang tidak ada di teks/foto. Lewati tulisan yang tidak terbaca. Kalau nama menu sama dengan input.menu_ada, pakai ejaan yang PERSIS sama.`,
+    schema: obj({
+      menu: arr(obj({
+        nama: str(),
+        harga: num("harga jual per porsi dalam Rupiah, 0 kalau tidak tercantum"),
+        kategori: en(["makanan", "minuman", "lainnya"]),
+        catatan: str(),
+      })),
+    }),
+  },
+
+  parse_bahan: {
+    effort: "low",
+    gambar: true,
+    instruction: `Baca daftar bahan & stok dari input.text dan/atau foto yang dilampirkan (catatan stok, nota/struk belanja) lalu ubah jadi daftar bahan.
+- satuan WAJIB salah satu: ${SATUAN.join(", ")}. Konversi: kg -> gram (x1000), ons -> gram (x100), liter -> ml (x1000), lusin -> pcs (x12), tray/rak telur -> butir (x30).
+- stok: jumlah yang ada sekarang dalam satuan tsb (untuk nota belanja = jumlah yang dibeli). 0 kalau tidak disebut.
+- harga_per_satuan: harga beli untuk 1 satuan tsb. Kalau yang tertulis harga total, bagi dengan jumlahnya (contoh: "cabai 1 kg 80rb" -> stok 1000 gram, harga 80). 0 kalau tidak disebut.
+Kalau bahan sama dengan input.bahan_ada, pakai nama & satuan yang PERSIS sama. Jangan mengarang bahan yang tidak disebut. Abaikan baris total, diskon, pajak, dan nama toko di nota.`,
+    schema: obj({
+      bahan: arr(obj({
+        nama: str(),
+        stok: num("jumlah dalam satuan di bawah"),
+        satuan: en(SATUAN),
+        harga_per_satuan: num("harga beli untuk 1 satuan, BUKAN total"),
+      })),
     }),
   },
 
