@@ -12,7 +12,8 @@ const DEFAULT = {
   transactions: [],       // { id, tanggal, jenis, kategori, nominal, catatan }
   kasAwal: null,
   imporJual: [],
-  promo: [],              // promo & voucher (lihat js/promo.js)          // riwayat impor penjualan { id, at, nama, dari, sampai, hari, omzet } (lihat js/imporjual.js)          // saldo kas awal { tanggal, nominal } (lihat saldoKas di js/impor.js)
+  promo: [],
+  wa: null,               // { usaha, pemilik } nomor WhatsApp (lihat js/wa.js)              // promo & voucher (lihat js/promo.js)          // riwayat impor penjualan { id, at, nama, dari, sampai, hari, omzet } (lihat js/imporjual.js)          // saldo kas awal { tanggal, nominal } (lihat saldoKas di js/impor.js)
   insight: null,
   chat: [],               // { role, content }
   bahan: [],              // { id, nama, satuan, harga (per satuan), stok, min, estimasi, tracked }

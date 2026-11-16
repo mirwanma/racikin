@@ -68,6 +68,17 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - **Pesan meja**: pelanggan juga memilih varian; server mengecek pilihan & menghitung harga (`place_table_order`).
 - Batasan: pilihan hanya **menambah** harga/bahan (belum bisa mengganti bahan atau mengalikan resep). Data `opsi` + `resep[].opsiIds`, logika di `js/varian.js`.
 
+## WhatsApp (link wa.me)
+- Semua lewat link `wa.me`: gratis, tanpa akun API. Pesan dibuka di WhatsApp HP, pengguna sendiri yang menekan kirim (WhatsApp biasa tidak bisa kirim massal / menerima pesan otomatis; itu butuh WhatsApp Business API resmi = tahap lanjutan).
+- Halaman **WhatsApp** (`#/wa`, modul di Bisnis):
+  - **Nomor WA usaha** (dipakai link pesan; fallback ke nomor di Studio Brand) & **nomor WA pemilik** (tujuan laporan). Disimpan di key `wa`.
+  - **Link & QR "Pesan via WA"**: chat ke nomor usaha dengan format pesanan (nama, jam ambil). Salin link / unduh QR (SVG) untuk brosur, bio IG, stiker meja.
+  - **Daftar menu siap kirim**: nama + harga toko + grup varian + promo hari ini (tanpa kode voucher) + jam/alamat + link pesan. Salin atau buka di WA (chat / Status).
+  - **Broadcast ke pelanggan** (kartu stempel): kelompok semua / lama nggak balik / stempel hampir penuh / hadiah siap / pelanggan baru 30 hari, pesan dengan kode {nama} {stempel} {sisa} {hadiah} {link} (bawaan: promo hari ini), tombol Kirim per pelanggan + tanda "terkirim" & progres harian (di HP ini).
+- **Kasir → Order dari chat WA**: tempel chat pelanggan → menu & jumlah dicocokkan otomatis (kata khas menu, "2x", "dua", abaikan "jam 5"/harga; kata asing tidak ditebak), atas nama & catatan (pedas, ambil jam, tanpa …) kebaca, yang nggak kebaca ditampilkan; cek & ubah, lalu masuk keranjang (menu bervarian pakai pilihan default). Dibaca di HP (tanpa AI, jalan juga di Mode Demo).
+- **Laporan ke pemilik**: tombol "Kirim rekap ke pemilik" di Kasir → Hari ini, dan "Kirim ke pemilik" di riwayat Shift (ringkasan tutup shift + selisih).
+- Logika di `js/wa.js`.
+
 ## Promo & voucher
 - Halaman **Promo & Voucher** (`#/promo`, pemilik/manajer; modul di Bisnis). Contoh cepat: happy hour (jam diambil dari jam paling sepi), beli 2 gratis 1, diskon min. belanja, hari spesial, voucher kode.
 - Jenis: **diskon order** (% dengan maks. potongan, atau Rp; min. belanja), **diskon menu** (% / potongan Rp per porsi / harga spesial per porsi; tambahan varian tetap dibayar), **beli X gratis Y** (menu yang dipilih, yang termurah gratis).

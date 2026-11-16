@@ -12,6 +12,7 @@ import { mejaAktif, pesananMasuk, dengarPesanan, ubahPesanan } from "../meja.js"
 import { shiftAktif, ringkasan as ringkasanShift, wajibShift } from "../shift.js";
 import { activeChannels, channelCfg, channelNama, hargaDi, isOnline, komisiRp } from "../online.js";
 import { pilihPromo } from "../promo.js";
+import { bacaChatOrder, linkWa, nomorPemilik, teksRekapHari } from "../wa.js";
 import { grupMenu, punyaOpsi, pilihanAwal, pilihanHabis, cekPilihan, hargaItem, kunciItem, labelOpsi, namaLengkap, aturan, tambahanDi } from "../varian.js";
 
 // State layar kasir (tidak disimpan; keranjang hilang kalau app ditutup).
@@ -19,6 +20,7 @@ let tab = "jual"; // jual | rekap
 let step = "menu"; // menu | bayar | struk
 let cart = []; // { key, resepId, nama, harga, qty, opsi? }
 let pilih = null; // sheet varian yang terbuka { resepId, ids: [pilihanId], error }
+let chatWa = null; // sheet "Order dari chat WA" { text, rows: [{ resepId, qty }] | null, sisa, atasNama, catatan }
 let form = { diskon: 0, kode: "", metode: "tunai", bayar: 0, pelangganId: "", atasNama: "", catatanDapur: "" };
 let lepasDapur = null;
 let lepasMeja = null;
@@ -55,6 +57,39 @@ const totalNow = () => {
 const count = () => cart.reduce((a, i) => a + i.qty, 0);
 const bisnisOf = (s) => s.brand?.terpilih?.nama || s.profile?.nama || "Toko";
 const jam = (w) => (w || "").slice(11, 16);
+
+/** Sheet "Order dari chat WA": tempel chat pelanggan -> cek -> masuk keranjang. */
+function chatSheet(s) {
+  if (!chatWa) return "";
+  const opsiMenu = (id) => s.resep.map((r) => `<option value="${r.id}" ${r.id === id ? "selected" : ""}>${esc(r.nama)}</option>`).join("");
+  const body = !chatWa.rows
+    ? `<textarea rows="7" data-change="chatText" placeholder="Tempel chat pelanggan di sini, cth:&#10;kak pesen tahu guyur bakso 2, es teh 1&#10;atas nama Budi, ambil jam 5" aria-label="Chat WA">${esc(chatWa.text)}</textarea>
+       <p class="small muted">Nama menu dicocokkan otomatis sama daftar menu. Nanti dicek dulu sebelum masuk keranjang.</p>
+       <button class="btn primary block lg" data-action="chatBaca">${icon("spark", 16)} Baca chat</button>`
+    : `${
+        chatWa.rows.length
+          ? chatWa.rows
+              .map(
+                (r, i) => `<div class="chat-row"><select data-change="chatRow" data-f="resepId" data-i="${i}" aria-label="Menu">${opsiMenu(r.resepId)}</select>
+                  <input type="number" min="1" step="1" value="${r.qty}" data-change="chatRow" data-f="qty" data-i="${i}" aria-label="Jumlah">
+                  <button class="icon-btn sm" data-action="chatHapus" data-i="${i}" aria-label="Hapus">${icon("x", 12)}</button></div>`,
+              )
+              .join("")
+          : `<p class="warn-box small">Nggak ada menu yang kebaca. Tambah manual atau cek tulisan chat-nya.</p>`
+      }
+      <button class="btn ghost sm" data-action="chatTambah">+ Menu</button>
+      ${chatWa.sisa.length ? `<p class="small muted">Nggak kebaca: ${chatWa.sisa.map((x) => `"${esc(x)}"`).join(", ")}</p>` : ""}
+      <div class="row2">
+        <label class="field"><span>Atas nama</span><input value="${esc(chatWa.atasNama)}" maxlength="40" data-change="chatField" data-f="atasNama"></label>
+        <label class="field"><span>Catatan</span><input value="${esc(chatWa.catatan)}" maxlength="200" data-change="chatField" data-f="catatan"></label>
+      </div>
+      <div class="row2"><button class="btn ghost" data-action="chatUlang">Ulang</button><button class="btn primary" data-action="chatMasuk" ${chatWa.rows.length ? "" : "disabled"}>Masukin keranjang</button></div>`;
+  return `<div class="sheet-bg" data-action="chatTutup"></div>
+    <section class="sheet" role="dialog" aria-modal="true" aria-label="Order dari chat WA">
+      <header class="row-between"><h2 class="card-title" style="margin:0">${icon("chat", 18)} Order dari chat WA</h2><button class="icon-btn sm" data-action="chatTutup" aria-label="Tutup">${icon("x", 14)}</button></header>
+      <div class="sheet-body">${body}</div>
+    </section>`;
+}
 
 /** Sheet pilih varian & topping untuk menu yang punya grup pilihan. */
 function pilihSheet(s) {
@@ -186,7 +221,7 @@ function menuView(s) {
         <p>Menu kasir diambil dari resep. Bikin resep dulu biar harga, HPP & stok nyambung otomatis.</p>
         ${isKasir() ? `<p class="small muted">Minta pemilik usaha bikin menu dulu.</p>` : `<a href="#/resep?id=new" class="btn primary">+ Bikin menu</a>`}
       </section>`;
-  return `${shiftBar(s)}${mejaAktif(s) ? `<div id="meja-inbox">${mejaInbox()}</div>` : ""}${dapurAktif(s) ? `<div id="siap-strip">${siapStrip()}</div>` : ""}${channelChips(s)}${grid}
+  return `${shiftBar(s)}${mejaAktif(s) ? `<div id="meja-inbox">${mejaInbox()}</div>` : ""}${dapurAktif(s) ? `<div id="siap-strip">${siapStrip()}</div>` : ""}${channelChips(s)}${s.resep.length ? `<button class="btn ghost sm pos-chatwa" data-action="chatBuka">${icon("chat", 14)} Order dari chat WA</button>` : ""}${grid}
     <details class="card">
       <summary><b>Item lain (di luar menu)</b></summary>
       <form class="row3 pos-custom" data-form="custom">
@@ -239,11 +274,11 @@ function bayarView(s) {
   const kurang = !online && form.metode === "tunai" && (Number(form.bayar) || 0) < total;
   const kembali = Math.max(0, (Number(form.bayar) || 0) - total);
   const pelanggan = s.loyalty && s.pelanggan.length;
-  const dapurForm = dapurAktif(s)
+  const dapurForm = dapurAktif(s) || form.atasNama || form.catatanDapur
     ? `<section class="card stack dapur-form">
         <div class="row2">
           <label class="field"><span>Atas nama / no. meja</span><input value="${esc(form.atasNama)}" maxlength="40" placeholder="cth: Budi / meja 3" data-change="atasNama"></label>
-          <label class="field"><span>Catatan untuk dapur</span><input value="${esc(form.catatanDapur)}" maxlength="200" placeholder="cth: pedas level 3, tanpa bawang" data-change="catatanDapur"></label>
+          <label class="field"><span>${dapurAktif(s) ? "Catatan untuk dapur" : "Catatan"}</span><input value="${esc(form.catatanDapur)}" maxlength="200" placeholder="cth: pedas level 3, tanpa bawang" data-change="catatanDapur"></label>
         </div>
       </section>`
     : "";
@@ -371,6 +406,7 @@ function rekapView(s) {
             ${r.terlaris.slice(0, 5).map(([nama, q], i) => `<div class="row-between pos-sum"><span><b class="mono">${i + 1}.</b> ${esc(nama)}</span><b>${q} porsi</b></div>`).join("")}
             ${promoHariIniRekap(r.aktif)}
             ${r.opsiLaris.length ? `<h4>Varian & topping hari ini</h4><div class="chips">${r.opsiLaris.slice(0, 8).map(([nama, q]) => `<span class="tag">${esc(nama)} · ${q}</span>`).join("")}</div>` : ""}
+            <a class="btn soft block" href="${esc(linkWa(nomorPemilik(s), teksRekapHari(s, todayISO())))}" target="_blank" rel="noopener">${icon("chat", 16)} Kirim rekap ke ${nomorPemilik(s) ? "pemilik" : "WA"}</a>
             ${isKasir() ? "" : `<p class="muted small">Penjualan kasir otomatis masuk ke <a href="#/kas" class="link">Kas</a>, digabung per metode bayar per hari.</p>`}
           </section>`
         : `<section class="card"><p class="muted">Belum ada penjualan hari ini.</p></section>`
@@ -443,6 +479,11 @@ export const kasir = {
   },
 
   render(s) {
+    if (location.hash.includes("wa=1")) {
+      chatWa ||= { text: "", rows: null, sisa: [], atasNama: "", catatan: "" };
+      tab = "jual";
+      history.replaceState(null, "", "#/kasir");
+    }
     if (location.hash.includes("tab=rekap")) {
       tab = "rekap";
       history.replaceState(null, "", "#/kasir");
@@ -458,10 +499,10 @@ export const kasir = {
         : step === "struk" && last
           ? strukView(s)
           : `<section class="card empty pos-empty"><div class="empty-icon">${icon("register", 30)}</div><h3>Keranjang kosong</h3><p>Ketuk menu di kiri untuk mulai pesanan.</p></section>`;
-      return `${head("Kasir", "#/")}${tabs}<div class="pos-split"><div class="pos-left">${menuView(s)}</div><aside class="pos-right">${panel}</aside></div>${pilihSheet(s)}`;
+      return `${head("Kasir", "#/")}${tabs}<div class="pos-split"><div class="pos-left">${menuView(s)}</div><aside class="pos-right">${panel}</aside></div>${pilihSheet(s)}${chatSheet(s)}`;
     }
     const body = tab === "rekap" ? rekapView(s) : step === "struk" && last ? strukView(s) : step === "bayar" && cart.length ? bayarView(s) : menuView(s);
-    return `${head("Kasir", "#/")}${tabs}${body}${tab === "jual" ? pilihSheet(s) : ""}`;
+    return `${head("Kasir", "#/")}${tabs}${body}${tab === "jual" ? pilihSheet(s) + chatSheet(s) : ""}`;
   },
 
   actions: {
@@ -516,6 +557,59 @@ export const kasir = {
       pilih = null;
       render();
     },
+    chatBuka() {
+      chatWa = { text: "", rows: null, sisa: [], atasNama: "", catatan: "" };
+      render();
+      document.querySelector("textarea[data-change=chatText]")?.focus();
+    },
+    chatTutup() {
+      chatWa = null;
+      render();
+    },
+    chatBaca() {
+      if (!chatWa.text.trim()) return toast("Tempel chat-nya dulu ya", "err");
+      const r = bacaChatOrder(chatWa.text, store.get().resep);
+      chatWa = { ...chatWa, rows: r.items.map((x) => ({ resepId: x.resepId, qty: x.qty })), sisa: r.sisa, atasNama: r.atasNama, catatan: r.catatan };
+      render();
+    },
+    chatUlang() {
+      chatWa = { ...chatWa, rows: null };
+      render();
+    },
+    chatTambah() {
+      chatWa.rows.push({ resepId: store.get().resep[0]?.id, qty: 1 });
+      render();
+    },
+    chatHapus(el) {
+      chatWa.rows.splice(Number(el.dataset.i), 1);
+      render();
+    },
+    chatMasuk() {
+      const s = store.get();
+      const map = bahanMap(s.bahan);
+      let varian = 0;
+      if (step === "struk") step = "menu";
+      for (const row of chatWa.rows) {
+        const r = s.resep.find((x) => x.id === row.resepId);
+        const qty = Math.max(1, Math.round(Number(row.qty) || 1));
+        if (!r) continue;
+        let it = { key: r.id, resepId: r.id, nama: r.nama, harga: hargaDi(s, r, channel) };
+        if (punyaOpsi(s, r)) {
+          const cek = cekPilihan(s, r, pilihanAwal(s, r, map));
+          it = { ...it, key: kunciItem(r.id, cek.opsi), harga: hargaItem(s, r, cek.opsi, channel), opsi: cek.opsi };
+          varian++;
+        }
+        const ada = cart.find((c) => c.key === it.key);
+        if (ada) ada.qty += qty;
+        else cart.push({ ...it, qty });
+      }
+      if (chatWa.atasNama) form.atasNama = chatWa.atasNama.slice(0, 40);
+      if (chatWa.catatan) form.catatanDapur = chatWa.catatan.slice(0, 200);
+      chatWa = null;
+      step = isWide() ? step : "bayar";
+      toast(varian ? `Masuk keranjang. Cek varian ${varian} menu (pakai pilihan default)` : "Masuk keranjang");
+      render();
+    },
     inc(el) {
       const c = cart.find((x) => x.key === el.dataset.key);
       if (c) c.qty++;
@@ -554,7 +648,7 @@ export const kasir = {
       if (mejaRef) order.meja = { id: mejaRef.id, nama: mejaRef.meja_nama, kode: mejaRef.kode };
       const keDapur = dapurAktif(s);
       if (form.atasNama.trim()) order.atasNama = form.atasNama.trim().slice(0, 40);
-      if (keDapur && form.catatanDapur.trim()) order.catatanDapur = form.catatanDapur.trim().slice(0, 200);
+      if (form.catatanDapur.trim()) order.catatanDapur = form.catatanDapur.trim().slice(0, 200);
       store.set(patch);
       if (keDapur) {
         kirimTiket(tiketDari(order, { nama: order.atasNama, catatan: order.catatanDapur })).then((ok) => {
@@ -681,6 +775,16 @@ export const kasir = {
     pelanggan(el) {
       form.pelangganId = el.value;
       render();
+    },
+    chatText(el) {
+      chatWa.text = el.value;
+    },
+    chatRow(el) {
+      const r = chatWa.rows[Number(el.dataset.i)];
+      r[el.dataset.f] = el.dataset.f === "qty" ? Math.max(1, Number(el.value) || 1) : el.value;
+    },
+    chatField(el) {
+      chatWa[el.dataset.f] = el.value;
     },
   },
 

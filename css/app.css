@@ -1127,3 +1127,18 @@ label.btn.disabled { opacity: .5; pointer-events: none; }
 .pos-kode { width: 140px; text-transform: uppercase; font-family: var(--mono); }
 .pm-promo { display: flex; flex-direction: column; gap: 4px; }
 .pm-promo p { margin: 0; display: flex; gap: 6px; align-items: flex-start; }
+
+/* ---------- WhatsApp ---------- */
+.wa-teks { font-family: var(--mono); font-size: 12.5px; line-height: 1.5; }
+.wa-qr { display: grid; place-items: center; }
+.wa-qr svg { width: 180px; height: 180px; background: #fff; padding: 6px; border: 1.5px solid var(--ink); border-radius: 8px; }
+.wa-link { word-break: break-all; margin: 0; }
+.wa-list { display: flex; flex-direction: column; max-height: 420px; overflow-y: auto; }
+.wa-row { padding: 8px 0; border-top: 1px dashed var(--line-2); gap: 8px; }
+.wa-row small { display: block; }
+.wa-row.done b { color: var(--muted); }
+.pos-chatwa { align-self: flex-start; margin: 2px 0 8px; display: inline-flex; gap: 6px; align-items: center; }
+.chat-row { display: grid; grid-template-columns: 1fr 70px auto; gap: 6px; align-items: center; }
+.chat-row select, .chat-row input { min-width: 0; }
+.wa-link { text-transform: none; letter-spacing: 0; font-size: 11.5px; color: var(--muted); }
+.sheet > header h2 { display: flex; align-items: center; gap: 8px; }

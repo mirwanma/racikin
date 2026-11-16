@@ -136,6 +136,10 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Diskon order / diskon menu / beli X gratis Y, aturan tanggal-hari-jam-saluran, kode voucher + kuota, otomatis di Kasir (tidak numpuk), statistik per promo, laporan, info promo di menu QR.
 - Berikutnya (belum): promo dihitung di server untuk pesan meja; kuota voucher per pelanggan; paket bundling.
 
+### Fase 22: Integrasi WhatsApp lewat wa.me (selesai)
+- Nomor WA usaha & pemilik, link & QR "Pesan via WA", daftar menu siap kirim, broadcast pelanggan per kelompok, order dari chat WA ke Kasir, rekap harian & tutup shift ke pemilik.
+- Berikutnya (opsional): WhatsApp Business API resmi (kirim otomatis & pesan masuk) setelah ada akun Meta Business + monetisasi.
+
 ### Di luar MVP (fase berikutnya)
 Foto produk AI (gambar), integrasi WhatsApp, perizinan (NIB/PIRT/Halal), monetisasi/langganan.
 
