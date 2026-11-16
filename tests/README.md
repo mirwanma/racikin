@@ -23,6 +23,7 @@ cd tests && npm run unit
 | `unit/sehat.test.mjs` | cek kesehatan usaha: status tiap pemeriksaan, skor, prioritas, data contoh |
 | `unit/impor.test.mjs` | input cepat menu & bahan (parser lokal, cocokkan data lama, stok = riwayat), saldo kas |
 | `unit/tahap.test.mjs` | tahap usaha: langkah Beranda baru ide vs udah jalan, urutan menurut masalah utama, tawaran naik tahap |
+| `unit/varian-resep.test.mjs` | varian yang mengubah resep: porsi ×, kemasan tidak dikali, ganti/tanpa bahan, stok, HPP per menu, rekap `opsiMenu`, laporan, data contoh |
 | `unit/varian.test.mjs` | varian & topping: validasi pilihan, harga toko/online, stok & batal order, rekap, laporan, menu publik |
 | `unit/merge.test.mjs` | 3-way merge sinkron (order/stok/stempel dari beberapa HP) |
 | `unit/merge-shift.test.mjs` | merge data shift & catatan laci |
@@ -41,7 +42,7 @@ mkdir -p /tmp/shots && node tests/e2e/kasir.js /tmp/shots
 
 `RACIKIN_URL` mengganti alamat app (default `http://localhost:8766/`).
 
-**Tanpa akun** (cukup app lokal): `mvp.js`, `kasir.js`, `online.js`, `tracked.js`, `studio.js`, `dummy.js`, `shift.js`, `laporan.js`, `belanja.js`, `kasfilter.js`, `tablet.js` (argumen opsional: lebar tinggi daftar-rute), `rotate.js`, `varian.js` (halaman pelanggan QR diuji dengan RPC mock), `tahap.js`, `impor.js` (Mode Demo; baca foto lewat AI Online dicoba manual), `sehat.js`, `imporjual.js`, `promo.js`, `wa.js` (link wa.me di-intercept, WhatsApp tidak benar-benar dibuka), `admin.js` (sesi & RPC Supabase di-mock, tidak menyentuh data asli), `izin.js`.
+**Tanpa akun** (cukup app lokal): `mvp.js`, `kasir.js`, `online.js`, `tracked.js`, `studio.js`, `dummy.js`, `shift.js`, `laporan.js`, `belanja.js`, `kasfilter.js`, `tablet.js` (argumen opsional: lebar tinggi daftar-rute), `rotate.js`, `varian.js` (halaman pelanggan QR diuji dengan RPC mock), `tahap.js`, `impor.js` (Mode Demo; baca foto lewat AI Online dicoba manual), `sehat.js`, `imporjual.js`, `promo.js`, `wa.js` (link wa.me di-intercept, WhatsApp tidak benar-benar dibuka), `admin.js` (sesi & RPC Supabase di-mock, tidak menyentuh data asli), `izin.js`, `varian-resep.js`.
 
 **Butuh Supabase & akun tes** (password lewat variabel lingkungan, tidak disimpan di repo):
 

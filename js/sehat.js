@@ -3,7 +3,7 @@
 // Skor = rata-rata pemeriksaan yang punya data (baik 100, waspada 60, bahaya 20); "kosong" & "info" tidak dihitung.
 import { addDays, todayISO } from "./ui.js";
 import { bahanMap, hppOf, menipis, belumDiisi } from "./stok-utils.js";
-import { cariPilihan, hppPilihan } from "./varian.js";
+import { kumpulOpsi, hppOpsiTerjual } from "./varian.js";
 import { activeChannels, saranMarkup, isOnline } from "./online.js";
 import { perluDiajak } from "./loyalty.js";
 
@@ -39,7 +39,7 @@ function porsi(s, dari, sampai) {
   for (const [t, r] of Object.entries(s.posHarian || {})) {
     if (!dalam(t, dari, sampai)) continue;
     for (const [nama, q] of Object.entries(r.items || {})) menu[nama] = (menu[nama] || 0) + (Number(q) || 0);
-    for (const [id, q] of Object.entries(r.opsi || {})) opsi[id] = (opsi[id] || 0) + (Number(q) || 0);
+    kumpulOpsi(opsi, r);
   }
   return { menu, opsi };
 }
@@ -71,11 +71,9 @@ export function cekKesehatan(s, today = todayISO()) {
     omzetMenu += q * (Number(r.harga) || 0);
     hppMenu += q * hppOf(r, map).hpp;
   }
-  for (const [id, q] of Object.entries(qOpsi)) {
-    const f = cariPilihan(s, id);
-    if (!f) continue;
-    omzetMenu += q * (Number(f.p.harga) || 0);
-    hppMenu += q * hppPilihan(f.p, map);
+  for (const { p, q, hpp } of hppOpsiTerjual(s, qOpsi, map)) {
+    omzetMenu += q * (Number(p.harga) || 0);
+    hppMenu += hpp;
   }
   if (omzetMenu > 0 && qLengkap >= 20) {
     const hppPct = (hppMenu / omzetMenu) * 100;

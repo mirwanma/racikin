@@ -66,10 +66,11 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 ## Varian & topping
 - Tab **Varian** di Stok & Resep (`#/stok?tab=varian`), editor `#/varian?id=…` (ada contoh cepat: level pedas, topping, ukuran, tingkat manis).
 - **Grup pilihan** dipakai ulang di banyak menu: nama, cara milih (**pilih satu** / **boleh lebih dari 1** + maksimal), wajib/opsional. Tiap pilihan punya **harga tambahan**, **bahan tambahan per porsi** (buat HPP & stok), dan tanda **lagi habis**. Grup dipasang ke menu dari editor varian atau dari editor resep.
+- **Ubah resep dasar** (per pilihan, opsional): **porsi resep ×** (cth Jumbo 1,5×; bahan kemasan seperti cup/sendok bisa dicentang "nggak ikut dikali", ditebak otomatis dari nama bahan) dan **ganti bahan resep** (cth susu sapi → susu oat, atau gula → dihilangkan buat "tanpa gula"; jumlah ngikut resep). Stok berkurang sesuai bahan sesungguhnya; editor nampilin selisih HPP per menu (bisa minus). Pilihan otomatis "habis" kalau bahan penggantinya stoknya 0.
 - **Kasir**: menu yang punya varian membuka sheet pilihan (aturan wajib/maks dicek, harga ter-update langsung). Menu sama dengan pilihan beda = baris keranjang beda. Struk, riwayat order, WA struk & tiket dapur menampilkan pilihannya.
 - **Harga online**: tambahan harga ikut markup saluran (GoFood dkk), dibulatkan ke atas.
 - **Stok**: yang dipotong bahan resep + bahan pilihan; batal order mengembalikan semuanya. Pilihan otomatis "habis" kalau stok bahannya (yang sudah diisi) kurang dari 1 porsi.
-- **Rekap & laporan**: `posHarian[tgl].opsi` = porsi per pilihan; tab Hari ini menampilkan varian terlaris, laporan laba rugi menghitung HPP tambahan pilihan & untung per pilihan.
+- **Rekap & laporan**: `posHarian[tgl].opsi` = porsi per pilihan, `opsiMenu` = porsi per pilihan per menu (HPP porsi/ganti bahan beda tiap menu; rekap lama tanpa `opsiMenu` dihitung dari bahan tambahan saja); tab Hari ini menampilkan varian terlaris, laporan laba rugi menghitung HPP tambahan pilihan & untung per pilihan.
 - **Pesan meja**: pelanggan juga memilih varian; server mengecek pilihan & menghitung harga (`place_table_order`).
 - Batasan: pilihan hanya **menambah** harga/bahan (belum bisa mengganti bahan atau mengalikan resep). Data `opsi` + `resep[].opsiIds`, logika di `js/varian.js`.
 
