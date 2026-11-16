@@ -4,10 +4,10 @@ import { icon } from "../icons.js";
 import { esc, rupiah, short, todayISO, fmtDate, download, toast } from "../ui.js";
 import { render } from "../app.js";
 import { sb, cloud } from "../cloud.js";
-import { FITUR, STATUS, statusMerchant, ringkasPlatform, saringMerchant, URUT, toCSV, isTes } from "../admin.js";
+import { FITUR, STATUS, statusMerchant, ringkasPlatform, saringMerchant, URUT, toCSV, isTes, PERIODE, ringkasHarian, persen, angkaPeriode, perluDisapa } from "../admin.js";
 
-let data = { status: "idle", list: [], at: null, error: "" }; // idle | loading | ok | bukan | error
-let f = { q: "", status: "", tahap: "", urut: "aktif", tes: false };
+let data = { status: "idle", list: [], harian: [], at: null, error: "" }; // idle | loading | ok | bukan | error
+let f = { q: "", status: "", tahap: "", urut: "aktif", tes: false, periode: 30 };
 let buka = null; // id merchant yang detailnya dibuka
 let gulir = null; // id merchant yang perlu di-scroll setelah dibuka dari Ringkasan
 const detail = new Map(); // id -> detail | "loading" | { error }
@@ -69,7 +69,7 @@ export function lupakanAdmin() {
   adminCache = null;
   lsSet(KEY_ADMIN, null);
   lsSet(KEY_MODE, null);
-  data = { status: "idle", list: [], at: null, error: "" };
+  data = { status: "idle", list: [], harian: [], at: null, error: "" };
   detail.clear();
   buka = null;
 }
@@ -84,22 +84,30 @@ export const tabAdmin = () => {
   return TAB_ADMIN.some(([k]) => k === t) ? t : "ringkasan";
 };
 
+
+// ---------- Data ----------
 async function muat() {
   if (data.status === "loading") return;
   data = { ...data, status: "loading", error: "" };
   render();
   try {
     if (!(await cekAdmin())) {
-      data = { status: "bukan", list: [], at: null, error: "" };
+      data = { status: "bukan", list: [], harian: [], at: null, error: "" };
     } else {
-      const { data: list, error } = await sb().rpc("admin_merchants");
-      if (error) throw new Error(error.message);
-      data = { status: "ok", list: Array.isArray(list) ? list : [], at: new Date(), error: "" };
+      const [m, h] = await Promise.all([sb().rpc("admin_merchants"), sb().rpc("admin_harian", { p_hari: 90, p_tes: f.tes })]);
+      if (m.error) throw new Error(m.error.message);
+      data = { status: "ok", list: Array.isArray(m.data) ? m.data : [], harian: !h.error && Array.isArray(h.data) ? h.data : [], at: new Date(), error: "" };
       detail.clear();
     }
   } catch (e) {
     data = { ...data, status: "error", error: e.message || "Gagal memuat data" };
   }
+  render();
+}
+
+async function muatHarian() {
+  const { data: h, error } = await sb().rpc("admin_harian", { p_hari: 90, p_tes: f.tes });
+  if (!error && Array.isArray(h)) data = { ...data, harian: h };
   render();
 }
 
@@ -111,179 +119,245 @@ async function muatDetail(id) {
   render();
 }
 
-const pill = (st) => `<span class="sehat-pill ${STATUS[st].cls}">${STATUS[st].nama}</span>`;
+// ---------- Komponen kecil ----------
 const tgl = (t) => (t ? fmtDate(String(t).slice(0, 10), { day: "numeric", month: "short", year: "2-digit" }) : "-");
-const trenTxt = (t) => (t === null ? "baru jualan" : `${t >= 0 ? "+" : ""}${Math.round(t)}%`);
-const delta = (now, prev) => (prev ? `${now >= prev ? "+" : ""}${Math.round(((now - prev) / prev) * 100)}%` : "");
+const rp = (n) => "Rp " + short(n);
+const WARNA_AV = ["#FFC531", "#F4A6A0", "#9BD5B1", "#A9C8F0", "#E9C1F2", "#F7C59F"];
+const warnaAv = (s) => WARNA_AV[[...String(s)].reduce((a, c) => a + c.charCodeAt(0), 0) % WARNA_AV.length];
+const avatar = (m) => `<span class="a-av" style="background:${warnaAv(m.nama)}">${esc(String(m.nama || "?").trim()[0]?.toUpperCase() || "?")}</span>`;
+const status = (st) => `<span class="a-st ${st}">${STATUS[st].nama}</span>`;
+const sepiTxt = (st) => (st.sepi === null ? "belum jualan" : st.sepi === 0 ? "jualan hari ini" : `${st.sepi} hari lalu`);
 
-function bars(items, { label = (x) => x.label, nilai = (x) => x.n, fmt = (n) => n } = {}) {
-  const max = Math.max(1, ...items.map(nilai));
-  return `<div class="adm-bars">${items
-    .map((x) => `<div class="adm-bar"><span class="adm-bar-label">${esc(label(x))}</span><span class="adm-bar-track"><i style="width:${(nilai(x) / max) * 100}%"></i></span><b class="mono">${fmt(nilai(x))}</b></div>`)
+/** Badge perubahan: +18% hijau / -6% merah. */
+function naik(p, { kebalik = false } = {}) {
+  if (p === null || !Number.isFinite(p)) return "";
+  const r = Math.round(p);
+  const baik = kebalik ? r <= 0 : r >= 0;
+  return `<span class="a-d ${baik ? "up" : "dn"}">${r > 0 ? "+" : ""}${r}%</span>`;
+}
+
+/** Garis (sparkline / area) SVG yang melebar ikut wadah. */
+function garis(vals, { h = 40, area = true, cls = "" } = {}) {
+  const v = vals.map((x) => Number(x) || 0);
+  if (v.length < 2) return "";
+  const W = 100;
+  const max = Math.max(1, ...v);
+  const pts = v.map((x, i) => `${((i / (v.length - 1)) * W).toFixed(2)},${(h - 1.5 - (x / max) * (h - 4)).toFixed(2)}`).join(" ");
+  return `<svg class="a-line ${cls}" viewBox="0 0 ${W} ${h}" preserveAspectRatio="none" height="${h}" aria-hidden="true">${area ? `<polygon points="0,${h} ${pts} ${W},${h}" class="a-fill"/>` : ""}<polyline points="${pts}" vector-effect="non-scaling-stroke"/></svg>`;
+}
+
+/** Batang harian (dengan label awal & akhir). */
+function batang(seri, k, fmt = (n) => n) {
+  const max = Math.max(1, ...seri.map((x) => Number(x[k]) || 0));
+  return `<div class="a-cols" role="img" aria-label="Grafik harian">${seri
+    .map((x) => `<i style="height:${Math.max(1.5, ((Number(x[k]) || 0) / max) * 100)}%" title="${esc(tgl(x.tgl))}: ${esc(String(fmt(Number(x[k]) || 0)))}"></i>`)
+    .join("")}</div><div class="a-axis"><span>${tgl(seri[0]?.tgl)}</span><span>hari ini</span></div>`;
+}
+
+function meter(items, total, label = (x, max) => `${Math.round((x.n / max) * 100)}%`) {
+  const max = Math.max(1, total);
+  return `<div class="a-meter">${items
+    .map((x) => `<div class="a-meter-row"><span>${esc(x.nama)}</span><span class="a-meter-track"><i style="width:${(x.n / max) * 100}%"></i></span><b>${label(x, max)}</b></div>`)
     .join("")}</div>`;
 }
 
-function grafik(harian) {
-  const max = Math.max(1, ...harian.map((h) => Number(h.order) || 0));
-  return `<div class="adm-chart" role="img" aria-label="Order harian 60 hari">${harian
-    .map((h) => `<i style="height:${((Number(h.order) || 0) / max) * 100}%" title="${esc(h.tgl)}: ${h.order} order · ${rupiah(h.omzet)}"></i>`)
-    .join("")}</div><div class="row-between small muted"><span>${tgl(harian[0]?.tgl)}</span><span>hari ini</span></div>`;
-}
+const tile = (judul, isi, cls = "") => `<section class="a-tile ${cls}"><h3>${judul}</h3>${isi}</section>`;
 
 function detailView(m) {
   const d = detail.get(m.id);
-  if (!d || d === "loading") return `<div class="inline-form"><p class="small muted">Memuat detail…</p></div>`;
-  if (d.error) return `<div class="inline-form"><p class="warn-box small">${esc(d.error)}</p></div>`;
-  return `<div class="inline-form stack adm-detail">
-    <div class="row-between small"><span>Pemilik: <b>${esc(m.pemilik || "-")}</b></span><a class="link" href="mailto:${esc(m.email)}">${esc(m.email)}</a></div>
-    <p class="small muted">${esc([m.jenis, m.konsep, m.kota].filter(Boolean).join(" · "))} · daftar ${tgl(m.daftar)} · login terakhir ${tgl(m.login_terakhir)}${(m.masalah || []).length ? ` · fokus: ${esc(m.masalah.join(", "))}` : ""}</p>
-    <h4>Order harian (60 hari)</h4>${grafik(d.harian || [])}
-    <div class="stats3">
-      <div><small>Omzet 7 hari</small><b>${short(m.omzet7)}</b></div>
-      <div><small>Omzet 30 hari</small><b>${short(m.omzet30)}</b></div>
-      <div><small>Rata/order</small><b>${m.order30 ? short(m.omzet30 / m.order30) : "-"}</b></div>
+  if (!d || d === "loading") return `<div class="a-detail"><p class="a-mut">Memuat detail…</p></div>`;
+  if (d.error) return `<div class="a-detail"><p class="warn-box small">${esc(d.error)}</p></div>`;
+  return `<div class="a-detail adm-detail">
+    <div class="a-detail-head"><span>Pemilik <b>${esc(m.pemilik || "-")}</b></span><a class="a-link" href="mailto:${esc(m.email)}">${esc(m.email)}</a></div>
+    <p class="a-mut">${esc([m.jenis, m.konsep, m.kota].filter(Boolean).join(" · "))} · daftar ${tgl(m.daftar)} · login terakhir ${tgl(m.login_terakhir)}${(m.masalah || []).length ? ` · fokus: ${esc(m.masalah.join(", "))}` : ""}</p>
+    <div class="a-detail-grid">
+      <div class="a-panel"><h4>Order harian 60 hari</h4><div class="adm-chart">${(d.harian || []).map((h) => `<i style="height:${Math.max(1.5, ((Number(h.order) || 0) / Math.max(1, ...(d.harian || []).map((x) => Number(x.order) || 0))) * 100)}%" title="${esc(h.tgl)}: ${h.order} order"></i>`).join("")}</div><div class="a-axis"><span>${tgl(d.harian?.[0]?.tgl)}</span><span>hari ini</span></div></div>
+      <div class="a-panel a-kv">
+        <div><small>Omzet 7 hari</small><b>${rp(m.omzet7)}</b></div>
+        <div><small>Omzet 30 hari</small><b>${rp(m.omzet30)}</b></div>
+        <div><small>Rata/order</small><b>${m.order30 ? rp(m.omzet30 / m.order30) : "-"}</b></div>
+        <div><small>Pesanan meja 30h</small><b>${d.meja}</b></div>
+      </div>
     </div>
-    ${(d.terlaris || []).length ? `<h4>Menu terlaris 30 hari</h4>${bars(d.terlaris, { label: (x) => x.nama, nilai: (x) => x.porsi })}` : ""}
-    <div class="row2">
-      <div><h4>Tim</h4><p class="small">${(d.tim || []).length ? d.tim.map((t) => `${t.n} ${esc(t.role)}`).join(", ") : "Sendirian"}</p></div>
-      <div><h4>AI 30 hari</h4><p class="small">${(d.ai || []).length ? d.ai.map((a) => `${esc(a.task)} ${a.n}`).join(", ") : "Belum pakai"}</p></div>
+    <div class="a-detail-grid">
+      <div class="a-panel"><h4>Menu terlaris 30 hari</h4>${(d.terlaris || []).length ? meter(d.terlaris.map((x) => ({ nama: x.nama, n: x.porsi })), Math.max(...d.terlaris.map((x) => x.porsi)), (x) => `${x.n} porsi`) : `<p class="a-mut">Belum ada.</p>`}</div>
+      <div class="a-panel"><h4>Tim & AI</h4><p>${(d.tim || []).length ? d.tim.map((t) => `${t.n} ${esc(t.role)}`).join(", ") : "Sendirian"}</p><p class="a-mut">${(d.ai || []).length ? d.ai.map((a) => `${esc(a.task)} ${a.n}`).join(" · ") : "Belum pakai AI"}</p>
+        <p class="a-mut">${m.menu} menu · ${m.bahan} bahan · ${m.pelanggan} pelanggan stempel</p></div>
     </div>
-    <p class="small">${m.menu} menu · ${m.bahan} bahan · ${m.pelanggan} pelanggan kartu stempel · ${d.meja} pesanan meja 30 hari</p>
-    <div class="chips">${FITUR.map(([k, n]) => `<span class="tag ${m.fitur?.[k] ? "pos" : "off"}">${n}</span>`).join("")}</div>
+    <div class="a-tags">${FITUR.map(([k, n]) => `<span class="${m.fitur?.[k] ? "on" : ""}">${n}</span>`).join("")}</div>
   </div>`;
 }
 
-const nyala = (m) => (m.st.sepi === null ? "belum jualan" : m.st.sepi === 0 ? "jualan hari ini" : `${m.st.sepi} hari lalu`);
-
-/** Baris merchant (bisa dibuka detailnya). */
-function barisMerchant(m) {
-  return `<div class="pos-order adm-row">
-    <button class="pos-order-head" data-action="detail" data-id="${esc(m.id)}">
-      <span class="adm-nama"><b>${esc(m.nama)}</b><small class="muted">${esc([m.kota, m.jenis].filter(Boolean).join(" · ") || "-")} · ${m.tahap === "jalan" ? "udah jalan" : "baru ide"}${isTes(m) ? " · tes" : ""}</small></span>
-      <span class="adm-angka"><b class="mono">${m.order30}</b><small class="muted">order 30h · ${short(m.omzet30)}</small></span>
-      <span class="adm-st">${pill(m.st.status)}<small class="muted">${nyala(m)}${m.order30 || m.order_prev30 ? ` · ${trenTxt(m.st.tren)}` : ""}</small></span>
-    </button>
-    ${buka === m.id ? detailView(m) : ""}
-  </div>`;
-}
-
-/** Kepala halaman admin: judul tab, waktu data, muat ulang, akun tes. */
+// ---------- Bagian halaman ----------
 function kepala(judul, sub, aksi = "") {
   const nTes = data.list.filter(isTes).length;
-  return `<header class="page-head adm-page-head"><h1>${esc(judul)}</h1><span class="pill adm-badge">${icon("lock", 12)} Admin</span></header>
-    <section class="card adm-head">
-      <div class="row-between"><div><p class="small" style="margin:0">${esc(sub)}</p><p class="small muted" style="margin:0">Diperbarui ${data.at ? data.at.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) : "-"} · data read-only</p></div>
-        <span class="row-gap"><button class="btn ghost sm" data-action="muat">${icon("sync", 14)} Muat ulang</button>${aksi}</span></div>
-      ${nTes ? `<label class="impor-cek"><input type="checkbox" data-change="tes" ${f.tes ? "checked" : ""}><span>Ikutkan ${nTes} akun tes (@racikin.test)</span></label>` : ""}
-    </section>`;
-}
-
-function kpi(r) {
-  return `<section class="card">
-      <div class="adm-kpi">
-        <div><small>Merchant</small><b>${r.total}</b><span class="small muted">+${r.baru30} baru 30 hari</span></div>
-        <div><small>Aktif 7 hari</small><b class="pos">${r.aktif7}</b><span class="small muted">${r.aktif30} aktif 30 hari</span></div>
-        <div><small>Berisiko berhenti</small><b class="${r.berisiko ? "neg" : ""}">${r.berisiko}</b><span class="small muted">jualan terakhir &gt;14 hari</span></div>
-        <div><small>Order 30 hari</small><b>${r.order30.toLocaleString("id-ID")}</b><span class="small muted">${delta(r.order30, r.orderPrev30)} vs 30 hari sebelumnya</span></div>
-        <div><small>Omzet merchant 30 hari</small><b>${short(r.omzet30)}</b><span class="small muted">${delta(r.omzet30, r.omzetPrev30)}</span></div>
-        <div><small>Pemakaian AI 30 hari</small><b>${r.ai30.toLocaleString("id-ID")}</b><span class="small muted">${r.meja30} pesanan meja</span></div>
+  return `<header class="a-top">
+      <div><h1>${esc(judul)}</h1><p class="a-mut">${esc(sub)} · diperbarui ${data.at ? data.at.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) : "-"}</p></div>
+      <div class="a-top-act">
+        <div class="a-seg" role="group" aria-label="Periode">${PERIODE.map((n) => `<button data-action="periode" data-n="${n}" class="${f.periode === n ? "on" : ""}" aria-pressed="${f.periode === n}">${n} hari</button>`).join("")}</div>
+        <button class="a-btn" data-action="muat" aria-label="Muat ulang">${icon("sync", 15)}<span>Muat ulang</span></button>${aksi}
       </div>
-    </section>`;
+    </header>
+    ${nTes ? `<label class="a-tes"><input type="checkbox" data-change="tes" ${f.tes ? "checked" : ""}><span>Ikutkan ${nTes} akun tes (@racikin.test)</span></label>` : ""}`;
 }
 
-/** Daftar pendek di Ringkasan; klik = buka detail di tab Merchant. */
-function daftarPendek(judul, list, kosong, ket) {
-  return `<section class="card">
-    <h2 class="card-title">${esc(judul)}</h2>
-    ${
-      list.length
-        ? `<div class="adm-mini">${list
-            .map((m) => `<a href="#/admin?tab=merchant&id=${esc(m.id)}" class="adm-mini-row"><span><b>${esc(m.nama)}</b><small class="muted">${esc([m.kota, m.jenis].filter(Boolean).join(" · ") || "-")}</small></span><span class="small">${ket(m)}</span>${icon("chevron", 14)}</a>`)
-            .join("")}</div>`
-        : `<p class="small muted">${esc(kosong)}</p>`
-    }
-  </section>`;
+function semuaMerchant() {
+  return f.tes ? data.list : data.list.filter((m) => !isTes(m));
+}
+
+function tabelMerchant(rows, { ringkas = false } = {}) {
+  const n = f.periode;
+  if (!rows.length) return `<p class="a-mut a-pad">Nggak ada merchant yang cocok.</p>`;
+  return `<div class="a-table" role="table">
+    <div class="a-tr a-th" role="row"><span>Usaha</span><span>Status</span><span class="a-hide-sm">Order 14 hari</span><span class="num">Order ${n}h</span><span class="num">Omzet ${n}h</span><span class="num a-hide-sm">Tren</span></div>
+    ${rows
+      .map((m) => {
+        const a = angkaPeriode(m, n);
+        const t = m.st.tren;
+        return `<div class="a-row ${buka === m.id ? "open" : ""}">
+          <button class="a-tr" data-action="detail" data-id="${esc(m.id)}" role="row" aria-expanded="${buka === m.id}">
+            <span class="a-usaha">${avatar(m)}<span><b>${esc(m.nama)}</b><small>${esc([m.kota, m.jenis].filter(Boolean).join(" · ") || "-")}${isTes(m) ? " · tes" : ""}</small></span></span>
+            <span>${status(m.st.status)}<small class="a-sm-only">${sepiTxt(m.st)}</small></span>
+            <span class="a-hide-sm a-spark ${m.st.status === "berisiko" ? "neg" : ""}">${garis(m.seri14 || [], { h: 26 })}</span>
+            <span class="num">${a.order.toLocaleString("id-ID")}</span>
+            <span class="num">${a.omzet ? short(a.omzet) : "-"}</span>
+            <span class="num a-hide-sm ${t === null || (!m.order30 && !m.order_prev30) ? "" : t >= 0 ? "pos" : "neg"}">${!m.order30 && !m.order_prev30 ? "-" : t === null ? "baru" : `${t > 0 ? "+" : ""}${Math.round(t)}%`}</span>
+          </button>
+          ${!ringkas && buka === m.id ? detailView(m) : ""}
+        </div>`;
+      })
+      .join("")}
+  </div>`;
+}
+
+function disapaList(list, maks = 5) {
+  if (!list.length) return `<p class="a-mut">Aman, nggak ada yang perlu disapa.</p>`;
+  return list
+    .slice(0, maks)
+    .map(
+      (x) => `<a class="a-alert" href="#/admin?tab=merchant&id=${esc(x.m.id)}"><i class="a-dot ${x.jenis}"></i><span><b>${esc(x.m.nama)}</b><small>${esc(x.teks)}</small></span><span class="a-alert-act">${x.jenis === "setup" ? "Bantu" : "Lihat"}</span></a>`,
+    )
+    .join("");
 }
 
 function ringkasanTab() {
   const today = todayISO();
-  const semua = f.tes ? data.list : data.list.filter((m) => !isTes(m));
+  const semua = semuaMerchant();
   const r = ringkasPlatform(semua, today);
+  const n = f.periode;
+  const h = ringkasHarian(data.harian, n);
   const x = semua.map((m) => ({ ...m, st: statusMerchant(m, today) }));
-  const berisiko = x.filter((m) => m.st.status === "berisiko").sort((a, b) => (b.omzet_prev30 || 0) - (a.omzet_prev30 || 0)).slice(0, 5);
-  const baru = [...x].sort((a, b) => String(b.daftar).localeCompare(String(a.daftar))).slice(0, 5);
-  const top = x.filter((m) => m.omzet30 > 0).sort((a, b) => b.omzet30 - a.omzet30).slice(0, 5);
-  return `${kepala("Ringkasan", "Kondisi platform Racikin hari ini")}
-    ${kpi(r)}
-    ${daftarPendek("Perlu disapa", berisiko, "Aman, nggak ada merchant yang berhenti jualan.", (m) => `${pill("berisiko")} <small class="muted">${nyala(m)}</small>`)}
-    ${daftarPendek("Paling rame 30 hari", top, "Belum ada merchant yang jualan lewat Kasir.", (m) => `<b class="mono">${short(m.omzet30)}</b> <small class="muted">${m.order30} order</small>`)}
-    ${daftarPendek("Pendaftar terbaru", baru, "Belum ada pendaftar.", (m) => `<small class="muted">daftar ${tgl(m.daftar)}</small> ${pill(m.st.status)}`)}`;
+  const sapa = perluDisapa(semua, today);
+  const berisiko = x.filter((m) => m.st.status === "berisiko");
+  const top = [...x].sort((a, b) => angkaPeriode(b, n).omzet - angkaPeriode(a, n).omzet || String(b.jualan_terakhir || "").localeCompare(String(a.jualan_terakhir || ""))).slice(0, 6);
+  const baruPeriode = x.filter((m) => m.st.umur < n).length;
+  const nBerisiko = berisiko.length;
+  const adaHarian = h.seri.length > 0;
+  const omzet = adaHarian ? h.omzet : semua.reduce((a, m) => a + angkaPeriode(m, n).omzet, 0);
+  const order = adaHarian ? h.order : semua.reduce((a, m) => a + angkaPeriode(m, n).order, 0);
+  return `${kepala("Ringkasan", `${fmtDate(today, { weekday: "long", day: "numeric", month: "short" })} · data read-only`)}
+    <div class="a-bento">
+      <section class="a-tile a-hero">
+        <h3>Omzet merchant ${n} hari</h3>
+        <div class="a-big-row"><b class="a-big xl">${rp(omzet)}</b>${adaHarian && h.adaPrev ? naik(persen(h.omzet, h.prev.omzet)) : ""}</div>
+        <p class="a-mut">${order.toLocaleString("id-ID")} order · rata-rata ${order ? rp(omzet / order) : "-"}/order${adaHarian ? ` · ${h.jualanRata.toFixed(1).replace(".", ",")} merchant jualan per hari` : ""}</p>
+        <div class="a-hero-chart">${adaHarian ? garis(h.seri.map((d) => d.omzet), { h: 110 }) : ""}</div>
+      </section>
+      ${tile("Merchant", `<div class="a-big-row"><b class="a-big">${r.total}</b>${baruPeriode ? `<span class="a-d up">+${baruPeriode}</span>` : ""}</div><p class="a-mut">${baruPeriode} daftar ${n} hari terakhir</p>`)}
+      ${tile("Aktif 7 hari", `<div class="a-big-row"><b class="a-big">${r.aktif7}</b><span class="a-mut">/ ${r.total}</span></div><div class="a-prog"><i style="width:${r.total ? (r.aktif7 / r.total) * 100 : 0}%"></i></div><p class="a-mut">${r.aktif30} aktif 30 hari</p>`)}
+      ${tile("Berisiko berhenti", `<div class="a-big-row"><b class="a-big ${nBerisiko ? "neg" : ""}">${nBerisiko}</b></div><p class="a-mut">${nBerisiko ? `${esc(berisiko[0].nama)}${nBerisiko > 1 ? ` +${nBerisiko - 1} lagi` : ""} · ${sepiTxt(berisiko[0].st)}` : "Semua masih jualan"}</p>`, nBerisiko ? "warn" : "")}
+      ${tile("Pemakaian AI", `<div class="a-big-row"><b class="a-big">${(adaHarian ? h.ai : r.ai30).toLocaleString("id-ID")}</b>${adaHarian && h.adaPrev ? naik(persen(h.ai, h.prev.ai)) : ""}</div><div class="a-mini-chart sky">${adaHarian ? garis(h.seri.map((d) => d.ai), { h: 30 }) : ""}</div>`)}
+    </div>
+    <div class="a-split">
+      <section class="a-tile a-flush">
+        <div class="a-tile-head"><h2>Merchant teratas</h2><a class="a-link" href="#/admin?tab=merchant">Lihat semua ${icon("chevron", 13)}</a></div>
+        ${tabelMerchant(top, { ringkas: true })}
+      </section>
+      <div class="a-stack">
+        ${tile(`Perlu disapa${sapa.length ? ` <span class="a-count">${sapa.length}</span>` : ""}`, disapaList(sapa))}
+        ${tile("Adopsi fitur", meter([...r.fitur].sort((a, b) => b.n - a.n).slice(0, 6), r.total))}
+      </div>
+    </div>`;
 }
+
+const CHIP = [["", "Semua"], ["aktif", "Aktif"], ["berisiko", "Berisiko"], ["baru", "Baru"], ["tidur", "Belum jualan"]];
 
 function merchantTab() {
   const today = todayISO();
   const rows = saringMerchant(data.list, f, today);
-  return `${kepala("Merchant", "Cari, saring & lihat detail tiap usaha", `<button class="btn soft sm" data-action="csv">${icon("download", 14)} CSV</button>`)}
-    <section class="card adm-list">
-      <div class="adm-filter">
-        <input type="search" value="${esc(f.q)}" placeholder="Cari nama usaha, email, kota…" data-change="q" aria-label="Cari merchant">
-        <select data-change="status" aria-label="Status"><option value="">Semua status</option>${Object.entries(STATUS).map(([k, x]) => `<option value="${k}" ${f.status === k ? "selected" : ""}>${x.nama}</option>`).join("")}</select>
-        <select data-change="tahap" aria-label="Tahap"><option value="">Semua tahap</option><option value="ide" ${f.tahap === "ide" ? "selected" : ""}>Baru ide</option><option value="jalan" ${f.tahap === "jalan" ? "selected" : ""}>Udah jalan</option></select>
-        <select data-change="urut" aria-label="Urutkan">${URUT.map(([k, n]) => `<option value="${k}" ${f.urut === k ? "selected" : ""}>${n}</option>`).join("")}</select>
+  const dasar = saringMerchant(data.list, { ...f, status: "" }, today);
+  const hitung = (k) => (k ? dasar.filter((m) => m.st.status === k).length : dasar.length);
+  return `${kepala("Merchant", "Cari, saring & lihat detail tiap usaha", `<button class="a-btn" data-action="csv">${icon("download", 15)}<span>CSV</span></button>`)}
+    <section class="a-tile a-flush">
+      <div class="a-filter">
+        <div class="a-chips">${CHIP.map(([k, n]) => `<button data-action="chip" data-k="${k}" class="${f.status === k ? "on" : ""}">${n} <span>${hitung(k)}</span></button>`).join("")}</div>
+        <div class="a-filter-row">
+          <input type="search" value="${esc(f.q)}" placeholder="Cari nama usaha, email, kota…" data-change="q" aria-label="Cari merchant">
+          <select data-change="tahap" aria-label="Tahap"><option value="">Semua tahap</option><option value="ide" ${f.tahap === "ide" ? "selected" : ""}>Baru ide</option><option value="jalan" ${f.tahap === "jalan" ? "selected" : ""}>Udah jalan</option></select>
+          <select data-change="urut" aria-label="Urutkan">${URUT.map(([k, n]) => `<option value="${k}" ${f.urut === k ? "selected" : ""}>${n}</option>`).join("")}</select>
+          <select data-change="status" aria-label="Status" class="a-hide"><option value="">Semua status</option>${Object.entries(STATUS).map(([k, x]) => `<option value="${k}" ${f.status === k ? "selected" : ""}>${x.nama}</option>`).join("")}</select>
+        </div>
       </div>
-      <p class="small muted">${rows.length} merchant</p>
-      ${rows.length ? rows.map(barisMerchant).join("") : `<p class="muted">Nggak ada merchant yang cocok.</p>`}
+      <p class="a-mut a-pad">${rows.length} merchant</p>
+      ${tabelMerchant(rows)}
     </section>`;
 }
 
 function trenTab() {
   const today = todayISO();
-  const semua = f.tes ? data.list : data.list.filter((m) => !isTes(m));
+  const semua = semuaMerchant();
   const r = ringkasPlatform(semua, today);
-  return `${kepala("Pertumbuhan", "Pendaftar, adopsi fitur & sebaran merchant")}
-    <section class="card">
-      <h2 class="card-title">Pendaftar per minggu</h2>
-      ${bars(r.daftarMinggu, { label: (x) => fmtDate(x.minggu, { day: "numeric", month: "short" }), nilai: (x) => x.n })}
-    </section>
-    <section class="card">
-      <h2 class="card-title">Adopsi fitur</h2>
-      ${bars(r.fitur, { label: (x) => x.nama, nilai: (x) => x.n, fmt: (n) => `${n}/${r.total}` })}
-    </section>
-    <section class="card">
-      <h2 class="card-title">Sebaran merchant</h2>
-      <div class="row2">
-        <div><h4>Tahap</h4><p class="small">Baru ide <b>${r.tahap.ide}</b> · Udah jalan <b>${r.tahap.jalan}</b></p>
-          <h4>Status</h4><p class="small">${r.status.map(([k, n]) => `${STATUS[k].nama} <b>${n}</b>`).join(" · ")}</p></div>
-        <div><h4>Kota teratas</h4><p class="small">${r.kota.map(([k, n]) => `${esc(k)} <b>${n}</b>`).join(" · ") || "-"}</p>
-          <h4>Jenis usaha</h4><p class="small">${r.jenis.map(([k, n]) => `${esc(k)} <b>${n}</b>`).join(" · ") || "-"}</p></div>
-      </div>
-    </section>
-    <section class="card">
-      <h2 class="card-title">Transaksi lewat Racikin</h2>
-      <div class="stats3">
-        <div><small>Order 30 hari</small><b>${r.order30.toLocaleString("id-ID")}</b></div>
-        <div><small>Omzet 30 hari</small><b>${short(r.omzet30)}</b></div>
-        <div><small>Pesanan meja</small><b>${r.meja30.toLocaleString("id-ID")}</b></div>
-      </div>
-      <p class="small muted">Dibanding 30 hari sebelumnya: order ${delta(r.order30, r.orderPrev30) || "-"}, omzet ${delta(r.omzet30, r.omzetPrev30) || "-"}. Pemakaian AI ${r.ai30.toLocaleString("id-ID")} kali.</p>
-    </section>`;
+  const n = f.periode;
+  const h = ringkasHarian(data.harian, n);
+  const ada = h.seri.length > 0;
+  const tahapTotal = r.tahap.ide + r.tahap.jalan || 1;
+  return `${kepala("Pertumbuhan", "Transaksi, pendaftar, adopsi fitur & sebaran merchant")}
+    <div class="a-bento a-bento-4">
+      ${tile(`Order ${n} hari`, `<div class="a-big-row"><b class="a-big">${(ada ? h.order : r.order30).toLocaleString("id-ID")}</b>${ada && h.adaPrev ? naik(persen(h.order, h.prev.order)) : ""}</div>`)}
+      ${tile(`Omzet ${n} hari`, `<div class="a-big-row"><b class="a-big">${rp(ada ? h.omzet : r.omzet30)}</b>${ada && h.adaPrev ? naik(persen(h.omzet, h.prev.omzet)) : ""}</div>`)}
+      ${tile(`Pendaftar ${n} hari`, `<div class="a-big-row"><b class="a-big">${ada ? h.daftar : r.baru30}</b>${ada && h.adaPrev ? naik(persen(h.daftar, h.prev.daftar)) : ""}</div>`)}
+      ${tile(`Pakai AI ${n} hari`, `<div class="a-big-row"><b class="a-big">${(ada ? h.ai : r.ai30).toLocaleString("id-ID")}</b>${ada && h.adaPrev ? naik(persen(h.ai, h.prev.ai)) : ""}</div>`)}
+    </div>
+    ${ada ? `<div class="a-split even">
+      ${tile("Order harian", batang(h.seri, "order", (v) => `${v} order`))}
+      ${tile("Merchant yang jualan per hari", batang(h.seri, "jualan", (v) => `${v} merchant`))}
+    </div>` : ""}
+    <div class="a-split even">
+      ${tile("Pendaftar per minggu (8 minggu)", batang(r.daftarMinggu.map((x) => ({ tgl: x.minggu, n: x.n })), "n", (v) => `${v} pendaftar`))}
+      ${tile("Adopsi fitur", meter([...r.fitur].sort((a, b) => b.n - a.n), r.total))}
+    </div>
+    <div class="a-split even">
+      ${tile("Tahap & status", `<div class="a-stackbar"><i style="width:${(r.tahap.jalan / tahapTotal) * 100}%"></i></div><p class="a-legend"><span><i class="y"></i>Udah jalan <b>${r.tahap.jalan}</b></span><span><i></i>Baru ide <b>${r.tahap.ide}</b></span></p>
+        <div class="a-status-grid">${r.status.map(([k, nn]) => `<div>${status(k)}<b>${nn}</b></div>`).join("")}</div>`)}
+      ${tile("Kota & jenis usaha", `<h4>Kota</h4>${r.kota.length ? meter(r.kota.map(([k, nn]) => ({ nama: k, n: nn })), r.total, (x) => x.n) : `<p class="a-mut">-</p>`}<h4>Jenis</h4>${r.jenis.length ? meter(r.jenis.map(([k, nn]) => ({ nama: k, n: nn })), r.total, (x) => x.n) : `<p class="a-mut">-</p>`}`)}
+    </div>`;
 }
 
 const TAB_VIEW = { ringkasan: ringkasanTab, merchant: merchantTab, tren: trenTab };
 
+/** Angka "berisiko" di menu samping (badge di Merchant). */
+function badgeMenu() {
+  const el = document.querySelector('.tabbar a[data-tab="admin-merchant"] .a-nav-badge');
+  if (!el) return;
+  const n = data.status === "ok" ? perluDisapa(semuaMerchant(), todayISO()).length : 0;
+  el.textContent = n || "";
+  el.hidden = !n;
+}
+
 export const admin = {
   render() {
-    const h = `<header class="page-head"><h1>Dashboard Admin</h1></header>`;
-    if (!cloud.available) return `${h}<section class="card"><p>Koneksi ke server belum siap. Cek internet lalu muat ulang.</p></section>`;
-    if (!cloud.user && !cloud.authSiap) return `${h}<section class="card"><p class="muted">Memuat…</p></section>`;
-    if (!cloud.user) return `${h}<section class="card empty"><div class="empty-icon">${icon("lock", 30)}</div><h3>Khusus admin Racikin</h3><p>Masuk pakai akun admin dulu.</p><a href="#/akun" class="btn primary">Masuk</a></section>`;
+    const h = `<header class="a-top"><div><h1>Dashboard Admin</h1></div></header>`;
+    const kartu = (isi) => `${h}<section class="a-tile a-empty">${isi}</section>`;
+    if (!cloud.available) return kartu(`<p>Koneksi ke server belum siap. Cek internet lalu muat ulang.</p>`);
+    if (!cloud.user && !cloud.authSiap) return kartu(`<p class="a-mut">Memuat…</p>`);
+    if (!cloud.user) return kartu(`${icon("lock", 30)}<h3>Khusus admin Racikin</h3><p class="a-mut">Masuk pakai akun admin dulu.</p><a href="#/akun" class="btn primary">Masuk</a>`);
     if (data.status === "idle" || (data.status === "ok" && adminCache?.uid !== cloud.user.id)) {
       muat();
-      return `${h}<section class="card"><p class="muted">Memuat data merchant…</p></section>`;
+      return skeleton();
     }
-    if (data.status === "loading" && !data.list.length) return `${h}<section class="card"><p class="muted">Memuat data merchant…</p></section>`;
-    if (data.status === "bukan") return `${h}<section class="card empty"><div class="empty-icon">${icon("lock", 30)}</div><h3>Khusus admin Racikin</h3><p>Akun ${esc(cloud.user.email)} bukan admin platform.</p><a href="#/" class="btn ghost">Ke Beranda</a></section>`;
-    if (data.status === "error") return `${h}<section class="card"><p class="warn-box small">${esc(data.error)}</p><button class="btn primary" data-action="muat">Coba lagi</button></section>`;
+    if (data.status === "loading" && !data.list.length) return skeleton();
+    if (data.status === "bukan") return kartu(`${icon("lock", 30)}<h3>Khusus admin Racikin</h3><p class="a-mut">Akun ${esc(cloud.user.email)} bukan admin platform.</p><a href="#/" class="btn ghost">Ke Beranda</a>`);
+    if (data.status === "error") return kartu(`<p class="warn-box small">${esc(data.error)}</p><button class="btn primary" data-action="muat">Coba lagi</button>`);
     const tab = tabAdmin();
     // Link dari Ringkasan: buka detail merchant tertentu
     const id = new URLSearchParams(location.hash.split("?")[1] || "").get("id");
@@ -293,11 +367,12 @@ export const admin = {
       history.replaceState(null, "", "#/admin?tab=merchant");
       if (!detail.has(id)) queueMicrotask(() => muatDetail(id));
     }
-    return TAB_VIEW[tab]();
+    return `<div class="a-wrap">${TAB_VIEW[tab]()}</div>`;
   },
   after(root) {
+    badgeMenu();
     if (gulir && tabAdmin() === "merchant") {
-      const el = root.querySelector(`.adm-row [data-id="${CSS.escape(gulir)}"]`);
+      const el = root.querySelector(`.a-row [data-id="${CSS.escape(gulir)}"]`);
       if (el) {
         gulir = null;
         setTimeout(() => el.scrollIntoView({ block: "start" }), 0); // setelah scroll-ke-atas bawaan pindah halaman
@@ -324,12 +399,25 @@ export const admin = {
     tes(el) {
       f.tes = el.checked;
       render();
+      muatHarian();
     },
   },
   actions: {
     muat: () => muat(),
+    periode(el) {
+      f.periode = Number(el.dataset.n) || 30;
+      render();
+    },
+    chip(el) {
+      f.status = el.dataset.k;
+      render();
+    },
     detail(el) {
       const id = el.dataset.id;
+      if (tabAdmin() !== "merchant") {
+        location.hash = "#/admin?tab=merchant&id=" + encodeURIComponent(id);
+        return;
+      }
       buka = buka === id ? null : id;
       if (buka && !detail.has(id)) return muatDetail(id);
       render();
@@ -341,3 +429,8 @@ export const admin = {
     },
   },
 };
+
+function skeleton() {
+  return `<div class="a-wrap"><header class="a-top"><div><h1>Ringkasan</h1><p class="a-mut">Memuat data merchant…</p></div></header>
+    <div class="a-bento">${'<section class="a-tile a-skel"></section>'.repeat(5).replace('a-tile a-skel', "a-tile a-skel a-hero")}</div></div>`;
+}

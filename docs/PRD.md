@@ -154,6 +154,7 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 
 ### Fase 26: Mode admin platform (selesai)
 - Akun admin langsung masuk mode admin dengan menu sendiri: Ringkasan, Merchant, Pertumbuhan, Akun. Menu usaha disembunyikan & dialihkan, profil usaha tidak wajib, bisa pindah ke app usaha & balik.
+- Desain ulang "pusat kontrol" (gelap, ikut mode terang): periode 7/30/90 hari, grafik omzet & order harian, tabel merchant dengan grafik mini, "Perlu disapa". Migrasi `admin_desain`: `admin_harian` + `seri14`/`order90` di `admin_merchants`.
 
 ### Di luar MVP (fase berikutnya)
 Monetisasi/langganan, WhatsApp Business API resmi, payment gateway sungguhan.
