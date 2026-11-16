@@ -9,6 +9,7 @@ import { program, siapTukar, perluDiajak } from "../loyalty.js";
 import { menipis, belumDiisi, bahanMap, bisaDibuat, fmtQty } from "../stok-utils.js";
 import { langkah, isJalan, tawarNaik, hariJualan, fokus } from "../tahap.js";
 import { saldoKas } from "../impor.js";
+import { sehatCard } from "./sehat.js";
 
 /** Langkah di Beranda (beda untuk usaha baru vs yang sudah jalan, lihat js/tahap.js). */
 export const journey = (s) => langkah(s, { anggotaTim: cloud.team?.role === "owner" ? cloud.team.anggota || 0 : 0 });
@@ -95,6 +96,7 @@ export const home = {
       </section>
 
       ${naikCard(s)}
+      ${isJalan(s) || hariJualan(s) >= 7 ? sehatCard(s) : ""}
       <section class="card journey">
         <div class="row-between">
           <h2 class="card-title">${isJalan(s) ? "Beresin usahamu" : "Perjalanan bisnismu"}</h2>

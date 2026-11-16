@@ -72,7 +72,7 @@ function langkahJalan(s, { anggotaTim = 0 } = {}) {
     { key: "tim", label: "Ajak tim ke Racikin", done: anggotaTim > 0, href: "#/tim", ikut: (Number(p.karyawan) || 0) > 0 || masalah.includes("karyawan") },
     { key: "pelanggan", label: "Kartu stempel pelanggan", done: !!s.loyalty, href: "#/pelanggan", ikut: masalah.includes("sepi") },
     { key: "konten", label: "Jadwal konten", done: !!s.calendar, href: "#/konten", ikut: masalah.includes("sepi") },
-    { key: "laporan", label: "Seminggu jualan, cek untung", done: hariJualan(s) >= 7, href: "#/laporan" },
+    { key: "laporan", label: "Seminggu jualan, cek kesehatan", done: hariJualan(s) >= 7, href: "#/sehat" },
   ].filter((x) => x.ikut !== false);
   const utama = new Set(masalah.flatMap((m) => PRIORITAS[m] || []));
   // "Masukin menu" selalu pertama (Kasir, stok & HPP butuh menu); sisanya: yang terkait masalah utama didahulukan.
