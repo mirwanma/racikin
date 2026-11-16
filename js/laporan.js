@@ -8,7 +8,7 @@
 // - Peralatan dicatat sebagai belanja aset (di bawah laba bersih), bukan biaya bulanan.
 import { bahanMap, hppOf } from "./stok-utils.js";
 import { CHANNELS } from "./online.js";
-import { cariPilihan, hppPilihan } from "./varian.js";
+import { kumpulOpsi, hppOpsiTerjual } from "./varian.js";
 
 export const KAT_HPP = ["Bahan Baku", "Kemasan"];
 export const KAT_ASET = ["Peralatan"];
@@ -35,7 +35,7 @@ function porsiBulan(s, ym, sampaiHari = 31) {
     hari++;
     omzetKasir += Number(r.omzet) || 0;
     for (const [nama, q] of Object.entries(r.items || {})) out[nama] = (out[nama] || 0) + (Number(q) || 0);
-    for (const [id, q] of Object.entries(r.opsi || {})) opsi[id] = (opsi[id] || 0) + (Number(q) || 0);
+    kumpulOpsi(opsi, r);
     for (const x of Object.values(r.promo || {})) promo += Number(x.rp) || 0;
   }
   return { porsi: out, opsi, promo, hari, omzetKasir };
@@ -80,15 +80,14 @@ export function labaRugi(s, ym, metode = metodeDefault(s, ym), sampaiHari = 31) 
     hppResep += q * m.hpp;
     menu.push({ nama, porsi: q, harga: m.harga, hpp: m.hpp, omzet: q * m.harga, untung: q * (m.harga - m.hpp), margin: m.harga ? ((m.harga - m.hpp) / m.harga) * 100 : 0 });
   }
-  // Varian & topping: HPP tambahan per pilihan terjual (pilihan yang sudah dihapus tidak dihitung).
+  // Varian & topping: HPP tambahan per pilihan terjual, termasuk efek porsi jumbo / ganti bahan per menu
+  // (pilihan yang sudah dihapus tidak dihitung).
   const opsi = [];
-  for (const [id, q] of Object.entries(opsiQ)) {
-    const f = cariPilihan(s, id);
-    if (!f) continue;
-    const h = hppPilihan(f.p, map);
-    const harga = Number(f.p.harga) || 0;
-    hppResep += q * h;
-    opsi.push({ nama: f.p.nama, grup: f.g.nama, porsi: q, harga, hpp: h, omzet: q * harga, untung: q * (harga - h) });
+  for (const { g, p, q, hpp: total } of hppOpsiTerjual(s, opsiQ, map)) {
+    const h = q ? total / q : 0;
+    const harga = Number(p.harga) || 0;
+    hppResep += total;
+    opsi.push({ nama: p.nama, grup: g.nama, porsi: q, harga, hpp: h, omzet: q * harga, untung: q * harga - total });
   }
   const hpp = Math.round(metode === "resep" ? hppResep : belanjaHpp);
 

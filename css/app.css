@@ -1051,6 +1051,11 @@ label.btn.disabled { opacity: .5; pointer-events: none; }
 .opsi-edit-list { display: flex; flex-direction: column; gap: 10px; }
 .opsi-edit { display: flex; flex-direction: column; gap: 8px; }
 .opsi-bahan { display: grid; grid-template-columns: 1fr 80px auto auto; gap: 6px; align-items: center; margin-bottom: 6px; }
+.opsi-ganti { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto; gap: 6px; align-items: center; margin-bottom: 6px; }
+.opsi-ganti select { min-width: 0; }
+.opsi-ubah { border-top: 1px dashed var(--line-2); margin: 8px 0; padding-top: 6px; }
+.opsi-ubah summary { cursor: pointer; font-weight: 700; padding: 4px 0; }
+.opsi-ubah .field { margin-top: 8px; }
 @media (min-width: 900px) {
   .sheet { bottom: auto; top: 50%; transform: translateY(-50%); border-bottom: 1.5px solid var(--ink); border-radius: 14px; box-shadow: 6px 6px 0 var(--shadow-c); }
 }

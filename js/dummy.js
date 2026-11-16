@@ -108,8 +108,8 @@ const MENU = [
 const OPSI = [
   ["level", "Level pedas", "satu", true, 0, [["l0", "Tidak pedas", 0, [], 3], ["l1", "Level 1", 0, [["cabai", 3]], 4], ["l3", "Level 3", 0, [["cabai", 8]], 5], ["l5", "Level 5", 1000, [["cabai", 15]], 3]], ["ori", "telur", "baksotg", "komplit", "keju", "paket", "baksotahu"]],
   ["topping", "Topping tambahan", "banyak", false, 3, [["tlr", "Telur", 4000, [["telur", 1]], 4], ["kj", "Keju", 3000, [["keju", 15]], 3], ["bks", "Bakso", 4000, [["bakso", 3]], 3], ["bg", "Bawang goreng ekstra", 1000, [["bgoreng", 5]], 2]], ["ori", "pedas", "telur", "baksotg", "crispy", "walik"]],
-  ["ukuran", "Ukuran", "satu", true, 0, [["reg", "Reguler", 0, [], 7], ["jmb", "Jumbo", 3000, [["teh", 1], ["gula", 10], ["es", 100]], 3]], ["esteh"]],
-  ["manis", "Tingkat manis", "satu", false, 0, [["nrm", "Normal", 0, [], 7], ["krg", "Kurang manis", 0, [], 3]], ["tehaaren", "esjeruk"]],
+  ["ukuran", "Ukuran", "satu", true, 0, [["reg", "Reguler", 0, [], 7], ["jmb", "Jumbo", 3000, [], 3, { porsi: 1.5, tetap: ["cup"] }]], ["esteh"]],
+  ["manis", "Tingkat manis", "satu", false, 0, [["nrm", "Normal", 0, [], 7], ["krg", "Kurang manis", 0, [], 3], ["tg", "Tanpa gula", 0, [], 1, { ganti: [["gula", ""], ["aren", ""]] }]], ["tehaaren", "esjeruk"]],
 ];
 
 const NAMA = [
@@ -173,7 +173,14 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH }
     tipe,
     wajib,
     ...(maks ? { maks } : {}),
-    pilihan: pilihan.map(([pk, pn, harga, items]) => ({ id: uid() + pk, nama: pn, harga, items: items.map(([b, qty]) => ({ bahanId: idB[b], qty })) })),
+    pilihan: pilihan.map(([pk, pn, harga, items, , x = {}]) => ({
+      id: uid() + pk,
+      nama: pn,
+      harga,
+      items: items.map(([b, qty]) => ({ bahanId: idB[b], qty })),
+      ...(x.porsi ? { porsi: x.porsi, tetap: (x.tetap || []).map((b) => idB[b]) } : {}),
+      ...(x.ganti ? { ganti: x.ganti.map(([dari, ke]) => ({ dari: idB[dari], ke: ke ? idB[ke] : "" })) } : {}),
+    })),
   }));
   MENU.forEach(([k], i) => {
     const ids = OPSI.map(([, , , , , , dipakai], j) => (dipakai.includes(k) ? opsi[j].id : null)).filter(Boolean);

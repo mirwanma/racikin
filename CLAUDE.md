@@ -11,7 +11,7 @@ Racikin ("Racik ide jadi cuan") = PWA co-founder AI untuk usaha F&B kecil di Ind
 ## Arsitektur
 - **Frontend tanpa build**: vanilla ES modules, router hash (`js/app.js`), event delegation `data-action` (click) / `data-change` / `data-form`. View = objek `{ render(s), after(root), actions, changes, forms }` yang mengembalikan template string.
 - **State**: satu objek di `localStorage` (`racikin:v1`, `js/store.js`). `store.set(patch)` → render ulang. `DEFAULT` di store.js = daftar semua key.
-- **Service worker** `sw.js`: naikkan `VERSION` (saat ini `racikin-v32`) di setiap rilis dan tambahkan file baru ke `SHELL`.
+- **Service worker** `sw.js`: naikkan `VERSION` (saat ini `racikin-v33`) di setiap rilis dan tambahkan file baru ke `SHELL`.
 - **Desain "papan warung"**: kuning marigold `#FFC531`, ink `#1B1916`, paper `#F6EFDC`; font Archivo + IBM Plex Mono; token warna di `:root` + mode gelap. Layar ≥ 900px: rail navigasi kiri, halaman di `COLS` (app.js) dua kolom, Kasir dua panel.
 - **Peran** (`js/cloud.js`): `owner`, `manajer`, `kasir` (hanya Kasir/Pelanggan/Stok), `dapur` (hanya layar dapur). Rute dibatasi di `app.js` (`KASIR_ROUTES`, `DAPUR_ROUTES`), dan server juga membatasi.
 
@@ -31,7 +31,7 @@ Lihat `tests/README.md`. Unit: `cd tests && npm run unit`. E2E: jalankan `python
 `profile.tahap` = `ide` (default, alur dari ide) atau `jalan` (usaha sudah berjalan: langkah Beranda & halaman Bisnis beda, lihat `js/tahap.js`). Pindahan data usaha lama: `#/impor?jenis=menu|bahan` (teks/foto) + saldo kas awal (`kasAwal`, `js/impor.js`) + impor penjualan lama `#/impor-jual` (`js/imporjual.js`, rekap ber-`imporId`, Kas `ref: "impor"`). Cek kesehatan usaha: `#/sehat` (`js/sehat.js`). Panduan perizinan: `#/izin` (`js/izin.js`, isi panduan bertanggal `DICEK`, perbarui kalau aturan berubah). Fitur baru sebaiknya cocok untuk dua-duanya.
 
 ## Data contoh
-`js/dummy.js` (tombol di Setelan / onboarding), profil tahap `jalan`: 15 menu (sebagian dengan varian: level pedas, topping, ukuran, tingkat manis), 3 promo (happy hour, es teh weekend, voucher TAHGUY5), 25 bahan, ±2.000 order 60 hari, Kas, stok, 35 pelanggan, 5 supplier, shift 30 hari atas nama tim, 8 meja. Semua angka harus tetap konsisten: Kas = rekap kasir per hari, stok = total `stokLog`, stempel = total `stempelLog`. Data hari ini hanya sampai jam sekarang.
+`js/dummy.js` (tombol di Setelan / onboarding), profil tahap `jalan`: 15 menu (sebagian dengan varian: level pedas, topping, ukuran (Jumbo 1,5× porsi), tingkat manis (ada "Tanpa gula" yang menghilangkan gula)), 3 promo (happy hour, es teh weekend, voucher TAHGUY5), 25 bahan, ±2.000 order 60 hari, Kas, stok, 35 pelanggan, 5 supplier, shift 30 hari atas nama tim, 8 meja. Semua angka harus tetap konsisten: Kas = rekap kasir per hari, stok = total `stokLog`, stempel = total `stempelLog`. Data hari ini hanya sampai jam sekarang.
 
 ## Ide berikutnya (belum dikerjakan)
-Promo di server untuk pesan meja & kuota voucher per pelanggan (promo & voucher di Kasir sudah ada: `js/promo.js`, tidak numpuk); varian yang mengganti bahan / mengalikan porsi; payment gateway sungguhan untuk pesan meja (QRIS saat ini SIMULASI di `pay_table_order_dummy`); WhatsApp Business API resmi (integrasi wa.me sudah ada: `js/wa.js`, `#/wa`, order dari chat di Kasir); monetisasi.
+Promo di server untuk pesan meja & kuota voucher per pelanggan (promo & voucher di Kasir sudah ada: `js/promo.js`, tidak numpuk); payment gateway sungguhan untuk pesan meja (QRIS saat ini SIMULASI di `pay_table_order_dummy`); WhatsApp Business API resmi (integrasi wa.me sudah ada: `js/wa.js`, `#/wa`, order dari chat di Kasir); monetisasi.

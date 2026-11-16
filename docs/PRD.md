@@ -148,6 +148,10 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - `#/izin`: NIB, PIRT, halal, SLHS, merek. Rekomendasi per jenis usaha & menu, langkah, dokumen, link resmi, status & nomor izin, masa berlaku + pengingat di Beranda, konteks Mentor AI. Tanpa server baru (data di dokumen usaha).
 - Berikutnya (opsional): panduan per daerah, pengingat push untuk izin yang mau habis.
 
+### Fase 25: Varian yang mengubah resep (selesai)
+- Pilihan varian bisa mengalikan porsi resep (Jumbo 1,5×, bahan kemasan tidak ikut dikali) dan mengganti / menghilangkan bahan resep (susu oat, tanpa gula). Stok, HPP per menu, rekap `opsiMenu`, laporan & cek kesehatan ikut. Data contoh: Es Teh Jumbo 1,5× porsi, pilihan "Tanpa gula".
+- Tanpa perubahan server (harga tetap dari harga tambahan; pesan meja ikut otomatis).
+
 ### Di luar MVP (fase berikutnya)
 Monetisasi/langganan, WhatsApp Business API resmi, payment gateway sungguhan.
 

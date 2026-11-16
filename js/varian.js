@@ -2,13 +2,18 @@
 //
 // Model:
 //   state.opsi = [{ id, nama: "Topping", tipe: "satu" | "banyak", wajib, maks,
-//                   pilihan: [{ id, nama: "Keju", harga: 3000, items: [{ bahanId, qty }], habis }] }]
+//                   pilihan: [{ id, nama: "Keju", harga: 3000, items: [{ bahanId, qty }], habis,
+//                               porsi?: 1.5, tetap?: [bahanId], ganti?: [{ dari: bahanId, ke: bahanId | "" }] }] }]
 //   resep.opsiIds = [grupId, ...]   // grup yang dipakai menu itu (urutan = urutan tampil)
 //
 // Item order/keranjang yang memakai pilihan:
 //   { resepId, nama, harga (per porsi, sudah termasuk tambahan), qty, opsi: [{ g, id, nama, harga }] }
 //   opsi[].harga = harga tambahan di toko (harga online dihitung ulang dari sini).
-// Pilihan hanya MENAMBAH harga & bahan (per porsi), tidak mengganti bahan resep.
+// Pilihan bisa:
+//   - menambah bahan (items, per porsi),
+//   - mengalikan resep dasar (porsi: 1.5 = Jumbo); bahan di `tetap` (kemasan) tidak ikut dikali,
+//   - mengganti / menghilangkan bahan resep dasar (ganti: susu sapi -> susu oat, ke "" = tanpa).
+// Harga tambahan tetap dari `harga`; HPP & stok mengikuti bahan sesungguhnya.
 import { kebutuhan } from "./stok-utils.js";
 import { channelCfg, hargaDi } from "./online.js";
 
@@ -30,16 +35,67 @@ export function aturan(g) {
 /** Bahan yang dipakai 1× pilihan. */
 const pakaiPilihan = (p) => (p.items || []).filter((it) => it.bahanId && Number(it.qty) > 0).map((it) => ({ bahanId: it.bahanId, qty: Number(it.qty) }));
 
-/** HPP tambahan 1× pilihan. */
+/** HPP bahan tambahan 1× pilihan (tanpa efek porsi / ganti bahan, yang tergantung menunya). */
 export const hppPilihan = (p, map) => pakaiPilihan(p).reduce((a, it) => a + it.qty * (Number(map[it.bahanId]?.harga) || 0), 0);
 
 /** Pilihan habis: ditandai manual, atau stok bahannya (yang sudah diisi) tidak cukup untuk 1 porsi. */
 export function pilihanHabis(p, map) {
   if (p.habis) return true;
-  return pakaiPilihan(p).some((it) => {
+  const kurang = pakaiPilihan(p).some((it) => {
     const b = map[it.bahanId];
     return b && b.tracked && (Number(b.stok) || 0) < it.qty;
   });
+  if (kurang) return true;
+  // Bahan pengganti yang stoknya sudah 0
+  return gantiPilihan(p).some((x) => {
+    const b = x.ke && map[x.ke];
+    return b && b.tracked && (Number(b.stok) || 0) <= 0;
+  });
+}
+
+/** Pengali porsi yang valid (default 1). */
+export const porsiPilihan = (p) => {
+  const n = Number(p?.porsi);
+  return n > 0 && n !== 1 ? Math.min(n, 10) : 1;
+};
+const gantiPilihan = (p) => (p?.ganti || []).filter((x) => x.dari && x.dari !== x.ke);
+
+/** Pilihan ini mengubah resep dasar (porsi / ganti bahan)? */
+export const ubahResep = (p) => porsiPilihan(p) !== 1 || gantiPilihan(p).length > 0;
+
+// Bahan yang biasanya kemasan (tidak ikut dikali saat porsi diperbesar). Hanya tebakan awal di editor.
+const KEMASAN = /\b(cup|gelas plastik|mangkok|mangkuk|sendok|garpu|sedotan|kantong|kresek|plastik|box|dus|kotak|kemasan|tutup|paper|kertas|botol|stiker|label|sumpit|tisu|thinwall)\b/i;
+export const tebakKemasan = (b) => KEMASAN.test(b?.nama || "");
+
+/** Bahan resep dasar untuk `porsi` porsi setelah efek pilihan (pengali porsi & ganti bahan). */
+function dasarDenganPilihan(r, porsi, pilihan) {
+  let kali = 1;
+  const tetap = new Set();
+  const ganti = new Map();
+  for (const p of pilihan) {
+    kali *= porsiPilihan(p);
+    for (const id of p.tetap || []) tetap.add(id);
+    for (const x of gantiPilihan(p)) ganti.set(x.dari, x.ke || "");
+  }
+  const out = [];
+  for (const it of kebutuhan(r, porsi)) {
+    const qty = tetap.has(it.bahanId) ? it.qty : it.qty * kali;
+    const ke = ganti.has(it.bahanId) ? ganti.get(it.bahanId) : it.bahanId;
+    if (ke) out.push({ bahanId: ke, qty });
+  }
+  return out;
+}
+
+const biaya = (rows, map) => rows.reduce((a, it) => a + it.qty * (Number(map[it.bahanId]?.harga) || 0), 0);
+
+/**
+ * HPP tambahan 1 porsi kalau pilihan ini dipilih di menu r (bahan tambahan + efek porsi / ganti bahan).
+ * Tanpa menu (atau menu sudah dihapus): hanya bahan tambahan.
+ */
+export function hppPilihanDi(r, p, map) {
+  const tambah = hppPilihan(p, map);
+  if (!r || !ubahResep(p)) return tambah;
+  return tambah + biaya(dasarDenganPilihan(r, 1, [p]), map) - biaya(kebutuhan(r, 1), map);
 }
 
 /**
@@ -99,13 +155,14 @@ export const namaLengkap = (item) => (item?.opsi?.length ? `${item.nama} (${labe
 export function pakaiItem(s, item) {
   const r = (s.resep || []).find((x) => x.id === item.resepId);
   if (!r) return [];
-  const out = kebutuhan(r, item.qty);
+  const pilihan = [];
   for (const o of item.opsi || []) {
     const g = (s.opsi || []).find((x) => x.id === o.g);
     const p = g?.pilihan.find((x) => x.id === o.id);
-    if (!p) continue;
-    for (const it of pakaiPilihan(p)) out.push({ bahanId: it.bahanId, qty: it.qty * item.qty });
+    if (p) pilihan.push(p);
   }
+  const out = dasarDenganPilihan(r, item.qty, pilihan);
+  for (const p of pilihan) for (const it of pakaiPilihan(p)) out.push({ bahanId: it.bahanId, qty: it.qty * item.qty });
   return out;
 }
 
@@ -116,4 +173,41 @@ export function cariPilihan(s, id) {
     if (p) return { g, p };
   }
   return null;
+}
+
+/**
+ * Kumpulkan pilihan terjual dari rekap kasir harian ke acc = { pilihanId: { namaMenu: porsi } }.
+ * Rekap lama (sebelum ada opsiMenu) dicatat dengan menu "" (HPP hanya dari bahan tambahan).
+ */
+export function kumpulOpsi(acc, rekap) {
+  if (rekap?.opsiMenu) {
+    for (const [id, per] of Object.entries(rekap.opsiMenu))
+      for (const [menu, q] of Object.entries(per || {})) {
+        acc[id] ??= {};
+        acc[id][menu] = (acc[id][menu] || 0) + (Number(q) || 0);
+      }
+  } else
+    for (const [id, q] of Object.entries(rekap?.opsi || {})) {
+      acc[id] ??= {};
+      acc[id][""] = (acc[id][""] || 0) + (Number(q) || 0);
+    }
+  return acc;
+}
+
+/** Porsi & total HPP per pilihan terjual (dari kumpulOpsi). Pilihan yang sudah dihapus dilewati. Return [{ g, p, q, hpp }] */
+export function hppOpsiTerjual(s, acc, map) {
+  const resepNama = new Map((s.resep || []).map((r) => [r.nama, r]));
+  const out = [];
+  for (const [id, per] of Object.entries(acc)) {
+    const f = cariPilihan(s, id);
+    if (!f) continue;
+    let q = 0;
+    let hpp = 0;
+    for (const [menu, n] of Object.entries(per)) {
+      q += n;
+      hpp += n * hppPilihanDi(resepNama.get(menu), f.p, map);
+    }
+    out.push({ g: f.g, p: f.p, q, hpp });
+  }
+  return out;
 }

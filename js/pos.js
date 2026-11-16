@@ -97,13 +97,18 @@ function rekapPatch(s, tanggal, orders) {
   const aktif = orders.filter((o) => o.tanggal === tanggal && o.status !== "batal");
   const items = {};
   const opsi = {}; // pilihan varian/topping terjual: { pilihanId: porsi }
+  const opsiMenu = {}; // per menu (HPP porsi jumbo / ganti bahan beda tiap menu): { pilihanId: { namaMenu: porsi } }
   for (const o of aktif)
     for (const it of o.items) {
       items[it.nama] = (items[it.nama] || 0) + it.qty;
-      for (const x of it.opsi || []) opsi[x.id] = (opsi[x.id] || 0) + it.qty;
+      for (const x of it.opsi || []) {
+        opsi[x.id] = (opsi[x.id] || 0) + it.qty;
+        opsiMenu[x.id] ??= {};
+        opsiMenu[x.id][it.nama] = (opsiMenu[x.id][it.nama] || 0) + it.qty;
+      }
     }
   const rekap = { order: aktif.length, omzet: Math.round(sum(aktif, (o) => o.total)), items };
-  if (Object.keys(opsi).length) rekap.opsi = opsi;
+  if (Object.keys(opsi).length) Object.assign(rekap, { opsi, opsiMenu });
   const promo = rekapPromo(aktif); // pemakaian promo: { promoId: { n, rp, omzet } }
   if (promo) rekap.promo = promo;
   return { ...(s.posHarian || {}), [tanggal]: rekap };

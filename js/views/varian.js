@@ -6,9 +6,11 @@ import { esc, rupiah, toast } from "../ui.js";
 import { render, go } from "../app.js";
 import { head } from "./_shared.js";
 import { bahanMap } from "../stok-utils.js";
-import { hppPilihan, MAKS_GRUP, MAKS_PILIHAN } from "../varian.js";
+import { hppPilihan, hppPilihanDi, porsiPilihan, ubahResep, tebakKemasan, MAKS_GRUP, MAKS_PILIHAN } from "../varian.js";
 
 let draft = null;
+const rpTanda = (n) => (n < 0 ? "−" : "") + rupiah(Math.abs(n));
+const bukaUbah = new Set(); // id pilihan yang bagian "Ubah resep dasar"-nya dibuka
 let loadedFor = null;
 
 const param = (k) => new URLSearchParams(location.hash.split("?")[1] || "").get(k);
@@ -18,7 +20,7 @@ const key = (n) => String(n || "").trim().toLowerCase();
 const PRESET = {
   pedas: { nama: "Level pedas", tipe: "satu", wajib: true, pilihan: [["Tidak pedas", 0], ["Level 1", 0, "cabai", 3], ["Level 3", 0, "cabai", 8], ["Level 5", 1000, "cabai", 15]] },
   topping: { nama: "Topping tambahan", tipe: "banyak", wajib: false, maks: 3, pilihan: [["Telur", 4000, "telur", 1], ["Keju", 3000, "keju", 15], ["Bakso", 4000, "bakso", 3]] },
-  ukuran: { nama: "Ukuran", tipe: "satu", wajib: true, pilihan: [["Reguler", 0], ["Jumbo", 3000]] },
+  ukuran: { nama: "Ukuran", tipe: "satu", wajib: true, pilihan: [["Reguler", 0], ["Jumbo", 3000, null, 0, 1.5]] },
   manis: { nama: "Tingkat manis", tipe: "satu", wajib: false, pilihan: [["Normal", 0], ["Kurang manis", 0], ["Tanpa gula", 0]] },
 };
 
@@ -32,12 +34,30 @@ function dariPreset(id) {
     tipe: p.tipe,
     wajib: p.wajib,
     maks: p.maks || "",
-    pilihan: p.pilihan.map(([nama, harga, kata, qty]) => {
+    pilihan: p.pilihan.map(([nama, harga, kata, qty, porsi]) => {
       const b = cari(kata);
-      return { id: uid(), nama, harga, habis: false, items: b ? [{ bahanId: b.id, qty }] : [] };
+      return { id: uid(), nama, harga, habis: false, items: b ? [{ bahanId: b.id, qty }] : [], ...(porsi ? { porsi, tetap: kemasanDi(store.get(), draftMenuKosong) } : {}) };
     }),
     menu: new Set(),
   };
+}
+
+const draftMenuKosong = new Set();
+
+/** Menu yang dicentang di draft (kalau belum ada: semua menu). */
+const menuDraft = (s) => {
+  const pilih = s.resep.filter((r) => draft?.menu?.has(r.id));
+  return pilih.length ? pilih : s.resep;
+};
+/** Bahan resep dasar dari menu-menu itu (urut nama). */
+function bahanDasar(s, menus) {
+  const ids = new Set(menus.flatMap((r) => (r.items || []).map((it) => it.bahanId)));
+  return s.bahan.filter((b) => ids.has(b.id)).sort((a, b) => a.nama.localeCompare(b.nama, "id"));
+}
+/** Tebakan awal bahan kemasan (tidak ikut dikali porsi). */
+function kemasanDi(s, menuSet) {
+  const menus = s.resep.filter((r) => menuSet.has(r.id));
+  return bahanDasar(s, menus.length ? menus : s.resep).filter(tebakKemasan).map((b) => b.id);
 }
 
 function load() {
@@ -74,8 +94,19 @@ function pilihanHtml(s, p, i) {
     .sort((a, b) => a.nama.localeCompare(b.nama, "id"))
     .map((b) => `<option value="${b.id}" ${b.id === cur ? "selected" : ""}>${esc(b.nama)} (${esc(b.satuan)})</option>`)
     .join("")}`;
-  const hpp = hppPilihan(p, map);
   const harga = Number(p.harga) || 0;
+  const menus = s.resep.filter((r) => draft.menu.has(r.id));
+  const dasar = bahanDasar(s, menuDraft(s));
+  const porsi = porsiPilihan(p);
+  const ubah = ubahResep(p);
+  const hpp = ubah && menus.length ? hppPilihanDi(menus[0], p, map) : hppPilihan(p, map);
+  const tetap = new Set(p.tetap || []);
+  const dasarOpt = (cur) => `<option value="">Bahan di resep…</option>${dasar.map((b) => `<option value="${b.id}" ${b.id === cur ? "selected" : ""}>${esc(b.nama)}</option>`).join("")}`;
+  const keOpt = (cur) => `<option value="" ${!cur ? "selected" : ""}>Dihilangkan (tanpa)</option>${[...s.bahan]
+    .sort((a, b) => a.nama.localeCompare(b.nama, "id"))
+    .map((b) => `<option value="${b.id}" ${b.id === cur ? "selected" : ""}>${esc(b.nama)} (${esc(b.satuan)})</option>`)
+    .join("")}`;
+  const bukaResep = ubah || bukaUbah.has(p.id);
   return `<div class="card opsi-edit" data-i="${i}">
     <div class="row-between"><b class="mono">#${i + 1}</b><button type="button" class="icon-btn sm" data-action="delPilihan" data-i="${i}" aria-label="Hapus pilihan">${icon("x", 14)}</button></div>
     <div class="row2">
@@ -95,8 +126,34 @@ function pilihanHtml(s, p, i) {
         .join("")}
       ${s.bahan.length ? `<button type="button" class="btn ghost sm" data-action="addPBahan" data-i="${i}">+ Bahan</button>` : `<p class="small muted">Belum ada bahan. Bikin resep dulu biar bahannya kecatat.</p>`}
     </div>
+    <details class="opsi-ubah" data-id="${p.id}" ${bukaResep ? "open" : ""}>
+      <summary>Ubah resep dasar <small class="muted">(porsi jumbo, ganti / tanpa bahan)</small></summary>
+      <label class="field"><span>Porsi resep (×)</span><input type="number" inputmode="decimal" min="0.1" max="10" step="0.25" value="${porsi !== 1 ? porsi : ""}" placeholder="1 = sama kayak resep, 1.5 = jumbo" data-change="pilihan" data-f="porsi" data-i="${i}"></label>
+      ${
+        porsi !== 1 && dasar.length
+          ? `<div class="field"><span>Nggak ikut dikali <small class="muted">(kemasan, cup, sendok)</small></span><div class="chips">${dasar
+              .map((b) => `<label class="chip"><input type="checkbox" data-change="tetap" data-i="${i}" value="${b.id}" ${tetap.has(b.id) ? "checked" : ""}><span>${esc(b.nama)}</span></label>`)
+              .join("")}</div></div>`
+          : ""
+      }
+      <div class="field"><span>Ganti bahan resep</span>
+        ${(p.ganti || [])
+          .map(
+            (x, j) => `<div class="opsi-ganti">
+              <select data-change="pganti" data-f="dari" data-i="${i}" data-j="${j}" aria-label="Bahan yang diganti">${dasarOpt(x.dari)}</select>
+              <span class="muted">jadi</span>
+              <select data-change="pganti" data-f="ke" data-i="${i}" data-j="${j}" aria-label="Diganti dengan">${keOpt(x.ke)}</select>
+              <button type="button" class="icon-btn sm" data-action="delGanti" data-i="${i}" data-j="${j}" aria-label="Hapus">${icon("x", 12)}</button>
+            </div>`,
+          )
+          .join("")}
+        ${dasar.length ? `<button type="button" class="btn ghost sm" data-action="addGanti" data-i="${i}">+ Ganti bahan</button>` : `<p class="small muted">Centang menu yang pakai grup ini dulu biar bahan resepnya muncul.</p>`}
+        <p class="small muted">Contoh: susu sapi jadi susu oat, atau gula dihilangkan buat "tanpa gula". Jumlahnya ngikut resep.</p>
+      </div>
+      ${ubah && menus.length ? `<div class="breakdown small">${menus.slice(0, 4).map((r) => { const h = hppPilihanDi(r, p, map); return `<div class="row-between"><span>${esc(r.nama)}</span><span class="mono">HPP ${h < 0 ? "−" : "+"}${rupiah(Math.abs(h))}</span></div>`; }).join("")}</div>` : ""}
+    </details>
     <div class="row-between small">
-      <span class="muted">${(p.items || []).some((it) => it.bahanId) ? `HPP tambahan ${rupiah(hpp)} · untung ${rupiah(harga - hpp)}` : harga ? "Tanpa bahan tambahan" : "Gratis, tanpa bahan tambahan"}</span>
+      <span class="muted">${ubah ? (menus.length ? `HPP ${hpp < 0 ? "−" : "+"}${rupiah(Math.abs(hpp))} di ${esc(menus[0].nama)} · untung ${rpTanda(harga - hpp)}` : "Ngubah resep dasar") : (p.items || []).some((it) => it.bahanId) ? `HPP tambahan ${rupiah(hpp)} · untung ${rupiah(harga - hpp)}` : harga ? "Tanpa bahan tambahan" : "Gratis, tanpa bahan tambahan"}</span>
       <label class="todo"><input type="checkbox" data-change="pilihan" data-f="habis" data-i="${i}" ${p.habis ? "checked" : ""}><span>Lagi habis</span></label>
     </div>
   </div>`;
@@ -148,6 +205,12 @@ export const varian = {
       ${ada() ? `<button class="btn danger block" data-action="del">Hapus grup ini</button>` : ""}`;
   },
 
+  after(root) {
+    root.querySelectorAll("details.opsi-ubah").forEach((el) =>
+      el.addEventListener("toggle", () => (el.open ? bukaUbah.add(el.dataset.id) : bukaUbah.delete(el.dataset.id))),
+    );
+  },
+
   changes: {
     field(el) {
       const f = el.dataset.f;
@@ -163,8 +226,26 @@ export const varian = {
       const f = el.dataset.f;
       if (f === "habis") p.habis = el.checked;
       else if (f === "harga") p.harga = Math.max(0, Math.round(Number(el.value) || 0));
-      else p.nama = el.value;
-      if (f === "harga") render();
+      else if (f === "porsi") {
+        const lama = porsiPilihan(p);
+        p.porsi = el.value === "" ? 1 : Math.min(10, Math.max(0.1, Number(el.value) || 1));
+        // Pertama kali diisi: tebak bahan kemasan yang nggak ikut dikali
+        if (lama === 1 && porsiPilihan(p) !== 1 && !(p.tetap || []).length) p.tetap = kemasanDi(store.get(), draft.menu);
+        bukaUbah.add(p.id);
+      } else p.nama = el.value;
+      if (f === "harga" || f === "porsi") render();
+    },
+    tetap(el) {
+      const p = draft.pilihan[Number(el.dataset.i)];
+      const set = new Set(p.tetap || []);
+      el.checked ? set.add(el.value) : set.delete(el.value);
+      p.tetap = [...set];
+      render();
+    },
+    pganti(el) {
+      const p = draft.pilihan[Number(el.dataset.i)];
+      p.ganti[Number(el.dataset.j)][el.dataset.f] = el.value;
+      render();
     },
     pbahan(el) {
       const p = draft.pilihan[Number(el.dataset.i)];
@@ -175,6 +256,7 @@ export const varian = {
     },
     menu(el) {
       el.checked ? draft.menu.add(el.value) : draft.menu.delete(el.value);
+      if (draft.pilihan.some(ubahResep)) render();
     },
   },
 
@@ -192,6 +274,16 @@ export const varian = {
       draft.pilihan[Number(el.dataset.i)].items.push({ bahanId: "", qty: "" });
       render();
     },
+    addGanti(el) {
+      const p = draft.pilihan[Number(el.dataset.i)];
+      p.ganti = [...(p.ganti || []), { dari: "", ke: "" }];
+      bukaUbah.add(p.id);
+      render();
+    },
+    delGanti(el) {
+      draft.pilihan[Number(el.dataset.i)].ganti.splice(Number(el.dataset.j), 1);
+      render();
+    },
     delPBahan(el) {
       draft.pilihan[Number(el.dataset.i)].items.splice(Number(el.dataset.j), 1);
       render();
@@ -206,6 +298,10 @@ export const varian = {
           harga: Math.max(0, Math.round(Number(p.harga) || 0)),
           items: (p.items || []).filter((it) => it.bahanId && Number(it.qty) > 0).map((it) => ({ bahanId: it.bahanId, qty: Number(it.qty) })),
           ...(p.habis ? { habis: true } : {}),
+          ...(porsiPilihan(p) !== 1 ? { porsi: porsiPilihan(p), tetap: [...new Set(p.tetap || [])] } : {}),
+          ...((p.ganti || []).some((x) => x.dari && x.dari !== x.ke)
+            ? { ganti: [...new Map(p.ganti.filter((x) => x.dari && x.dari !== x.ke).map((x) => [x.dari, { dari: x.dari, ke: x.ke || "" }])).values()] }
+            : {}),
         }))
         .filter((p) => p.nama);
       if (!pilihan.length) return toast("Tambahkan minimal 1 pilihan", "err");
@@ -266,8 +362,9 @@ export function varianTab(s) {
         <div class="row-between"><div><h3 style="margin:0">${esc(g.nama)}</h3><p class="small muted">${g.tipe === "satu" ? "Pilih satu" : g.maks ? `Maks. ${g.maks}` : "Boleh lebih dari 1"} · ${g.wajib ? "wajib" : "opsional"}</p></div><a href="#/varian?id=${g.id}" class="btn ghost sm">Edit</a></div>
         <div class="breakdown small">${g.pilihan
           .map((p) => {
-            const h = hppPilihan(p, map);
-            return `<div class="row-between"><span>${esc(p.nama)}${p.habis ? ` <span class="tag">habis</span>` : ""}</span><span class="mono">${p.harga ? `+${rupiah(p.harga)}` : "gratis"}${h ? ` <small class="muted">HPP ${rupiah(h)}</small>` : ""}</span></div>`;
+            const h = ubahResep(p) && menu.length ? hppPilihanDi(menu[0], p, map) : hppPilihan(p, map);
+            const ket = [porsiPilihan(p) !== 1 ? `${String(porsiPilihan(p)).replace(".", ",")}× porsi` : "", (p.ganti || []).length ? "ganti bahan" : ""].filter(Boolean).join(" · ");
+            return `<div class="row-between"><span>${esc(p.nama)}${p.habis ? ` <span class="tag">habis</span>` : ""}${ket ? ` <small class="muted">${ket}</small>` : ""}</span><span class="mono">${p.harga ? `+${rupiah(p.harga)}` : "gratis"}${h ? ` <small class="muted">HPP ${h < 0 ? "−" : ""}${rupiah(Math.abs(h))}</small>` : ""}</span></div>`;
           })
           .join("")}</div>
         <p class="small muted">${menu.length ? `Dipakai di: ${menu.map((r) => esc(r.nama)).join(", ")}` : `<span class="neg">Belum dipasang ke menu mana pun.</span>`}</p>
