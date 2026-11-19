@@ -1,4 +1,5 @@
 import { icon } from "../icons.js";
+import { bolehPro } from "../paket.js";
 import { store, uid } from "../store.js";
 import { esc, rupiah, toast, list } from "../ui.js";
 import { ai } from "../ai.js";
@@ -67,7 +68,7 @@ function fotoCard() {
       <div class="field"><span>Gaya (untuk AI)</span><div class="chips">${GAYA.map((g) => `<button type="button" class="chip-btn ${foto.gaya === g.id ? "on" : ""}" data-action="fotoGaya" data-g="${g.id}" ${sibuk ? "disabled" : ""}>${g.nama}</button>`).join("")}</div></div>
       <div class="row2">
         <button type="button" class="btn ghost foto-btn" data-action="fotoAuto" ${sibuk ? "disabled" : ""}><span>Percantik otomatis</span><small>gratis · di HP</small></button>
-        <button type="button" class="btn soft foto-btn" data-action="fotoAI" ${sibuk ? "disabled" : ""}><span>${icon("spark", 16)} Percantik pakai AI</span><small>Gemini · kuota harian</small></button>
+        ${bolehPro() ? `<button type="button" class="btn soft foto-btn" data-action="fotoAI" ${sibuk ? "disabled" : ""}><span>${icon("spark", 16)} Percantik pakai AI</span><small>Gemini · kuota harian</small></button>` : `<a href="#/paket" class="btn soft foto-btn"><span>${icon("lock", 16)} Percantik pakai AI</span><small>khusus paket Pro</small></a>`}
       </div>
       <div class="row2">
         <button type="button" class="btn ${foto.hasil ? "ghost" : "primary"}" data-action="fotoSimpan" data-v="asli" ${sibuk ? "disabled" : ""}>Simpan foto asli</button>

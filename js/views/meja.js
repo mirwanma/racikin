@@ -1,5 +1,7 @@
 // Manajemen meja & QR (pemilik/manajer). Fitur opsional "Pesan lewat meja".
 import { store, uid } from "../store.js";
+import { bolehPro } from "../paket.js";
+import { kunciPro } from "./paket.js";
 import { esc, rupiah, toast, copy } from "../ui.js";
 import { render } from "../app.js";
 import { icon } from "../icons.js";
@@ -40,6 +42,7 @@ export const meja = {
       return `${h}<section class="card empty"><div class="empty-icon">${icon("grid", 30)}</div><h3>Masuk dulu</h3><p>Pesan lewat meja butuh akun, supaya pesanan pelanggan bisa masuk ke Kasir.</p><a href="#/akun" class="btn primary">Masuk / Daftar</a></section>`;
     }
     if (!bisaAtur()) return `${h}<section class="card"><p>Hanya pemilik atau manajer yang bisa mengatur meja.</p></section>`;
+    if (!bolehPro()) return `${h}${kunciPro("meja", mejaAktif(s) ? "Paket Pro usaha ini habis, jadi pelanggan sementara nggak bisa pesan lewat QR. Upgrade buat nyalain lagi." : "")}`;
     const list = s.meja || [];
     pastikanQr(list);
     if (cetak) {

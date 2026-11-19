@@ -1430,3 +1430,30 @@ body[data-admin="1"] .adm-chart i { background: var(--a-y); }
 .bill-pilih:hover { background: var(--yellow-tint); }
 .bill-bayar { border-color: var(--yellow-deep); }
 .danger-text { color: var(--chili); }
+.hidden { display: none !important; }
+
+/* ---------- Paket Gratis / Pro ---------- */
+.pro-tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 99px; background: var(--ink); color: var(--yellow); font: 700 10.5px var(--mono); letter-spacing: 0.04em; vertical-align: middle; }
+.pro-kunci { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; border-style: dashed; }
+.pro-kunci h3 { margin: 2px 0 0; }
+.pro-kunci p { margin: 0 0 6px; }
+.paket-mini { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; color: inherit; text-decoration: none; border-left: 4px solid var(--yellow-deep); }
+.paket-mini.turun { border-left-color: var(--chili); }
+.paket-mini small { display: block; }
+.paket-status h2 { margin: 4px 0; font-size: 22px; }
+.paket-status.pro { background: var(--yellow-soft); }
+.paket-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+.paket-kol h3 { margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.paket-kol.pro { border-width: 2px; box-shadow: 4px 4px 0 var(--shadow-c); }
+.paket-harga { display: block; font-size: 30px; font-weight: 900; font-stretch: 112%; margin: 8px 0 4px; }
+.paket-harga small { font-size: 14px; font-weight: 600; color: var(--muted); }
+.paket-kol .checks li small { display: inline; }
+@media (max-width: 680px) { .paket-grid { grid-template-columns: 1fr; } }
+.a-pk { display: inline-block; font: 700 10px var(--mono); letter-spacing: 0.04em; text-transform: uppercase; padding: 1px 6px; border-radius: 99px; border: 1px solid currentColor; vertical-align: middle; color: var(--a-mut); }
+.a-pk.bayar { color: var(--a-yl); background: var(--a-yfill); }
+.a-pk.coba, .a-pk.transisi { color: var(--a-b); }
+.a-paket { display: flex; flex-direction: column; gap: 8px; }
+.a-paket p { margin: 0; }
+.a-input { width: 100%; background: var(--a-bg); border: 1px solid var(--a-line); color: var(--a-ink); border-radius: 9px; padding: 8px 10px; font: 13px var(--font); box-shadow: none; }
+.a-paket-act { display: flex; gap: 6px; flex-wrap: wrap; }
+.a-btn.neg { color: var(--a-r); }

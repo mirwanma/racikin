@@ -152,6 +152,25 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Pilihan varian bisa mengalikan porsi resep (Jumbo 1,5×, bahan kemasan tidak ikut dikali) dan mengganti / menghilangkan bahan resep (susu oat, tanpa gula). Stok, HPP per menu, rekap `opsiMenu`, laporan & cek kesehatan ikut. Data contoh: Es Teh Jumbo 1,5× porsi, pilihan "Tanpa gula".
 - Tanpa perubahan server (harga tetap dari harga tambahan; pesan meja ikut otomatis).
 
+### Fase 29: Monetisasi tahap 1, paket Gratis & Pro (selesai)
+Keputusan pemilik (20 Nov 2026):
+
+| Hal | Keputusan |
+|---|---|
+| Harga Pro | **Rp49.000/bulan** atau **Rp490.000/tahun** (hemat ±2 bulan). Bisa diubah admin di Akun mode admin. |
+| Masa coba | Pendaftar baru dapat **Pro 14 hari**, lalu otomatis Gratis (data tetap aman). |
+| Masa transisi | Akun yang daftar sebelum fitur ini rilis dapat **Pro gratis sampai 20 Feb 2027**. |
+| Fitur Pro | Tim > 1 orang (kasir/manajer/dapur), pesan meja QR, layar dapur, open bill, foto menu AI, impor penjualan lama, kuota AI **300/hari**. |
+| Fitur Gratis | Kasir, Kas & laporan, resep/HPP/stok, promo & voucher, kartu stempel, WhatsApp, cek kesehatan, panduan izin, AI **20/hari**. |
+| Cara bayar | Belum ada payment gateway: tombol upgrade membuka **chat WA admin** (pesan berisi email & nama usaha), admin mengaktifkan / memperpanjang Pro 1 bulan / 1 tahun dari dashboard. |
+| Tanpa akun | Semua fitur bisa dicoba di HP itu (data lokal); yang butuh server tetap butuh akun Pro. |
+
+- **Server yang menentukan** (`paket_info` / `paket_saya`): Pro berbayar (`langganan`) → masa transisi → masa coba → Gratis. Kunci di server: kuota AI per paket (`consume_ai_quota`), AI foto khusus Pro, undang & gabung tim, anggota tim kehilangan akses kalau Pro usaha habis (`team_role`), pesan meja nonaktif (`meja_dari_token`). Fitur yang datanya hanya di dokumen usaha (open bill, impor penjualan, layar dapur pemilik) dikunci di app; bill yang masih buka tetap bisa dibayar saat Pro habis.
+- **Merchant**: halaman `#/paket` (status, perbandingan, harga, upgrade via WA), kartu paket di Akun, pengingat di Beranda (masa coba/transisi ≤ 7 hari, Pro bayar ≤ 5 hari, baru turun ke Gratis ≤ 14 hari), kotak "khusus Pro" di fitur yang terkunci, ajakan upgrade saat kuota AI harian habis.
+- **Admin**: tag paket per merchant, kotak MRR / Pro berbayar (konversi) / masa coba & transisi / Gratis, panel paket di detail merchant (aktifkan / perpanjang 1 bulan / 1 tahun + catatan pembayaran, hentikan), setelan harga & nomor WA upgrade. Riwayat perubahan di `langganan_log`.
+- Migrasi `monetisasi`: `platform_setting`, `langganan`, `langganan_log`, `owner_dari`, `paket_info`, `paket_pro`, `paket_saya`, `admin_paket`, `admin_setting`, `admin_set_setting`, `admin_set_langganan`.
+- **Tahap berikutnya**: payment gateway (Midtrans/Xendit) untuk bayar langganan otomatis + QRIS asli di pesan meja, invoice/kuitansi, kode referral, paket per cabang.
+
 ### Fase 28: Open bill + pembayaran campuran (selesai)
 - Bill terbuka per meja/pembeli dengan ronde (stok dipotong saat dikirim, Kas saat dilunasi), pesan meja "bayar di kasir" masuk bill meja, batal item/bill (pemilik/manajer + alasan), peringatan tutup shift, pembayaran sebagian tunai + QRIS/transfer. Migrasi `open_bill_kasir` (kasir boleh menulis `bills`).
 - Berikutnya (opsional): split bill per orang / bayar sebagian, pindah & gabung meja, batal sebagian qty.
@@ -164,7 +183,7 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Desain ulang "pusat kontrol" (gelap, ikut mode terang): periode 7/30/90 hari, grafik omzet & order harian, tabel merchant dengan grafik mini, "Perlu disapa". Migrasi `admin_desain`: `admin_harian` + `seri14`/`order90` di `admin_merchants`.
 
 ### Di luar MVP (fase berikutnya)
-Monetisasi/langganan, WhatsApp Business API resmi, payment gateway sungguhan.
+Payment gateway sungguhan (langganan Pro otomatis + QRIS pesan meja), WhatsApp Business API resmi, split bill per orang, multi-cabang.
 
 ## 6. Arsitektur MVP
 - **Frontend**: PWA statis (HTML + CSS + JS modules, tanpa build) di root repo ini, di-host di GitHub Pages. Data disimpan di `localStorage` (offline-first).
@@ -187,3 +206,5 @@ Monetisasi/langganan, WhatsApp Business API resmi, payment gateway sungguhan.
 - Sinkron per dokumen: kalau dua perangkat mengubah data saat offline, salah satu versi harus dipilih (belum merge per item).
 - Email konfirmasi/reset butuh Custom SMTP untuk user umum (batas server email bawaan Supabase).
 - Angka estimasi AI (harga, RAB) bukan nasihat keuangan → tampilkan disclaimer.
+- Monetisasi: pembayaran Pro masih manual lewat WA (rawan telat diaktifkan) → payment gateway di tahap berikutnya; harga & masa transisi bisa diubah tanpa rilis app (`platform_setting`).
+- Fitur Pro yang datanya hanya di dokumen usaha (open bill, impor penjualan) dikunci di app saja, belum di server.

@@ -18,6 +18,15 @@ const SERI = { '11111111-1111-1111-1111-111111111111': [8,9,10,9,11,10,12,9,11,1
 for (const m of MERCHANT) { m.seri14 = SERI[m.id] || Array(14).fill(0); m.order90 = m.order30 + m.order_prev30; m.omzet90 = m.omzet30 + m.omzet_prev30; }
 // Total platform per hari, 180 hari (90 sekarang + 90 sebelumnya). 30 hari terakhir: order 10/hari, omzet 200rb/hari; 30 hari sebelumnya: 5/hari.
 const HARIAN = Array.from({ length: 180 }, (_, i) => { const umur = 179 - i; const o = umur < 30 ? 10 : umur < 60 ? 5 : 2; return { tgl: iso(umur), order: o, omzet: o * 20000, jualan: umur < 30 ? 2 : 1, daftar: umur === 3 ? 1 : 0, ai: umur < 30 ? 1 : 0 }; });
+// Paket: Bakso Bu Sari Pro bayar bulanan, Kopi Senja gratis, Dimsum Mama masa coba, akun tes transisi.
+const PAKET = [
+  { id: '11111111-1111-1111-1111-111111111111', paket: 'pro', sumber: 'bayar', periode: 'bulan', sampai: iso(-20) + 'T00:00:00Z', catatan: 'transfer BCA' },
+  { id: '22222222-2222-2222-2222-222222222222', paket: 'gratis', sumber: null, pro_terakhir: iso(40) + 'T00:00:00Z', catatan: '' },
+  { id: '33333333-3333-3333-3333-333333333333', paket: 'pro', sumber: 'coba', sampai: iso(-11) + 'T00:00:00Z', catatan: '' },
+  { id: '55555555-5555-5555-5555-555555555555', paket: 'pro', sumber: 'transisi', sampai: '2027-02-20T16:59:59Z', catatan: '' },
+];
+const SETTING = { wa: '', harga_bulan: 49000, harga_tahun: 490000, coba_hari: 14, transisi_sampai: '2027-02-20T16:59:59Z' };
+const SET = [];
 const DETAIL = { harian: Array.from({ length: 60 }, (_, i) => ({ tgl: iso(59 - i), order: 5 + (i % 7), omzet: (5 + (i % 7)) * 20000 })), terlaris: [{ nama: 'Bakso Urat', porsi: 420 }, { nama: 'Es Teh', porsi: 210 }], tim: [{ role: 'kasir', n: 2 }], ai: [{ task: 'mentor_chat', n: 10 }], meja: 30 };
 
 async function halaman(b, { admin }) {
@@ -35,6 +44,11 @@ async function halaman(b, { admin }) {
     if (url.includes('/rpc/admin_merchants')) return admin ? json(MERCHANT) : json({ message: 'Khusus admin Racikin' }, 400);
     if (url.includes('/rpc/admin_merchant_detail')) return json(DETAIL);
     if (url.includes('/rpc/admin_harian')) return json(HARIAN);
+    if (url.includes('/rpc/admin_paket')) return json(PAKET);
+    if (url.includes('/rpc/admin_setting')) return json(SETTING);
+    if (url.includes('/rpc/admin_set_setting')) { const b = JSON.parse(route.request().postData()); Object.assign(SETTING, { wa: b.p_wa.replace(/\D/g, ''), harga_bulan: b.p_harga_bulan, harga_tahun: b.p_harga_tahun }); return json(SETTING); }
+    if (url.includes('/rpc/admin_set_langganan')) { const b = JSON.parse(route.request().postData()); SET.push(b); return json({ paket: 'pro', sumber: 'bayar', sampai: b.p_sampai, periode: b.p_periode }); }
+    if (url.includes('/rpc/paket_saya')) return json({ paket: 'pro', sumber: 'transisi', sampai: '2027-02-20T16:59:59Z' });
     if (url.includes('/auth/v1/user')) return json({ id: uid, email: 'admin@contoh.id', aud: 'authenticated', role: 'authenticated' });
     if (url.includes('/rpc/my_team')) return json(null);
     if (url.includes('/rpc/doc_get')) return json(null);
@@ -78,6 +92,10 @@ async function halaman(b, { admin }) {
   const sapa = await p.$$eval('.a-alert', (a) => a.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
   console.log('sapa:', sapa);
   ok(sapa.length === 2 && sapa[0].includes('Kopi Senja') && sapa[1].includes('Dimsum Mama') && sapa[1].includes('menu masih kosong'), 'Perlu disapa: Kopi Senja (berhenti) & Dimsum Mama (menu kosong)');
+  const lg = await p.$$eval('.a-bento-4 .a-tile', (a) => a.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+  console.log('langganan:', lg.join(' | '));
+  ok(/MRR\)\s*Rp 49rb/i.test(lg[0]) && /Pro berbayar\s*1/.test(lg[1]) && /Masa coba \/ transisi\s*1/.test(lg[2]) && /Gratis\s*1/.test(lg[3]), 'langganan: MRR 49rb, 1 Pro, 1 coba (akun tes disembunyikan), 1 gratis');
+  ok((await txt(p, '.a-flush')).includes('PRO') || (await p.$$eval('.a-flush .a-pk', (a) => a.length)) >= 2, 'tabel: tag paket per merchant');
   await p.screenshot({ path: OUT + '/a1-ringkasan.png', fullPage: true });
 
   // Periode 7 hari
@@ -115,6 +133,11 @@ async function halaman(b, { admin }) {
   const det = await txt(p, '.adm-detail');
   console.log('detail:', det.slice(0, 260));
   ok((await p.$$eval('.adm-chart i', (a) => a.length)) === 60 && det.includes('Bakso Urat') && det.includes('sari@contoh.id') && det.includes('2 kasir'), 'detail: grafik 60 hari, terlaris, email, tim');
+  ok((await txt(p, '.a-paket')).includes('transfer BCA'), 'detail: panel paket + catatan pembayaran');
+  await p.fill('[data-change=catatanPro]', 'transfer 20/11'); await p.press('[data-change=catatanPro]', 'Tab');
+  p.once('dialog', (d) => d.accept());
+  await p.click('[data-action=proSet][data-periode=tahun]'); await p.waitForTimeout(300);
+  ok(SET.length === 1 && SET[0].p_periode === 'tahun' && SET[0].p_catatan === 'transfer 20/11' && SET[0].p_owner.startsWith('1111') && new Date(SET[0].p_sampai) > new Date(Date.now() + 360 * 864e5), 'perpanjang Pro 1 tahun dari sisa masa aktif');
   await p.screenshot({ path: OUT + '/a2-merchant.png', fullPage: true });
 
   // CSV
@@ -132,6 +155,10 @@ async function halaman(b, { admin }) {
   // Akun versi admin + pindah ke app usaha & balik
   await p.click('.tabbar a[data-tab="akun"]'); await p.waitForSelector('[data-action=keUsaha]');
   ok((await txt(p, '.view')).includes('Admin platform') && !(await p.$('a[href="#/tim"]')), 'Akun admin: tanpa menu usaha (Tim, Pengingat)');
+  await p.waitForSelector('form[data-form=platform]');
+  await p.fill('form[data-form=platform] input[name=wa]', '0812 1111 2222'); await p.fill('form[data-form=platform] input[name=bulan]', '59000');
+  await p.click('form[data-form=platform] button.primary'); await p.waitForTimeout(400);
+  ok(SETTING.wa === '081211112222' && SETTING.harga_bulan === 59000, 'setelan paket Pro (nomor WA & harga) tersimpan');
   await p.click('[data-action=keUsaha]'); await p.waitForSelector('.hero, form[data-form]', { timeout: 10000 }); await p.waitForTimeout(300);
   ok(p.url().includes('#/profil') && (await p.getAttribute('body', 'data-admin')) === '', 'Buka app usaha: keluar dari mode admin (ke isi profil)');
   await p.goto(B + '#/akun'); await p.waitForSelector('[data-action=keAdmin]');

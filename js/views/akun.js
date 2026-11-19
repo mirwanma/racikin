@@ -4,7 +4,8 @@ import { esc, toast } from "../ui.js";
 import { render, go } from "../app.js";
 import { cloud, signIn, signUp, sendReset, setNewPassword, signOut, syncNow, isMember } from "../cloud.js";
 import { peranNama } from "./tim.js";
-import { cekAdmin, adminDiketahui, isAdminMode, modeUsaha, setModeUsaha, lupakanAdmin } from "./admin.js";
+import { paketKini, labelPaket } from "../paket.js";
+import { cekAdmin, adminDiketahui, isAdminMode, modeUsaha, setModeUsaha, lupakanAdmin, platformCard, simpanPlatform } from "./admin.js";
 
 let mode = "masuk"; // masuk | daftar | lupa
 let busy = false;
@@ -70,6 +71,7 @@ export const akun = {
           <p class="small"><span class="pill adm-badge">${icon("lock", 12)} Admin platform</span></p>
           <p class="small muted">Kamu lagi di mode admin: menu usaha (Kasir, Kas, Konten, Bisnis) disembunyiin. Data merchant cuma bisa dilihat, nggak bisa diubah.</p>
         </section>
+        ${platformCard()}
         <section class="card">
           <h2 class="card-title">Punya usaha sendiri juga?</h2>
           <p class="small">${punyaUsaha ? "Akun ini juga punya data usaha. Buka app usaha buat jualan & ngatur usahamu." : "Akun ini belum punya data usaha. Kalau mau nyoba app sebagai merchant, buka app usaha lalu isi profil."}</p>
@@ -89,6 +91,13 @@ export const akun = {
           <button class="btn soft" data-action="sync" ${cloud.status === "syncing" ? "disabled" : ""}>${icon("sync", 16)} Sinkron sekarang</button>
         </section>
 
+        ${
+          isMember()
+            ? cloud.team?.pro === false
+              ? `<p class="warn-box small">${icon("lock", 14)} Paket Pro usaha ini sudah habis, jadi akun tim sementara nggak bisa dipakai. Minta pemilik memperpanjang.</p>`
+              : ""
+            : `<a href="#/paket" class="card module"><span class="module-num">${icon("spark", 18)}</span><div><h3>Paket: ${esc(labelPaket(paketKini()))}</h3><p class="muted small">${paketKini().paket === "gratis" ? "Upgrade ke Pro buat tim, pesan meja, dapur, open bill & foto AI" : "Lihat detail paket & perpanjang"}</p></div><span class="chev">${icon("chevron", 18)}</span></a>`
+        }
         <a href="#/tim" class="card module">
           <span class="module-num">${icon("team", 18)}</span>
           <div><h3>${isMember() ? esc(cloud.team.bisnis || "Tim") : "Tim & Karyawan"}</h3><p class="muted small">${
@@ -197,6 +206,9 @@ export const akun = {
   },
 
   forms: {
+    platform(form) {
+      return run(() => simpanPlatform(form));
+    },
     auth(form) {
       const fd = new FormData(form);
       const email = fd.get("email").trim();

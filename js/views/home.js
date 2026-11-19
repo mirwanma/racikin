@@ -4,13 +4,14 @@ import { monthStats } from "./_shared.js";
 import { store } from "../store.js";
 import { render } from "../app.js";
 import { syncBadge } from "./akun.js";
-import { cloud } from "../cloud.js";
+import { cloud, isMember } from "../cloud.js";
 import { program, siapTukar, perluDiajak } from "../loyalty.js";
 import { menipis, belumDiisi, bahanMap, bisaDibuat, fmtQty } from "../stok-utils.js";
 import { langkah, isJalan, tawarNaik, hariJualan, fokus } from "../tahap.js";
 import { saldoKas } from "../impor.js";
 import { sehatCard } from "./sehat.js";
 import { izinCard } from "./izin.js";
+import { paketCard } from "./paket.js";
 
 /** Langkah di Beranda (beda untuk usaha baru vs yang sudah jalan, lihat js/tahap.js). */
 export const journey = (s) => langkah(s, { anggotaTim: cloud.team?.role === "owner" ? cloud.team.anggota || 0 : 0 });
@@ -99,6 +100,7 @@ export const home = {
       ${naikCard(s)}
       ${isJalan(s) || hariJualan(s) >= 7 ? sehatCard(s) : ""}
       ${izinCard(s)}
+      ${cloud.user && !isMember() ? paketCard() : ""}
       <section class="card journey">
         <div class="row-between">
           <h2 class="card-title">${isJalan(s) ? "Beresin usahamu" : "Perjalanan bisnismu"}</h2>
