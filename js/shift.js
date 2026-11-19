@@ -13,6 +13,9 @@
 // "keluar" (beli es, dll.) dibayar dari laci -> juga jadi pengeluaran di Kas (ref "laci").
 // "tambah" (uang kembalian ditambah) & "ambil" (disetor ke pemilik) hanya memindah uang, tidak masuk Kas.
 import { uid } from "./store.js";
+
+// Sama dengan porsiMetode di js/pos.js (ditulis ulang di sini supaya tidak saling impor).
+const porsiMetode = (o) => (Array.isArray(o.pembayaran) && o.pembayaran.length ? o.pembayaran : [{ metode: o.metode, jumlah: o.total }]);
 import { todayISO } from "./ui.js";
 
 export const SIMPAN_SHIFT_HARI = 90;
@@ -41,8 +44,11 @@ export const wajibShift = (s) => !!s.posSetting?.wajibShift;
 /** Ringkasan uang shift (dihitung dari order & catatan laci). */
 export function ringkasan(s, shift) {
   const orders = (s.orders || []).filter((o) => o.shiftId === shift.id && o.status !== "batal");
-  const tunai = sum(orders.filter((o) => o.metode === "tunai"), (o) => o.total);
-  const nonTunai = sum(orders.filter((o) => o.channel === "toko" && o.metode !== "tunai"), (o) => o.total);
+  // Pembayaran campuran: bagian tunai masuk laci, sisanya non-tunai.
+  const tunaiDari = (o) => sum(porsiMetode(o).filter((x) => x.metode === "tunai"), (x) => Number(x.jumlah) || 0);
+  const toko = orders.filter((o) => !o.channel || o.channel === "toko");
+  const tunai = sum(toko, tunaiDari);
+  const nonTunai = sum(toko, (o) => o.total - tunaiDari(o));
   const online = sum(orders.filter((o) => o.channel && o.channel !== "toko"), (o) => o.total);
   const laci = shift.laci || [];
   const keluar = sum(laci.filter((l) => l.jenis === "keluar"), (l) => l.nominal);

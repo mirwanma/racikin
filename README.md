@@ -119,6 +119,16 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - Tab **Hari ini**: omzet, jumlah order, rata-rata, per metode bayar, menu terlaris, daftar order. **Batalkan order** mengembalikan kas, stok & stempel.
 - Data: `orders` (detail order, disimpan 30 hari) + `posHarian` (rekap harian permanen) — supaya dokumen cloud tetap kecil walau ratusan order per hari. Logika di `js/pos.js`.
 
+### Open bill (opsional)
+- Aktifkan di Kasir → tab **Bill** (pemilik/manajer, default nonaktif). Buat pembeli yang pesan dulu, nambah-nambah, bayar belakangan, tanpa ganggu transaksi lain (keranjang kasir tetap bebas).
+- **Simpan ke bill** dari layar bayar (bill baru atau bill yang masih buka), atau **Buka bill** dari tab Bill. Tiap tambahan = **ronde**: stok langsung dipotong & dikirim ke dapur (kalau mode dapur aktif). Uang baru masuk Kas & rekap waktu bill **dilunasi** (jadi 1 order biasa dengan `order.bill`), stok nggak dipotong dua kali.
+- Pesan meja (QR) yang pilih "bayar di kasir" otomatis masuk **bill meja itu** (voucher dari pelanggan ikut tersimpan; status dapur tetap kelihatan di HP pelanggan). Waktu bill lunas, pesanan meja terkait ikut ditandai lunas.
+- Isi bill nggak bisa diubah waktu dibayar (nambah lewat "Tambah pesanan"). Item yang sudah dikirim hanya bisa dibatalkan pemilik/manajer + alasan (pilih stok dikembalikan atau nggak); bill bisa dibatalkan seluruhnya (riwayat disimpan 30 hari). Tutup shift memperingatkan bill yang belum dibayar.
+- Data di `bills` (sinkron antar HP, ronde dari 2 HP digabung). Logika di `js/bill.js`.
+
+### Pembayaran campuran
+- Untuk QRIS/Transfer bisa centang **Sebagian dibayar tunai**: order menyimpan `pembayaran: [{ metode, jumlah }]` (`metode: "campur"`). Kas per metode, rekap Hari ini, struk & laci shift memakai porsi masing-masing (`porsiMetode` di `js/pos.js`).
+
 ## Belanja & supplier
 - Halaman `#/belanja` (Bisnis, atau Stok > Bahan & Stok). Khusus pemilik/manajer.
 - **Daftar belanja**: untuk 1/3/7 hari ke depan = rata-rata pemakaian 14 hari terakhir (riwayat stok dari Kasir) × hari + stok minimum − stok sekarang, dibulatkan (gram/ml per 100–500, atau per kemasan `bahan.pack`). Dikelompokkan per supplier dengan perkiraan biaya; jumlah bisa diubah, item bisa dicoret atau ditambah. Tombol **Pesan via WA** mengirim daftar ke nomor supplier.

@@ -11,9 +11,9 @@ Racikin ("Racik ide jadi cuan") = PWA co-founder AI untuk usaha F&B kecil di Ind
 ## Arsitektur
 - **Frontend tanpa build**: vanilla ES modules, router hash (`js/app.js`), event delegation `data-action` (click) / `data-change` / `data-form`. View = objek `{ render(s), after(root), actions, changes, forms }` yang mengembalikan template string.
 - **State**: satu objek di `localStorage` (`racikin:v1`, `js/store.js`). `store.set(patch)` → render ulang. `DEFAULT` di store.js = daftar semua key.
-- **Service worker** `sw.js`: naikkan `VERSION` (saat ini `racikin-v36`) di setiap rilis dan tambahkan file baru ke `SHELL`.
+- **Service worker** `sw.js`: naikkan `VERSION` (saat ini `racikin-v37`) di setiap rilis dan tambahkan file baru ke `SHELL`.
 - **Desain "papan warung"**: kuning marigold `#FFC531`, ink `#1B1916`, paper `#F6EFDC`; font Archivo + IBM Plex Mono; token warna di `:root` + mode gelap. Layar ≥ 900px: rail navigasi kiri, halaman di `COLS` (app.js) dua kolom, Kasir dua panel.
-- **Peran** (`js/cloud.js`): `owner`, `manajer`, `kasir` (hanya Kasir/Pelanggan/Stok), `dapur` (hanya layar dapur). Rute dibatasi di `app.js` (`KASIR_ROUTES`, `DAPUR_ROUTES`), dan server juga membatasi.
+- **Peran** (`js/cloud.js`): `owner`, `manajer`, `kasir` (hanya Kasir/Pelanggan/Stok; boleh menulis `bills`), `dapur` (hanya layar dapur). Rute dibatasi di `app.js` (`KASIR_ROUTES`, `DAPUR_ROUTES`), dan server juga membatasi.
 
 ## Supabase (project `racikin`, ref `ujdxslztjcufidhqpmcd`, ap-southeast-1)
 - **Sinkron**: satu dokumen JSON per usaha (`user_data`, kolom `rev`), dibaca/ditulis lewat RPC `doc_get` / `doc_save` (optimistic locking) + **3-way merge** di klien (`js/merge.js`; field penghitung seperti `stok`, `stempel`, `delta` digabung sebagai selisih). Setelah merge, Kas & rekap kasir dihitung ulang dari order (`reconcile` di `js/pos.js`). Kasir tidak menerima & tidak bisa menulis bagian keuangan (`doc_kasir_hidden` / `doc_kasir_writable` di SQL).
@@ -26,6 +26,9 @@ Racikin ("Racik ide jadi cuan") = PWA co-founder AI untuk usaha F&B kecil di Ind
 
 ## Tes
 Lihat `tests/README.md`. Unit: `cd tests && npm run unit`. E2E: jalankan `python3 -m http.server 8766` di root lalu `node tests/e2e/<nama>.js <folder-screenshot>`. Tes yang butuh akun memakai akun `*@racikin.test`, dengan password lewat variabel lingkungan. Kosongkan data akun tes sebelum menjalankan tes cloud. Sebelum PR: jalankan unit test + E2E yang relevan + regresi `mvp.js`, `kasir.js`, `dummy.js`.
+
+## Kasir: open bill & pembayaran campuran
+Open bill opsional (`posSetting.openBill`, `js/bill.js`, data `bills`): ronde memotong stok saat dikirim, uang masuk Kas hanya saat bill dilunasi (`buatOrder(..., { stok: false, bill })`). Pembayaran campuran: `order.pembayaran` + `metode: "campur"`; semua hitungan per metode harus lewat `porsiMetode` (pos.js) / porsi di shift.js.
 
 ## Tahap usaha
 `profile.tahap` = `ide` (default, alur dari ide) atau `jalan` (usaha sudah berjalan: langkah Beranda & halaman Bisnis beda, lihat `js/tahap.js`). Pindahan data usaha lama: `#/impor?jenis=menu|bahan` (teks/foto) + saldo kas awal (`kasAwal`, `js/impor.js`) + impor penjualan lama `#/impor-jual` (`js/imporjual.js`, rekap ber-`imporId`, Kas `ref: "impor"`). Cek kesehatan usaha: `#/sehat` (`js/sehat.js`). Panduan perizinan: `#/izin` (`js/izin.js`, isi panduan bertanggal `DICEK`, perbarui kalau aturan berubah). Fitur baru sebaiknya cocok untuk dua-duanya.

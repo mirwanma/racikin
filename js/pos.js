@@ -20,7 +20,14 @@ export const METODE = [
   { id: "transfer", nama: "Transfer" },
 ];
 // Semua "metode" yang mungkin muncul di order (termasuk data lama "ojol").
-const SEMUA_METODE = [...METODE, ...CHANNELS.map((c) => ({ id: c.id, nama: c.nama })), { id: "ojol", nama: "Ojol" }];
+const SEMUA_METODE = [...METODE, ...CHANNELS.map((c) => ({ id: c.id, nama: c.nama })), { id: "ojol", nama: "Ojol" }, { id: "campur", nama: "Campuran" }];
+/**
+ * Porsi pembayaran order per metode: [{ metode, jumlah }]. Order biasa = 1 metode senilai total;
+ * order dengan pembayaran campuran (mis. sebagian tunai, sisanya QRIS) punya o.pembayaran.
+ */
+export const porsiMetode = (o) => (Array.isArray(o.pembayaran) && o.pembayaran.length ? o.pembayaran : [{ metode: o.metode, jumlah: o.total }]);
+const jumlahMetode = (list, id) => sum(list, (o) => sum(porsiMetode(o).filter((x) => x.metode === id), (x) => Number(x.jumlah) || 0));
+const pakaiMetode = (o, id) => porsiMetode(o).some((x) => x.metode === id);
 export const metodeNama = (id) => SEMUA_METODE.find((m) => m.id === id)?.nama || channelNama(id);
 export const SIMPAN_HARI = 30;
 
@@ -44,14 +51,14 @@ function kasPatch(transactions, orders, tanggal) {
   const aktif = orders.filter((o) => o.tanggal === tanggal && o.status !== "batal");
   let tx = transactions.filter((t) => !(t.ref === "pos" && t.tanggal === tanggal));
   for (const m of SEMUA_METODE) {
-    const list = aktif.filter((o) => o.metode === m.id);
+    const list = aktif.filter((o) => pakaiMetode(o, m.id));
     if (!list.length) continue;
     tx.push({
       id: `pos-${tanggal}-${m.id}`,
       tanggal,
       jenis: "masuk",
       kategori: "Penjualan",
-      nominal: Math.round(sum(list, (o) => o.total)),
+      nominal: Math.round(jumlahMetode(list, m.id)),
       catatan: `Kasir · ${m.nama} · ${list.length} order`,
       ref: "pos",
     });
@@ -72,7 +79,7 @@ function kasPatch(transactions, orders, tanggal) {
 }
 
 /** Ubah stok bahan dari item order (arah: -1 jual, +1 batal). Hanya bahan yang stoknya sudah diisi. */
-function stokPatch(s, items, tanggal, arah) {
+export function stokPatch(s, items, tanggal, arah) {
   const pakai = {};
   for (const it of items) for (const k of pakaiItem(s, it)) pakai[k.bahanId] = (pakai[k.bahanId] || 0) + k.qty;
   const tracked = new Set(s.bahan.filter((b) => b.tracked).map((b) => b.id));
@@ -133,7 +140,7 @@ function itemOrder(i) {
  * Buat order baru. cart = [{ resepId|null, nama, harga, qty, opsi? }].
  * Return { patch, order, stempelInfo }.
  */
-export function buatOrder(s, { cart, diskon = 0, promo = null, metode = "tunai", bayar = 0, pelangganId = "", channel = "toko", kasir = null, shiftId = null }) {
+export function buatOrder(s, { cart, diskon = 0, promo = null, metode = "tunai", bayar = 0, pelangganId = "", channel = "toko", kasir = null, shiftId = null, tunaiSebagian = 0, stok = true, bill = null }) {
   if (isOnline(channel)) metode = channel; // order online dibayar lewat platform
   const tanggal = todayISO();
   const items = cart.filter((i) => i.qty > 0).map(itemOrder);
@@ -161,6 +168,16 @@ export function buatOrder(s, { cart, diskon = 0, promo = null, metode = "tunai",
     stempel: 0,
     status: "selesai",
   };
+  // Pembayaran campuran: sebagian tunai (pas), sisanya pakai metode non-tunai yang dipilih.
+  const tunaiPart = Math.round(Number(tunaiSebagian) || 0);
+  if (!isOnline(channel) && metode !== "tunai" && tunaiPart > 0 && tunaiPart < total) {
+    order.pembayaran = [
+      { metode: "tunai", jumlah: tunaiPart },
+      { metode, jumlah: total - tunaiPart },
+    ];
+    order.metode = "campur";
+  }
+  if (bill) order.bill = bill; // { id, nama, ronde } dari open bill (stok sudah dipotong per ronde)
   if (kasir) order.kasir = kasir; // { id, nama } yang mencatat (mode tim)
   if (shiftId) order.shiftId = shiftId; // shift kasir yang sedang terbuka
 
@@ -176,8 +193,8 @@ export function buatOrder(s, { cart, diskon = 0, promo = null, metode = "tunai",
       stempelInfo = { nama: p.nama, stempel: p.stempel, target: prog.target, siap: p.stempel >= prog.target };
     } else stempelInfo = { kurang: prog.minBelanja };
   }
-  // stok
-  st = { ...st, ...stokPatch(st, items, tanggal, -1) };
+  // stok (open bill: sudah dipotong waktu tiap ronde dikirim)
+  if (stok) st = { ...st, ...stokPatch(st, items, tanggal, -1) };
   // order + kas + rekap
   const orders = prune([...(st.orders || []), order]);
   const patch = {
@@ -242,8 +259,8 @@ export function rekapHari(s, tanggal = todayISO()) {
   const aktif = semua.filter((o) => o.status !== "batal");
   const omzet = sum(aktif, (o) => o.total);
   const perMetode = SEMUA_METODE.map((m) => {
-    const list = aktif.filter((o) => o.metode === m.id);
-    return { ...m, total: sum(list, (o) => o.total), komisi: sum(list, (o) => o.komisi || 0), n: list.length };
+    const list = aktif.filter((o) => pakaiMetode(o, m.id));
+    return { ...m, total: jumlahMetode(list, m.id), komisi: sum(list, (o) => o.komisi || 0), n: list.length };
   }).filter((m) => m.n);
   const komisi = sum(aktif, (o) => o.komisi || 0);
   const items = {};
@@ -270,7 +287,7 @@ export function struk(o, bisnis, rp) {
     o.promo ? `Promo ${o.promo.nama} -${rp(o.promo.potongan)}` : null,
     o.diskon ? `Diskon -${rp(o.diskon)}` : null,
     `*Total ${rp(o.total)}*`,
-    isOnline(o.channel) ? `Pesanan ${channelNama(o.channel)}` : `Bayar ${metodeNama(o.metode)}${o.metode === "tunai" ? ` ${rp(o.bayar)} · Kembali ${rp(o.kembali)}` : ""}`,
+    isOnline(o.channel) ? `Pesanan ${channelNama(o.channel)}` : o.pembayaran ? `Bayar ${o.pembayaran.map((x) => `${metodeNama(x.metode)} ${rp(x.jumlah)}`).join(" + ")}` : `Bayar ${metodeNama(o.metode)}${o.metode === "tunai" ? ` ${rp(o.bayar)} · Kembali ${rp(o.kembali)}` : ""}`,
     "",
     "Terima kasih, ditunggu lagi ya!",
   ];

@@ -152,6 +152,10 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Pilihan varian bisa mengalikan porsi resep (Jumbo 1,5×, bahan kemasan tidak ikut dikali) dan mengganti / menghilangkan bahan resep (susu oat, tanpa gula). Stok, HPP per menu, rekap `opsiMenu`, laporan & cek kesehatan ikut. Data contoh: Es Teh Jumbo 1,5× porsi, pilihan "Tanpa gula".
 - Tanpa perubahan server (harga tetap dari harga tambahan; pesan meja ikut otomatis).
 
+### Fase 28: Open bill + pembayaran campuran (selesai)
+- Bill terbuka per meja/pembeli dengan ronde (stok dipotong saat dikirim, Kas saat dilunasi), pesan meja "bayar di kasir" masuk bill meja, batal item/bill (pemilik/manajer + alasan), peringatan tutup shift, pembayaran sebagian tunai + QRIS/transfer. Migrasi `open_bill_kasir` (kasir boleh menulis `bills`).
+- Berikutnya (opsional): split bill per orang / bayar sebagian, pindah & gabung meja, batal sebagian qty.
+
 ### Fase 27: Promo di server untuk pesan meja + kuota voucher per pelanggan (selesai)
 - `cek_promo_meja` / `place_table_order` (7 argumen, versi lama 5 argumen tetap jalan) menghitung promo otomatis & voucher dari `promoAturan`; `table_orders` + `subtotal`, `promo`. Voucher bisa dibatasi per pelanggan (nomor WA, di-hash di server). Migrasi `promo_meja_server` + `promo_meja_rp`.
 

@@ -14,6 +14,7 @@ const DEFAULT = {
   imporJual: [],          // riwayat impor penjualan { id, at, nama, dari, sampai, hari, omzet } (lihat js/imporjual.js)
   promo: [],              // promo & voucher (lihat js/promo.js)
   wa: null,               // { usaha, pemilik } nomor WhatsApp (lihat js/wa.js)
+  bills: [],              // open bill: pesan dulu bayar belakangan (lihat js/bill.js)
   izin: {},               // status perizinan { [nib|pirt|halal|slhs|merek]: { status, nomor, terbit, berlaku, catatan, dok } } (lihat js/izin.js)
   insight: null,
   chat: [],               // { role, content }
