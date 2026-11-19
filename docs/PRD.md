@@ -156,8 +156,47 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Akun admin langsung masuk mode admin dengan menu sendiri: Ringkasan, Merchant, Pertumbuhan, Akun. Menu usaha disembunyikan & dialihkan, profil usaha tidak wajib, bisa pindah ke app usaha & balik.
 - Desain ulang "pusat kontrol" (gelap, ikut mode terang): periode 7/30/90 hari, grafik omzet & order harian, tabel merchant dengan grafik mini, "Perlu disapa". Migrasi `admin_desain`: `admin_harian` + `seri14`/`order90` di `admin_merchants`.
 
+### Fase 27: Monetisasi tahap 1, langganan dengan aktivasi manual (rencana)
+Tujuan: ngetes dulu apakah merchant mau bayar, **sebelum** bikin integrasi payment gateway. Bayar lewat QRIS/transfer manual, plan diaktifkan admin dari `#/admin`.
+
+**Dari mana biaya muncul.** AI teks (Gemini, murah per request), AI foto (paling mahal, wajib billing), dan Supabase (sinkron, Realtime dapur & pesan meja, Storage foto, push), yang naik sesuai jumlah merchant aktif. Mode lokal hampir tanpa biaya. Jadi yang dikunci adalah fitur cloud + AI, yang juga paling bernilai buat usaha yang sudah jalan.
+
+**Paket (usulan, angka belum final):**
+
+| | Gratis | Pro (±Rp49–59rb/bln) | Bisnis (±Rp129–149rb/bln) |
+|---|---|---|---|
+| Alur ide, RAB, resep/HPP, izin, cek kesehatan | ✓ | ✓ | ✓ |
+| Kasir, Kas, stok, laporan dasar (1 perangkat, lokal) | ✓ | ✓ | ✓ |
+| AI teks per hari | ~5 | ~30 | ~60 |
+| AI foto per bulan | – (percantik otomatis) | ~20 | ~60 |
+| Sinkron cloud & backup multi-perangkat | – | ✓ | ✓ |
+| Tim (kasir/manajer) | – | 2 akun | tanpa batas |
+| Kartu stempel, promo/voucher, impor penjualan | – | ✓ | ✓ |
+| Layar dapur, pesan meja QR, push notif | – | – | ✓ |
+
+- Trial otomatis saat daftar (14–30 hari, plan Bisnis) supaya sinkron & tim sempat dicoba.
+- Bayar tahunan = 10 bulan dapat 12.
+- Add-on kredit foto AI (misalnya 20 foto) untuk yang butuh sesekali.
+
+**Prinsip:**
+1. **Data tidak disandera.** Langganan habis → data lokal tetap bisa dipakai penuh, data cloud jadi read-only & bisa diekspor. Tidak ada data yang dihapus otomatis.
+2. **Batas dicek di server.** UI cuma menyembunyikan/menandai fitur; kuota AI/foto dicek di Edge Function, akses tim/dapur/meja dicek lewat RLS/fungsi SQL sesuai plan.
+3. **Tahap `ide` tetap terasa gratis & berguna** (corong masuk). Monetisasi baru kena saat usaha `jalan` dan butuh fitur cloud/tim.
+
+**Yang dikerjakan di tahap 1:**
+- Tabel `subscriptions` (per `owner_id`: `plan` gratis/pro/bisnis, `berlaku_sampai`, `sumber` trial/manual, `catatan`) + fungsi `my_plan()` yang mengembalikan plan efektif (lewat tanggal → gratis). Anggota tim ikut plan pemiliknya.
+- Batas per plan di satu tempat (tabel/konstanta server), dipakai `racikin-ai` & `racikin-foto` untuk kuota, serta `doc_save`, `team_invites`, `kitchen_tickets`, `table_orders` untuk gating.
+- Halaman **Paket** di app (`#/paket`): plan sekarang, sisa hari, sisa kuota AI, perbandingan paket, cara bayar (QRIS statis + nomor rekening + tombol WA konfirmasi ke admin dengan ID usaha terisi otomatis).
+- Penanda "Pro"/"Bisnis" di menu/fitur yang terkunci + layar ajakan upgrade yang sopan (bukan pop-up mengganggu). Pengingat di Beranda 7 & 1 hari sebelum habis.
+- **Admin**: di detail merchant ada aksi set plan + tanggal berlaku + catatan pembayaran (fungsi `admin_set_plan`, hanya `platform_admins`, tercatat di log). Ringkasan admin menampilkan jumlah merchant per plan, trial yang mau habis, dan perkiraan pendapatan bulanan.
+- Migrasi merchant lama: dapat masa grace (misalnya plan Bisnis 2–3 bulan) sebelum aturan baru berlaku.
+
+**Keputusan terbuka:** sasaran utama yang bayar (usaha `jalan` vs pemula `ide`), harga final, lama trial & grace merchant lama.
+
+**Tahap berikutnya:** payment gateway (Midtrans/Xendit/Tripay) + webhook ke Edge Function untuk perpanjang otomatis. Gateway yang sama dipakai untuk QRIS pesan meja sungguhan (ganti `pay_table_order_dummy`). Opsional: fee kecil per transaksi pesan meja.
+
 ### Di luar MVP (fase berikutnya)
-Monetisasi/langganan, WhatsApp Business API resmi, payment gateway sungguhan.
+Payment gateway sungguhan (monetisasi tahap 2), WhatsApp Business API resmi.
 
 ## 6. Arsitektur MVP
 - **Frontend**: PWA statis (HTML + CSS + JS modules, tanpa build) di root repo ini, di-host di GitHub Pages. Data disimpan di `localStorage` (offline-first).
