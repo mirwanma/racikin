@@ -25,7 +25,7 @@ function jamSepi(s) {
   return buka.length ? Number(buka[0][0]) : 14;
 }
 
-const kosong = () => ({ id: null, nama: "", aktif: true, jenis: "order", tipe: "persen", nilai: 10, minBelanja: 0, maks: 0, resepIds: [], beli: 2, gratis: 1, waktu: { dari: "", sampai: "", hari: [], jamDari: "", jamSampai: "" }, saluran: ["toko"], kode: "", kuota: 0 });
+const kosong = () => ({ id: null, nama: "", aktif: true, jenis: "order", tipe: "persen", nilai: 10, minBelanja: 0, maks: 0, resepIds: [], beli: 2, gratis: 1, waktu: { dari: "", sampai: "", hari: [], jamDari: "", jamSampai: "" }, saluran: ["toko"], kode: "", kuota: 0, maksPerPelanggan: 0 });
 
 function dariPreset(id, s) {
   const d = kosong();
@@ -110,9 +110,11 @@ function editor(s) {
       <h2 class="card-title" style="margin:0">Kode voucher <small class="muted">opsional</small></h2>
       <div class="row2">
         <label class="field"><span>Kode</span><input value="${esc(d.kode)}" maxlength="20" placeholder="kosong = otomatis" autocapitalize="characters" data-change="f" data-f="kode"></label>
-        <label class="field"><span>Kuota (kali)</span><input type="number" min="0" step="1" value="${d.kuota || ""}" placeholder="0 = tanpa batas" data-change="f" data-f="kuota"></label>
+        <label class="field"><span>Kuota total (kali)</span><input type="number" min="0" step="1" value="${d.kuota || ""}" placeholder="0 = tanpa batas" data-change="f" data-f="kuota"></label>
       </div>
-      <p class="small muted">${d.kode ? "Promo cuma kepakai kalau kasir masukin kode ini." : "Tanpa kode, promo otomatis kepakai di Kasir kalau syaratnya terpenuhi."} Promo nggak numpuk: tiap order ambil 1 promo yang paling untung buat pelanggan.</p>
+      ${d.kode ? `<label class="field"><span>Maks. per pelanggan (kali)</span><input type="number" min="0" step="1" value="${d.maksPerPelanggan || ""}" placeholder="0 = bebas" data-change="f" data-f="maksPerPelanggan"></label>
+      <p class="small muted">Pelanggan dikenali dari nomor WA: di Kasir pilih pelanggan kartu stempel-nya, di pesan meja pelanggan isi nomor WA.</p>` : ""}
+      <p class="small muted">${d.kode ? "Promo cuma kepakai kalau kode ini dimasukin (di Kasir atau di pesan meja)." : "Tanpa kode, promo otomatis kepakai di Kasir & pesan meja kalau syaratnya terpenuhi."} Promo nggak numpuk: tiap order ambil 1 promo yang paling untung buat pelanggan.</p>
       <label class="impor-cek"><input type="checkbox" data-change="f" data-f="aktif" ${d.aktif ? "checked" : ""}><span>Aktif</span></label>
     </section>
     <section class="card accent"><p class="small" style="margin:0"><b>Pelanggan lihatnya:</b> ${esc(ketPromo(d, s))}</p></section>
@@ -144,7 +146,7 @@ function daftar(s) {
         return `<section class="card promo-card ${p.aktif ? "" : "off"}">
           <div class="row-between"><div><h3 style="margin:0">${esc(p.nama)}</h3><p class="small muted">${esc(ketPromo(p, s))}</p></div>
             <label class="switch" title="Aktif"><input type="checkbox" data-change="toggle" data-id="${p.id}" ${p.aktif ? "checked" : ""}><span></span></label></div>
-          <div class="chips">${p.kode ? `<span class="tag mono">${esc(p.kode)}${Number(p.kuota) ? ` · ${u.n}/${p.kuota}` : ""}</span>` : `<span class="tag">otomatis</span>`}${p.aktif ? (jalan ? `<span class="tag pos">lagi jalan</span>` : "") : `<span class="tag">nonaktif</span>`}</div>
+          <div class="chips">${p.kode ? `<span class="tag mono">${esc(p.kode)}${Number(p.kuota) ? ` · ${u.n}/${p.kuota}` : ""}</span>${Number(p.maksPerPelanggan) ? `<span class="tag">maks ${p.maksPerPelanggan}x/pelanggan</span>` : ""}` : `<span class="tag">otomatis</span>`}${p.aktif ? (jalan ? `<span class="tag pos">lagi jalan</span>` : "") : `<span class="tag">nonaktif</span>`}</div>
           <div class="stats3"><div><small>Dipakai</small><b>${u.n}×</b></div><div><small>Total potongan</small><b class="neg">${rupiah(u.rp)}</b></div><div><small>Omzet order</small><b>${rupiah(u.omzet)}</b></div></div>
           <a href="#/promo?id=${p.id}" class="btn ghost sm">Edit</a>
         </section>`;
@@ -162,7 +164,7 @@ export const promo = {
     f(el) {
       const k = el.dataset.f;
       if (k === "aktif") draft.aktif = el.checked;
-      else if (["nilai", "minBelanja", "maks", "beli", "gratis", "kuota"].includes(k)) draft[k] = el.value === "" ? 0 : Math.max(0, Number(el.value) || 0);
+      else if (["nilai", "minBelanja", "maks", "beli", "gratis", "kuota", "maksPerPelanggan"].includes(k)) draft[k] = el.value === "" ? 0 : Math.max(0, Number(el.value) || 0);
       else if (k === "kode") draft.kode = normKode(el.value);
       else draft[k] = el.value;
       if (k === "jenis") draft.tipe = el.value === "menu" ? "persen" : draft.tipe === "harga" ? "persen" : draft.tipe;
@@ -214,7 +216,7 @@ export const promo = {
         ...(d.jenis === "order" ? { minBelanja: Math.round(Number(d.minBelanja) || 0), ...(d.tipe === "persen" && Number(d.maks) ? { maks: Math.round(Number(d.maks)) } : {}) } : { resepIds: d.resepIds }),
         waktu: w,
         saluran: d.saluran,
-        ...(kode ? { kode, ...(Number(d.kuota) ? { kuota: Math.round(Number(d.kuota)) } : {}) } : {}),
+        ...(kode ? { kode, ...(Number(d.kuota) ? { kuota: Math.round(Number(d.kuota)) } : {}), ...(Number(d.maksPerPelanggan) ? { maksPerPelanggan: Math.round(Number(d.maksPerPelanggan)) } : {}) } : {}),
         dibuat: (s.promo || []).find((p) => p.id === d.id)?.dibuat || todayISO(),
       };
       const list = (s.promo || []).some((p) => p.id === rec.id) ? s.promo.map((p) => (p.id === rec.id ? rec : p)) : [...(s.promo || []), rec];

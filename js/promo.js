@@ -10,10 +10,13 @@
 //   waktu: { dari, sampai, hari: [0-6], jamDari: "HH:MM", jamSampai: "HH:MM" },
 //   saluran: ["toko", "gofood", ...],   // default hanya toko
 //   kode, kuota,                        // voucher (opsional): promo aktif kalau kode dimasukkan; kuota = total pemakaian
+//   maksPerPelanggan,                   // voucher: maks. pemakaian per pelanggan (dikenali dari nomor WA), 0 = bebas
 // }]
+// Pemakaian per pelanggan: order.promo.wa (nomor WA dinormalisasi) -> posHarian[tgl].promo[id].wa = { "62812...": n }.
 // Aturan: promo TIDAK numpuk. Tiap order otomatis memakai 1 promo dengan potongan terbesar (+ diskon manual kasir).
 // Pemakaian dihitung dari rekap harian (posHarian[tgl].promo = { promoId: { n, rp } }), jadi ikut benar setelah sinkron.
 import { channelNama } from "./online.js";
+import { normWa } from "./loyalty.js";
 
 export const HARI = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 const sum = (arr, f) => arr.reduce((a, x) => a + f(x), 0);
@@ -29,6 +32,10 @@ export function pemakaian(s) {
       cur.n += Number(x.n) || 0;
       cur.rp += Number(x.rp) || 0;
       cur.omzet += Number(x.omzet) || 0;
+      for (const [wa, n] of Object.entries(x.wa || {})) {
+        cur.wa ||= {};
+        cur.wa[wa] = (cur.wa[wa] || 0) + (Number(n) || 0);
+      }
     }
   }
   return out;
@@ -81,13 +88,21 @@ export function potonganPromo(p, cart) {
   return { potongan: Math.round(Math.min(pot, sub)), kurang: 0 };
 }
 
+/** Batas pemakaian per pelanggan (0 = bebas). Hanya untuk voucher (yang pakai kode). */
+export const maksPelanggan = (p) => (p?.kode ? Math.max(0, Math.round(Number(p.maksPerPelanggan) || 0)) : 0);
+
+/** Sudah berapa kali pelanggan (nomor WA) memakai promo ini. */
+export const pakaiPelanggan = (pakai, promoId, wa) => (wa ? Number(pakai[promoId]?.wa?.[wa]) || 0 : 0);
+
 /**
- * Promo terbaik untuk keranjang. opsi = { channel, waktu ("YYYY-MM-DDTHH:MM"), kode }.
+ * Promo terbaik untuk keranjang. opsi = { channel, waktu ("YYYY-MM-DDTHH:MM"), kode, wa (nomor WA pelanggan) }.
  * Return { promo: { id, nama, potongan, kode? } | null, hint: string, kodeError: string, berlaku: [...] }.
  */
-export function pilihPromo(s, cart, { channel = "toko", waktu, kode = "" } = {}) {
+export function pilihPromo(s, cart, { channel = "toko", waktu, kode = "", wa = "" } = {}) {
   const pakai = pemakaian(s);
   const k = normKode(kode);
+  const w = normWa(wa);
+  const habisPelanggan = (p) => maksPelanggan(p) > 0 && (!w || pakaiPelanggan(pakai, p.id, w) >= maksPelanggan(p));
   let kodeError = "";
   if (k) {
     const p = (s.promo || []).find((x) => normKode(x.kode) === k);
@@ -95,17 +110,19 @@ export function pilihPromo(s, cart, { channel = "toko", waktu, kode = "" } = {})
     else if (!p.aktif) kodeError = "Voucher ini lagi nonaktif";
     else if (!berlakuPada(p, waktu, channel)) kodeError = "Voucher ini nggak berlaku sekarang / di saluran ini";
     else if (Number(p.kuota) > 0 && (pakai[p.id]?.n || 0) >= Number(p.kuota)) kodeError = "Kuota voucher ini sudah habis";
+    else if (maksPelanggan(p) && !w) kodeError = `Voucher ini maks. ${maksPelanggan(p)}x per pelanggan. Pilih pelanggan yang ada nomor WA-nya dulu`;
+    else if (habisPelanggan(p)) kodeError = `Pelanggan ini sudah pakai voucher ini ${pakaiPelanggan(pakai, p.id, w)}x (maks. ${maksPelanggan(p)}x)`;
   }
   const kandidat = (s.promo || []).filter((p) => {
     if (!berlakuPada(p, waktu, channel)) return false;
-    if (p.kode) return normKode(p.kode) === k && !(Number(p.kuota) > 0 && (pakai[p.id]?.n || 0) >= Number(p.kuota));
+    if (p.kode) return normKode(p.kode) === k && !(Number(p.kuota) > 0 && (pakai[p.id]?.n || 0) >= Number(p.kuota)) && !habisPelanggan(p);
     return true;
   });
   let best = null;
   let hint = "";
   for (const p of kandidat) {
     const r = potonganPromo(p, cart);
-    if (r.potongan > (best?.potongan || 0)) best = { id: p.id, nama: p.nama, potongan: r.potongan, ...(p.kode ? { kode: normKode(p.kode) } : {}) };
+    if (r.potongan > (best?.potongan || 0)) best = { id: p.id, nama: p.nama, potongan: r.potongan, ...(p.kode ? { kode: normKode(p.kode) } : {}), ...(maksPelanggan(p) ? { wa: w } : {}) };
     else if (!r.potongan && r.kurang && !hint) hint = `Tambah ${rp(r.kurang)} lagi biar dapat ${p.nama}`;
     else if (!r.potongan && r.kurangPorsi && !hint) hint = `Tambah ${r.kurangPorsi} porsi lagi biar dapat ${p.nama}`;
   }
@@ -127,6 +144,10 @@ export function rekapPromo(orders) {
     cur.n += 1;
     cur.rp += Number(o.promo.potongan) || 0;
     cur.omzet += Number(o.total) || 0;
+    if (o.promo.wa) {
+      cur.wa ||= {};
+      cur.wa[o.promo.wa] = (cur.wa[o.promo.wa] || 0) + 1;
+    }
   }
   return Object.keys(out).length ? out : null;
 }
@@ -157,3 +178,38 @@ export function ketPromo(p, s) {
 /** Promo yang aktif hari ini (untuk ditampilkan ke pelanggan, tanpa kode voucher). */
 export const promoHariIni = (s, tanggal) =>
   (s.promo || []).filter((p) => p.aktif && !p.kode && berlakuPada({ ...p, waktu: { ...p.waktu, jamDari: "", jamSampai: "" } }, `${tanggal}T12:00`, "toko"));
+
+/**
+ * Aturan promo untuk dihitung server di pesan meja (disimpan di public_menu, TIDAK dikirim ke pelanggan).
+ * Hanya promo aktif yang berlaku di saluran toko. pakai = pemakaian total sejauh ini; pakaiWa = per nomor WA
+ * (nomor di-hash waktu diunggah, lihat publikasi di js/meja.js).
+ */
+export function aturanPromoMeja(s) {
+  const pakai = pemakaian(s);
+  return (s.promo || [])
+    .filter((p) => p.aktif && (p.saluran?.length ? p.saluran : ["toko"]).includes("toko"))
+    .map((p) => {
+      const w = p.waktu || {};
+      const a = {
+        id: p.id,
+        nama: String(p.nama || "Promo").slice(0, 40),
+        jenis: p.jenis,
+        tipe: p.tipe,
+        nilai: Number(p.nilai) || 0,
+        minBelanja: Number(p.minBelanja) || 0,
+        maks: Number(p.maks) || 0,
+        resepIds: p.resepIds || [],
+        beli: Number(p.beli) || 0,
+        gratis: Number(p.gratis) || 0,
+        waktu: { dari: w.dari || "", sampai: w.sampai || "", hari: w.hari || [], jamDari: w.jamDari || "", jamSampai: w.jamSampai || "" },
+      };
+      if (p.kode) {
+        a.kode = normKode(p.kode);
+        a.kuota = Number(p.kuota) || 0;
+        a.pakai = pakai[p.id]?.n || 0;
+        a.maksPerPelanggan = maksPelanggan(p);
+        if (a.maksPerPelanggan) a.pakaiWa = { ...(pakai[p.id]?.wa || {}) };
+      }
+      return a;
+    });
+}
