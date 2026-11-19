@@ -18,7 +18,7 @@ cd tests && npm run unit
 | `unit/izin.test.mjs` | panduan perizinan: rekomendasi per jenis usaha, masa berlaku, pengingat, progres |
 | `unit/admin.test.mjs` | dashboard admin: status merchant (aktif/berisiko/baru/tidur), ringkasan platform, filter & urut, CSV, periode 7/30/90, perlu disapa |
 | `unit/wa.test.mjs` | WhatsApp: baca chat order, link wa.me, teks menu, broadcast per kelompok, ringkasan rekap & shift |
-| `unit/paket.test.mjs` | paket Gratis/Pro: label, sisa hari, pengingat, hemat tahunan, link upgrade WA, ringkasan langganan & MRR, perpanjang |
+| `unit/paket.test.mjs` | paket Gratis/Pro: label, sisa hari, pengingat, hemat tahunan, link upgrade WA, ringkasan langganan & MRR, perpanjang, konfigurasi fitur & kuota AI dari admin |
 | `unit/split-bill.test.mjs` | open bill tahap 2: batal sebagian, bayar sebagian per orang, Kas & stok konsisten, gabung bill, pindah meja |
 | `unit/bill.test.mjs` | open bill: ronde & stok, batal item/bill, bayar (Kas saat lunas, stok nggak dobel), pembayaran campuran di Kas/rekap/laci, bill meja, gabung ronde dari 2 HP |
 | `unit/promo-meja.test.mjs` | voucher per pelanggan (nomor WA), rekap per nomor, batal, aturan promo yang diunggah, hash nomor WA sama dengan SQL |

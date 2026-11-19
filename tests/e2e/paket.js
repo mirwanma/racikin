@@ -87,6 +87,18 @@ async function halaman(b, paket) {
   await c.goto(B + '#/impor-jual'); await c.waitForTimeout(300);
   ok(!(await c.$('.pro-kunci')), 'masa coba: impor penjualan kebuka');
 
+  // --- Konfigurasi admin: pesan meja & foto AI dijadikan Gratis, kuota AI gratis 50
+  const k = await halaman(b, { paket: 'gratis', sumber: null, sampai: null, fitur: { tim: 'pro', meja: 'gratis', dapur: 'pro', bill: 'pro', foto: 'gratis', imporJual: 'pro' }, ai_gratis: 50, ai_pro: 400 });
+  await k.goto(B + '#/meja'); await k.waitForTimeout(400);
+  ok(!(await k.$('.pro-kunci')), 'konfigurasi: pesan meja Gratis -> kebuka di paket Gratis');
+  await k.goto(B + '#/impor-jual'); await k.waitForTimeout(300);
+  ok(!!(await k.$('.pro-kunci')), 'konfigurasi: impor penjualan tetap Pro');
+  await k.goto(B + '#/paket'); await k.waitForSelector('.paket-grid');
+  const kolGratis = await txt(k, '.paket-kol:not(.pro)'), kolPro = await txt(k, '.paket-kol.pro');
+  ok(kolGratis.includes('Pesan lewat QR meja') && kolGratis.includes('Foto menu AI') && kolGratis.includes('AI 50x/hari') && !kolPro.includes('Pesan lewat QR meja') && kolPro.includes('Kuota AI 400/hari'), 'halaman Paket ikut konfigurasi admin');
+  await k.screenshot({ path: OUT + '/p3-paket-konfig.png', fullPage: true });
+  k.errs.forEach((e) => g.errs.push(e));
+
   ok(await g.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'HP: tidak ada scroll ke samping');
   console.log('errors:', [...g.errs, ...c.errs]);
   ok(![...g.errs, ...c.errs].length, 'tanpa error');

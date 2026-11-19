@@ -1,6 +1,7 @@
 // Dashboard admin platform Racikin (#/admin). Hanya akun di tabel platform_admins (dicek di server).
 // READ-ONLY: ringkasan platform, adopsi fitur, daftar merchant (cari/filter/urut), detail merchant, export CSV.
 import { icon } from "../icons.js";
+import { FITUR as FITUR_PAKET, SELALU_GRATIS, FITUR_DEFAULT } from "../paket.js";
 import { esc, rupiah, short, todayISO, fmtDate, download, toast } from "../ui.js";
 import { render } from "../app.js";
 import { sb, cloud } from "../cloud.js";
@@ -78,6 +79,7 @@ export const TAB_ADMIN = [
   ["ringkasan", "Ringkasan"],
   ["merchant", "Merchant"],
   ["tren", "Pertumbuhan"],
+  ["paket", "Paket & harga"],
 ];
 export const tabAdmin = () => {
   const t = new URLSearchParams(location.hash.split("?")[1] || "").get("tab");
@@ -225,30 +227,7 @@ function paketPanel(m) {
 
 /** Setelan platform (harga & nomor WA upgrade), dipakai di halaman Akun mode admin. */
 export function platformCard() {
-  if (data.status !== "ok") {
-    if (data.status === "idle" && cloud.user) muat();
-    return "";
-  }
-  const st = data.setting || {};
-  return `<form class="card stack" data-form="platform">
-    <h2 class="card-title" style="margin:0">Setelan paket Pro</h2>
-    <label class="field"><span>Nomor WA admin (tombol upgrade merchant)</span><input name="wa" type="tel" inputmode="tel" value="${esc(st.wa || "")}" placeholder="08xx / 628xx" maxlength="20"></label>
-    <div class="row2">
-      <label class="field"><span>Harga bulanan (Rp)</span><input name="bulan" type="number" min="0" step="1000" value="${st.harga_bulan ?? 49000}"></label>
-      <label class="field"><span>Harga tahunan (Rp)</span><input name="tahun" type="number" min="0" step="1000" value="${st.harga_tahun ?? 490000}"></label>
-    </div>
-    <p class="small muted">Masa coba ${st.coba_hari ?? 14} hari untuk pendaftar baru. Akun lama gratis Pro sampai ${tgl(st.transisi_sampai)} (masa transisi).</p>
-    <button class="btn primary">Simpan setelan</button>
-  </form>`;
-}
-
-export async function simpanPlatform(form) {
-  const fd = new FormData(form);
-  const { data: st, error } = await sb().rpc("admin_set_setting", { p_wa: String(fd.get("wa") || ""), p_harga_bulan: Number(fd.get("bulan")) || 0, p_harga_tahun: Number(fd.get("tahun")) || 0 });
-  if (error) throw new Error(error.message);
-  data = { ...data, setting: st };
-  toast("Setelan paket disimpan");
-  render();
+  return `<a href="#/admin?tab=paket" class="card module"><span class="module-num">${icon("receipt", 18)}</span><div><h3>Paket & harga</h3><p class="muted small">Atur fitur Gratis / Pro, kuota AI, harga, masa coba & nomor WA upgrade</p></div><span class="chev">${icon("chevron", 18)}</span></a>`;
 }
 
 // ---------- Bagian halaman ----------
@@ -407,7 +386,93 @@ function trenTab() {
     </div>`;
 }
 
-const TAB_VIEW = { ringkasan: ringkasanTab, merchant: merchantTab, tren: trenTab };
+const tglInput = (t) => (t ? new Date(t).toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" }) : "");
+
+/** Halaman Paket & harga: tabel fitur Gratis / Pro, kuota AI, harga, masa coba & transisi, nomor WA upgrade. */
+function paketTab() {
+  const st = data.setting || {};
+  const fitur = { ...FITUR_DEFAULT, ...(st.fitur || {}) };
+  const r = ringkasPaket(semuaMerchant(), data.paket, st);
+  const hb = Number(st.harga_bulan ?? 49000);
+  const ht = Number(st.harga_tahun ?? 490000);
+  const seg = (id, v) => `<div class="a-seg a-seg-sm" role="radiogroup" aria-label="${esc(id)}">
+      <label class="${v === "gratis" ? "on" : ""}"><input type="radio" name="f_${id}" value="gratis" ${v === "gratis" ? "checked" : ""} data-change="segPaket">Gratis</label>
+      <label class="${v !== "gratis" ? "on" : ""}"><input type="radio" name="f_${id}" value="pro" ${v !== "gratis" ? "checked" : ""} data-change="segPaket">Pro</label>
+    </div>`;
+  return `<header class="a-top"><div><h1>Paket & harga</h1><p class="a-mut">Atur fitur Gratis vs Pro, kuota AI & harga. Langsung berlaku ke semua merchant (dicek server).</p></div>
+      <div class="a-top-act"><button class="a-btn" data-action="muat">${icon("sync", 15)}<span>Muat ulang</span></button></div></header>
+    <div class="a-bento a-bento-4">
+      ${tile("Pro berbayar", `<div class="a-big-row"><b class="a-big">${r.bayar}</b></div><p class="a-mut">MRR ${rp(r.mrr)}</p>`)}
+      ${tile("Masa coba / transisi", `<div class="a-big-row"><b class="a-big">${r.coba + r.transisi}</b></div><p class="a-mut">tetap dapat semua fitur Pro</p>`)}
+      ${tile("Gratis", `<div class="a-big-row"><b class="a-big">${r.gratis}</b></div><p class="a-mut">kena aturan di bawah</p>`)}
+      ${tile("Terakhir diubah", `<div class="a-big-row"><b class="a-big sm">${st.diubah ? tgl(st.diubah) : "-"}</b></div>`)}
+    </div>
+    <form class="a-stack" data-form="paketAdmin">
+      <section class="a-tile a-flush">
+        <div class="a-tile-head"><h2>Tabel fitur</h2><span class="a-mut">pilih Gratis / Pro per fitur</span></div>
+        <div class="a-table a-ptable">
+          <div class="a-tr a-th"><span>Fitur</span><span>Paket</span></div>
+          ${FITUR_PAKET.map((f) => `<div class="a-tr"><span class="a-usaha"><span><b>${esc(f.nama)}</b><small>${esc(f.ket)}</small></span></span><span>${seg(f.id, fitur[f.id])}</span></div>`).join("")}
+          <div class="a-tr"><span class="a-usaha"><span><b>Kuota AI per akun per hari</b><small>Mentor, analisa, konten, baca menu/nota dari foto</small></span></span>
+            <span class="a-ai-kuota"><label>Gratis <input class="a-input" type="number" name="ai_gratis" min="0" max="1000" value="${st.ai_gratis ?? 20}"></label><label>Pro <input class="a-input" type="number" name="ai_pro" min="0" max="5000" value="${st.ai_pro ?? 300}"></label></span></div>
+          ${SELALU_GRATIS.map((n) => `<div class="a-tr a-tetap"><span class="a-usaha"><span><b>${esc(n)}</b><small>fitur inti</small></span></span><span class="a-mut">Selalu gratis</span></div>`).join("")}
+        </div>
+      </section>
+      <div class="a-split even">
+        <section class="a-tile">
+          <h3>Harga Pro</h3>
+          <div class="a-form-grid">
+            <label>Bulanan (Rp)<input class="a-input" type="number" name="harga_bulan" min="0" step="1000" value="${hb}" required></label>
+            <label>Tahunan (Rp)<input class="a-input" type="number" name="harga_tahun" min="0" step="1000" value="${ht}" required></label>
+          </div>
+          <p class="a-mut">${ht < hb * 12 ? `Tahunan hemat ${rp(hb * 12 - ht)} (±${Math.round((hb * 12 - ht) / Math.max(1, hb))} bulan gratis)` : "Tahunan nggak lebih murah dari 12x bulanan"}</p>
+        </section>
+        <section class="a-tile">
+          <h3>Masa coba & transisi</h3>
+          <div class="a-form-grid">
+            <label>Masa coba pendaftar baru (hari)<input class="a-input" type="number" name="coba_hari" min="0" max="90" value="${st.coba_hari ?? 14}" required></label>
+            <label>Akun lama gratis Pro sampai<input class="a-input" type="date" name="transisi_sampai" value="${tglInput(st.transisi_sampai) || "2027-02-20"}" required></label>
+          </div>
+          <p class="a-mut">0 hari = tanpa masa coba. Mengubah masa coba berlaku juga ke pendaftar yang lagi coba.</p>
+        </section>
+      </div>
+      <section class="a-tile">
+        <h3>Upgrade</h3>
+        <div class="a-form-grid">
+          <label>Nomor WA admin (tombol upgrade di app merchant)<input class="a-input" type="tel" inputmode="tel" name="wa" maxlength="20" value="${esc(st.wa || "")}" placeholder="08xx / 628xx"></label>
+        </div>
+        <p class="a-mut">${st.wa ? "Merchant yang klik Upgrade langsung chat ke nomor ini (pesan berisi email & nama usaha)." : "Masih kosong: tombol upgrade di app merchant tampil \"sebentar lagi dibuka\"."}</p>
+      </section>
+      <div class="a-save"><button class="btn primary">Simpan pengaturan paket</button></div>
+    </form>`;
+}
+
+/** Simpan konfigurasi paket dari form. */
+async function simpanPaket(form) {
+  const fd = new FormData(form);
+  const fitur = Object.fromEntries(FITUR_PAKET.map((f) => [f.id, fd.get("f_" + f.id) === "gratis" ? "gratis" : "pro"]));
+  const p = {
+    wa: String(fd.get("wa") || ""),
+    harga_bulan: Number(fd.get("harga_bulan")) || 0,
+    harga_tahun: Number(fd.get("harga_tahun")) || 0,
+    coba_hari: Number(fd.get("coba_hari")) || 0,
+    transisi_sampai: `${fd.get("transisi_sampai")}T23:59:59+07:00`,
+    ai_gratis: Number(fd.get("ai_gratis")) || 0,
+    ai_pro: Number(fd.get("ai_pro")) || 0,
+    fitur,
+  };
+  const gratisJadi = FITUR_PAKET.filter((f) => fitur[f.id] === "gratis" && (data.setting?.fitur?.[f.id] || "pro") !== "gratis").map((f) => f.nama);
+  const proJadi = FITUR_PAKET.filter((f) => fitur[f.id] === "pro" && (data.setting?.fitur?.[f.id] || "pro") === "gratis").map((f) => f.nama);
+  const ubah = [gratisJadi.length ? `Jadi Gratis: ${gratisJadi.join(", ")}` : "", proJadi.length ? `Jadi Pro (merchant Gratis kehilangan akses): ${proJadi.join(", ")}` : ""].filter(Boolean).join("\n");
+  if (!confirm(`Simpan pengaturan paket? Langsung berlaku ke semua merchant.${ubah ? "\n\n" + ubah : ""}`)) return;
+  const { data: st, error } = await sb().rpc("admin_set_paket", { p });
+  if (error) throw new Error(error.message);
+  data = { ...data, setting: st };
+  toast("Pengaturan paket disimpan");
+  render();
+}
+
+const TAB_VIEW = { ringkasan: ringkasanTab, merchant: merchantTab, tren: trenTab, paket: paketTab };
 
 /** Angka "berisiko" di menu samping (badge di Merchant). */
 function badgeMenu() {
@@ -453,7 +518,15 @@ export const admin = {
       }
     }
   },
+  forms: {
+    paketAdmin(form) {
+      return simpanPaket(form);
+    },
+  },
   changes: {
+    segPaket(el) {
+      el.closest(".a-seg")?.querySelectorAll("label").forEach((l) => l.classList.toggle("on", l.contains(el)));
+    },
     q(el) {
       f.q = el.value;
       render();

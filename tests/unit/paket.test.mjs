@@ -60,4 +60,19 @@ assert.equal(A.perpanjang({ paket: "pro", sumber: "bayar", sampai: "2027-01-10T0
 assert.equal(A.perpanjang({ paket: "pro", sumber: "coba", sampai: "2026-12-05T00:00:00Z" }, "tahun", new Date("2026-12-01T00:00:00Z")), "2027-12-01T00:00:00.000Z");
 assert.equal(A.perpanjang({ paket: "gratis" }, "bulan", new Date("2026-01-31T00:00:00Z")).slice(0, 7), "2026-03", "Date overflow wajar (31 Jan + 1 bulan)");
 
+// --- Konfigurasi dari admin: fitur Gratis/Pro & kuota AI
+assert.deepEqual(P.aturFitur(null), P.FITUR_DEFAULT);
+const atur = { paket: "gratis", fitur: { meja: "gratis", foto: "gratis" }, ai_gratis: 50, ai_pro: 400 };
+assert.equal(P.bolehFitur("meja", atur), true, "meja diatur Gratis");
+assert.equal(P.bolehFitur("bill", atur), false, "bill tetap Pro");
+assert.equal(P.bolehFitur("bill", { paket: "pro" }), true);
+assert.equal(P.bolehFitur("tim", { paket: "lokal" }), true, "tanpa akun boleh dicoba");
+assert.deepEqual(P.kuotaAi(atur), { gratis: 50, pro: 400 });
+const isi = P.isiPaket(atur);
+assert.ok(isi.gratis.includes("Pesan lewat QR meja") && isi.gratis.includes("Foto menu AI") && isi.gratis.at(-1) === "Mentor & AI 50x/hari");
+assert.deepEqual(isi.pro.map((f) => f.id), ["tim", "dapur", "bill", "imporJual", "ai"]);
+assert.equal(isi.pro.at(-1).nama, "Kuota AI 400/hari");
+assert.ok(!P.isiPaket({ ai_gratis: 300, ai_pro: 300 }).pro.some((f) => f.id === "ai"), "kuota sama: AI bukan pembeda Pro");
+assert.deepEqual(P.FITUR.map((f) => f.id), ["tim", "meja", "dapur", "bill", "foto", "imporJual"], "sama dengan paket_fitur_ids() di SQL");
+
 console.log("paket OK");
