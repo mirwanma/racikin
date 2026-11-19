@@ -7,7 +7,7 @@ import { bahanMap, bisaDibuat } from "../stok-utils.js";
 import { program, waLink } from "../loyalty.js";
 import { cloud, markCards, isKasir, pelaku, teamActive } from "../cloud.js";
 import { METODE, metodeNama, subtotal, buatOrder, batalOrder, rekapHari, struk, perKasir } from "../pos.js";
-import { billAktif, billTerbuka, cariBill, billMeja, keranjangBill, totalBill, jumlahItem, lamaBuka, bukaBill, tambahRonde, hapusItem, batalBill, ubahBill, tutupBill, voucherBill, itemBill } from "../bill.js";
+import { billAktif, billTerbuka, cariBill, billMeja, keranjangBill, totalBill, jumlahItem, lamaBuka, bukaBill, tambahRonde, hapusItem, batalBill, ubahBill, tutupBill, voucherBill, itemBill, rapikanPilih, keranjangPilih, totalPilih, semuaDipilih, bayarSebagian, gabungBill, pindahMeja } from "../bill.js";
 import { dapurAktif, kirimTiket, tiketDari, ubahStatus as statusDapur, daftarTiket, dengar as dengarDapur } from "../dapur.js";
 import { mejaAktif, pesananMasuk, dengarPesanan, ubahPesanan } from "../meja.js";
 import { shiftAktif, ringkasan as ringkasanShift, wajibShift } from "../shift.js";
@@ -36,6 +36,8 @@ let billTambah = null; // id bill yang sedang ditambah pesanannya (keranjang -> 
 let billRef = null; // { id, nama, ronde } bill yang sedang dibayar (keranjang = isi bill, tidak bisa diubah)
 let billSheet = null; // pilih bill untuk "Simpan ke bill": { nama, error }
 let billBuka = null; // id bill yang detailnya dibuka di tab Bill
+let billSplit = null; // sheet bayar sebagian { id, pilih: { itemId: qty } }
+let billPindah = null; // sheet pindah meja / gabung bill: id bill
 const FORM_AWAL = () => ({ diskon: 0, kode: "", metode: "tunai", bayar: 0, pelangganId: "", atasNama: "", catatanDapur: "", tunaiSebagian: 0, campur: false });
 const bolehAtur = () => !isKasir();
 
@@ -334,7 +336,10 @@ function bayarView(s) {
     : "";
   const bRef = billRef ? cariBill(s, billRef.id) : null;
   const billInfo = bRef
-    ? `<section class="card meja-bayar bill-bayar"><b>Bayar bill ${esc(bRef.nama)}</b> <span class="small">${(bRef.ronde || []).length} ronde · dibuka ${lamaBuka(bRef)} lalu</span>
+    ? billRef.pilih
+      ? `<section class="card meja-bayar bill-bayar"><b>Bayar sebagian bill ${esc(bRef.nama)}</b> <span class="small">${cart.reduce((a, c) => a + c.qty, 0)} item dipilih</span>
+        <p class="small">Sisanya (${rupiah(totalBill(bRef) - subtotal(cart))}) tetap di bill sampai dibayar.</p></section>`
+      : `<section class="card meja-bayar bill-bayar"><b>Bayar bill ${esc(bRef.nama)}</b> <span class="small">${(bRef.ronde || []).length} ronde · dibuka ${lamaBuka(bRef)} lalu</span>
         <p class="small">Isi bill nggak bisa diubah di sini. Mau nambah? Buka tab Bill, pilih "Tambah pesanan".</p></section>`
     : "";
   return `${billInfo}${mejaInfo}${bRef ? "" : dapurForm}
@@ -401,7 +406,7 @@ function bayarView(s) {
                 : ""
             }`
       }
-      <button class="btn primary block lg" data-action="selesai" ${kurang || !cart.length || (form.campur && form.metode !== "tunai" && campurError(total)) ? "disabled" : ""}>${billRef ? "Lunasi bill" : "Selesaikan"} · ${rupiah(total)}</button>
+      <button class="btn primary block lg" data-action="selesai" ${kurang || !cart.length || (form.campur && form.metode !== "tunai" && campurError(total)) ? "disabled" : ""}>${billRef ? (billRef.pilih ? "Bayar bagian ini" : "Lunasi bill") : "Selesaikan"} · ${rupiah(total)}</button>
       ${billAktif(s) && bolehPro() && !billRef && !mejaRef && cart.length ? `<button class="btn soft block" data-action="billSimpanBuka">${icon("receipt", 16)} Simpan ke bill (bayar nanti)</button>` : ""}
     </section>`
     }`;
@@ -503,6 +508,66 @@ function billSheetView(s) {
     </section>`;
 }
 
+/** Sheet bayar sebagian: pilih item & jumlah yang dibayar sekarang (split bill per orang). */
+function billSplitView(s) {
+  if (!billSplit) return "";
+  const b = cariBill(s, billSplit.id);
+  if (!b) return "";
+  const p = billSplit.pilih;
+  const items = itemBill(b);
+  const tot = totalPilih(b, p);
+  return `<div class="sheet-bg" data-action="billSplitTutup"></div>
+    <section class="sheet" role="dialog" aria-modal="true" aria-label="Bayar sebagian">
+      <header class="row-between"><div><h2 class="card-title" style="margin:0">Bayar sebagian · ${esc(b.nama)}</h2><p class="small muted">Pilih yang dibayar sekarang, sisanya tetap di bill.</p></div><button class="icon-btn sm" data-action="billSplitTutup" aria-label="Tutup">${icon("x", 14)}</button></header>
+      <div class="sheet-body">
+        ${items
+          .map((it) => {
+            const q = p[it.id] || 0;
+            return `<div class="pos-line split-line ${q ? "on" : ""}">
+              <div><b>${esc(it.nama)}</b>${it.opsi?.length ? `<p class="small pos-opsi">${esc(labelOpsi(it))}</p>` : ""}<p class="small muted">${rupiah(it.harga)} · ada ${it.qty}</p></div>
+              <div class="stepper"><button class="icon-btn sm" data-action="splitMin" data-i="${esc(it.id)}" aria-label="Kurangi" ${q ? "" : "disabled"}>−</button><b>${q}</b><button class="icon-btn sm" data-action="splitPlus" data-i="${esc(it.id)}" aria-label="Tambah" ${q < it.qty ? "" : "disabled"}>+</button></div>
+              <b class="pos-line-total">${rupiah(it.harga * q)}</b>
+            </div>`;
+          })
+          .join("")}
+      </div>
+      <div class="row-between pos-total"><span>Dibayar sekarang</span><b>${rupiah(tot)}</b></div>
+      <p class="small muted">Sisa di bill: ${rupiah(totalBill(b) - tot)}</p>
+      <button class="btn primary block lg" data-action="billSplitBayar" ${tot ? "" : "disabled"}>Lanjut bayar · ${rupiah(tot)}</button>
+    </section>`;
+}
+
+/** Sheet pindah meja / gabung ke bill lain. */
+function billPindahView(s) {
+  if (!billPindah) return "";
+  const b = cariBill(s, billPindah);
+  if (!b) return "";
+  const lain = billTerbuka(s).filter((x) => x.id !== b.id);
+  const meja = (s.meja || []).filter((m) => m.id !== b.meja?.id);
+  return `<div class="sheet-bg" data-action="billPindahTutup"></div>
+    <section class="sheet" role="dialog" aria-modal="true" aria-label="Pindah atau gabung bill">
+      <header class="row-between"><h2 class="card-title" style="margin:0">Pindah / gabung · ${esc(b.nama)}</h2><button class="icon-btn sm" data-action="billPindahTutup" aria-label="Tutup">${icon("x", 14)}</button></header>
+      <div class="sheet-body stack">
+        ${
+          meja.length
+            ? `<p class="small muted">Pindah ke meja (kalau meja itu sudah punya bill, otomatis digabung):</p><div class="chips">${meja
+                .map((m) => {
+                  const ada = billTerbuka(s).find((x) => x.meja?.id === m.id);
+                  return `<button class="chip-btn" data-action="billPindahMeja" data-meja="${esc(m.id)}">${esc(m.nama)}${ada ? " · ada bill" : ""}</button>`;
+                })
+                .join("")}</div>`
+            : ""
+        }
+        ${
+          lain.length
+            ? `<p class="small muted">Gabung ke bill lain (semua pesanan pindah ke sana):</p>${lain.map((x) => `<button class="bill-pilih" data-action="billGabung" data-ke="${esc(x.id)}"><b>${esc(x.nama)}</b><small class="muted">${jumlahItem(x)} item · ${rupiah(totalBill(x))}</small></button>`).join("")}`
+            : ""
+        }
+        ${!meja.length && !lain.length ? `<p class="muted">Belum ada meja atau bill lain. Ganti nama bill aja kalau pindah tempat.</p>` : ""}
+      </div>
+    </section>`;
+}
+
 /** Tab Bill: daftar bill yang masih buka. */
 function billView(s) {
   if (!billAktif(s) && !bolehPro()) return kunciPro("bill");
@@ -530,9 +595,14 @@ function billView(s) {
             <span><b>${esc(b.nama)}</b>${b.meja ? ` <span class="tag">QR ${esc(b.meja.nama)}</span>` : ""}<small class="muted">${jumlahItem(b)} item · ${(b.ronde || []).length} ronde · ${lamaBuka(b)}</small></span>
             <b class="mono">${rupiah(totalBill(b))}</b>
           </button>
+          ${(b.dibayar || []).length ? `<p class="small pos">${icon("check", 13)} Sudah dibayar sebagian: ${rupiah(b.dibayar.reduce((a, x) => a + (Number(x.total) || 0), 0))} (${b.dibayar.length}x)</p>` : ""}
           <div class="row2">
             <button class="btn soft" data-action="billTambahMulai" data-id="${esc(b.id)}" ${bolehPro() ? "" : "disabled"}>${icon("plus", 14)} Tambah pesanan</button>
-            <button class="btn primary" data-action="billBayar" data-id="${esc(b.id)}" ${jumlahItem(b) ? "" : "disabled"}>Bayar</button>
+            <button class="btn primary" data-action="billBayar" data-id="${esc(b.id)}" ${jumlahItem(b) ? "" : "disabled"}>Bayar semua</button>
+          </div>
+          <div class="row2">
+            <button class="btn ghost sm" data-action="billSplitBuka" data-id="${esc(b.id)}" ${jumlahItem(b) > 1 ? "" : "disabled"}>Bayar sebagian</button>
+            <button class="btn ghost sm" data-action="billPindahBuka" data-id="${esc(b.id)}">Pindah / gabung</button>
           </div>
           ${
             open
@@ -724,7 +794,7 @@ export const kasir = {
           : `<section class="card empty pos-empty"><div class="empty-icon">${icon("register", 30)}</div><h3>Keranjang kosong</h3><p>Ketuk menu di kiri untuk mulai pesanan.</p></section>`;
       return `${head("Kasir", "#/")}${tabs}<div class="pos-split"><div class="pos-left">${billBanner(s)}${menuView(s)}</div><aside class="pos-right">${panel}</aside></div>${pilihSheet(s)}${chatSheet(s)}${billSheetView(s)}`;
     }
-    const body = tab === "rekap" ? rekapView(s) : tab === "bill" ? billView(s) : step === "struk" && last ? strukView(s) : step === "bayar" && cart.length ? bayarView(s) : billBanner(s) + menuView(s);
+    const body = tab === "rekap" ? rekapView(s) : tab === "bill" ? billView(s) + billSplitView(s) + billPindahView(s) : step === "struk" && last ? strukView(s) : step === "bayar" && cart.length ? bayarView(s) : billBanner(s) + menuView(s);
     return `${head("Kasir", "#/")}${tabs}${body}${tab === "jual" ? pilihSheet(s) + chatSheet(s) + billSheetView(s) : ""}`;
   },
 
@@ -890,17 +960,20 @@ export const kasir = {
         shiftId: shiftAktif(s, pelaku())?.id || null,
         // Open bill: stok sudah dipotong per ronde.
         stok: !bRef,
-        bill: bRef ? { id: bRef.id, nama: bRef.nama, ronde: (bRef.ronde || []).length } : null,
+        bill: bRef ? { id: bRef.id, nama: bRef.nama, ronde: (bRef.ronde || []).length, ...(billRef.pilih ? { sebagian: true } : {}) } : null,
       });
       if (mejaRef) order.meja = { id: mejaRef.id, nama: mejaRef.meja_nama, kode: mejaRef.kode };
       const keDapur = dapurAktif(s) && !bRef; // bill: tiap ronde sudah dikirim ke dapur
       if (bRef) order.atasNama = bRef.nama.slice(0, 40);
       else if (form.atasNama.trim()) order.atasNama = form.atasNama.trim().slice(0, 40);
       if (form.catatanDapur.trim()) order.catatanDapur = form.catatanDapur.trim().slice(0, 200);
-      store.set(bRef ? { ...patch, ...tutupBill(s, bRef.id) } : patch);
+      // Bill: lunas penuh -> ditutup; bayar sebagian -> item yang dibayar dikurangi dari bill.
+      const sisa = bRef && billRef.pilih ? bayarSebagian(s, bRef.id, billRef.pilih, { orderId: order.id, total: order.total }) : null;
+      store.set(bRef ? { ...patch, ...(sisa ? { bills: sisa.bills } : tutupBill(s, bRef.id)) } : patch);
       if (bRef) {
-        // Pesanan dari QR meja yang masuk bill ini ikut lunas.
-        for (const r of bRef.ronde || []) if (r.meja?.id) ubahPesanan(r.meja.id, { bayar_status: "lunas" }).catch(() => {});
+        // Pesanan dari QR meja yang masuk bill ini ikut lunas (kalau bill-nya sudah lunas semua).
+        if (!sisa || sisa.lunas) for (const r of bRef.ronde || []) if (r.meja?.id) ubahPesanan(r.meja.id, { bayar_status: "lunas" }).catch(() => {});
+        if (sisa && !sisa.lunas) toast(`Sisa bill ${bRef.nama}: ${rupiah(totalBill(cariBill(store.get(), bRef.id)))}`);
         billRef = null;
       }
       if (keDapur) {
@@ -997,17 +1070,95 @@ export const kasir = {
       render();
       window.scrollTo(0, 0);
     },
+    billSplitBuka(el) {
+      billSplit = { id: el.dataset.id, pilih: {} };
+      render();
+    },
+    billSplitTutup() {
+      billSplit = null;
+      render();
+    },
+    splitPlus(el) {
+      const b = cariBill(store.get(), billSplit?.id);
+      const it = itemBill(b).find((x) => x.id === el.dataset.i);
+      if (!it) return;
+      billSplit.pilih[it.id] = Math.min(it.qty, (billSplit.pilih[it.id] || 0) + 1);
+      render();
+    },
+    splitMin(el) {
+      if (!billSplit) return;
+      billSplit.pilih[el.dataset.i] = Math.max(0, (billSplit.pilih[el.dataset.i] || 0) - 1);
+      render();
+    },
+    billSplitBayar() {
+      const s = store.get();
+      const b = cariBill(s, billSplit?.id);
+      if (!b) return;
+      const pilih = rapikanPilih(b, billSplit.pilih);
+      if (!Object.keys(pilih).length) return toast("Pilih item yang dibayar dulu", "err");
+      billSplit = null;
+      if (cart.length && !billRef && !confirm("Keranjang sekarang akan diganti. Lanjut?")) return;
+      const semua = semuaDipilih(b, pilih);
+      billRef = semua ? { id: b.id, nama: b.nama } : { id: b.id, nama: b.nama, pilih };
+      billTambah = null;
+      mejaRef = null;
+      channel = "toko";
+      cart = semua ? keranjangBill(b) : keranjangPilih(b, pilih);
+      form = { ...FORM_AWAL(), kode: b.kode || "" };
+      tab = "jual";
+      step = "bayar";
+      render();
+      window.scrollTo(0, 0);
+    },
+    billPindahBuka(el) {
+      billPindah = el.dataset.id;
+      render();
+    },
+    billPindahTutup() {
+      billPindah = null;
+      render();
+    },
+    billPindahMeja(el) {
+      const s = store.get();
+      const m = (s.meja || []).find((x) => x.id === el.dataset.meja);
+      const b = cariBill(s, billPindah);
+      if (!m || !b) return;
+      const r = pindahMeja(s, b.id, m);
+      store.set({ bills: r.bills });
+      billPindah = null;
+      billBuka = r.digabung || b.id;
+      toast(r.digabung ? `${b.nama} digabung ke bill ${m.nama}` : `Bill pindah ke ${m.nama}`);
+      render();
+    },
+    billGabung(el) {
+      const s = store.get();
+      const b = cariBill(s, billPindah);
+      const ke = cariBill(s, el.dataset.ke);
+      if (!b || !ke || !confirm(`Gabung ${b.nama} ke ${ke.nama}? Semua pesanan ${b.nama} pindah ke ${ke.nama}.`)) return;
+      store.set(gabungBill(s, b.id, ke.id));
+      billPindah = null;
+      billBuka = ke.id;
+      toast(`${b.nama} digabung ke ${ke.nama}`);
+      render();
+    },
     billHapusItem(el) {
       const s = store.get();
       const b = cariBill(s, el.dataset.id);
       const it = b?.ronde.find((r) => r.id === el.dataset.r)?.items.find((x) => x.id === el.dataset.i);
       if (!it) return;
-      const alasan = prompt(`Batalkan ${it.qty}× ${it.nama} dari bill ${b.nama}? Tulis alasannya:`, "Salah input");
+      let qty = it.qty;
+      if (it.qty > 1) {
+        const j = prompt(`Batalkan berapa ${it.nama}? (1-${it.qty})`, String(it.qty));
+        if (j === null) return;
+        qty = Math.round(Number(j));
+        if (!(qty >= 1 && qty <= it.qty)) return toast(`Isi angka 1 sampai ${it.qty}`, "err");
+      }
+      const alasan = prompt(`Batalkan ${qty}× ${it.nama} dari bill ${b.nama}? Tulis alasannya:`, "Salah input");
       if (alasan === null) return;
       if (!alasan.trim()) return toast("Alasan wajib diisi", "err");
       const stokKembali = confirm("Kembalikan stok bahannya? (OK kalau belum sempat dibuat, Batal kalau sudah dibuat / terbuang)");
-      store.set(hapusItem(s, b.id, el.dataset.r, it.id, { alasan, oleh: pelaku(), stokKembali }));
-      toast(`${it.nama} dibatalkan dari bill`);
+      store.set(hapusItem(s, b.id, el.dataset.r, it.id, { alasan, oleh: pelaku(), stokKembali, qty }));
+      toast(`${qty}× ${it.nama} dibatalkan dari bill`);
       render();
     },
     billBatal(el) {

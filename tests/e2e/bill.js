@@ -66,7 +66,7 @@ const stok = (s, nama) => s.bahan.find((x) => x.nama === nama).stok;
 
   // --- Batalkan 1 item (pemilik): alasan + kembalikan stok
   const sebelum = stok(s, 'Teh celup');
-  jawab.push('Salah input', true);
+  jawab.push('2', 'Salah input', true); // batalkan berapa (2 dari 2), alasan, stok kembali
   await p.click('.bill-ronde:nth-of-type(2) [data-action=billHapusItem]'); await p.waitForTimeout(300);
   s = await st(p);
   bb = s.bills.find((x) => x.id === bill.id);

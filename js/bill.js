@@ -4,14 +4,17 @@
 //   id, nama, meja: { id, nama } | null, dibuka: "YYYY-MM-DDTHH:MM", oleh: { id, nama } | null,
 //   status: "buka" | "batal",
 //   ronde: [{ id, waktu, tanggal, oleh, items: [{ id, resepId, nama, harga, qty, opsi? }], meja?: { id, kode } }],
-//   hapus: [{ id, waktu, oleh, rondeId, item, alasan, stokKembali }],   // item yang dibatalkan setelah dikirim
+//   hapus: [{ id, waktu, oleh, rondeId, item, alasan, stokKembali }],   // item yang dibatalkan setelah dikirim (item.qty = yang dibatalkan)
+//   dibayar: [{ orderId, waktu, total, n }],                           // pembayaran sebagian (split bill)
 //   kode?, wa?,                                                         // voucher dari pesan meja (dipakai saat bayar)
 //   batal?: { waktu, oleh, alasan, stokKembali },
 // }]
 // Aturan:
 // - Tiap "ronde" (tambahan pesanan) langsung memotong stok & dikirim ke dapur (kalau mode dapur aktif).
 // - Uang masuk Kas & rekap HANYA saat bill dibayar (jadi 1 order biasa, order.bill = { id, nama, ronde }).
-// - Item yang sudah dikirim hanya bisa dibatalkan pemilik/manajer + alasan (stok bisa dikembalikan).
+// - Item yang sudah dikirim hanya bisa dibatalkan pemilik/manajer + alasan (stok bisa dikembalikan), boleh sebagian jumlah.
+// - Bayar sebagian (split bill): pilih item & jumlah -> jadi 1 order; sisanya tetap di bill sampai lunas.
+// - Gabung bill / pindah meja: semua ronde dipindah ke bill tujuan.
 import { uid } from "./store.js";
 import { stokPatch, subtotal } from "./pos.js";
 import { kunciItem } from "./varian.js";
@@ -78,24 +81,105 @@ export function tambahRonde(s, billId, cart, { oleh = null, waktu = sekarang(), 
   return { patch: { bills, ...stok }, ronde };
 }
 
-/** Batalkan 1 item yang sudah dikirim (pemilik/manajer). */
-export function hapusItem(s, billId, rondeId, itemId, { alasan, oleh = null, stokKembali = true, waktu = sekarang() }) {
+/** Kurangi qty item di ronde (qty 0 -> item hilang, ronde kosong -> ronde hilang). kurang = { itemId: qty } */
+function kurangiItem(ronde, kurang) {
+  return ronde
+    .map((r) => ({
+      ...r,
+      items: r.items.map((it) => (kurang[it.id] ? { ...it, qty: it.qty - Math.min(it.qty, kurang[it.id]) } : it)).filter((it) => it.qty > 0),
+    }))
+    .filter((r) => r.items.length);
+}
+
+/** Batalkan item yang sudah dikirim (pemilik/manajer). qty = jumlah yang dibatalkan (default semua). */
+export function hapusItem(s, billId, rondeId, itemId, { alasan, oleh = null, stokKembali = true, waktu = sekarang(), qty = null }) {
   if (!String(alasan || "").trim()) throw new Error("Tulis alasan dulu");
   const b = cariBill(s, billId);
   const r = b?.ronde.find((x) => x.id === rondeId);
   const it = r?.items.find((x) => x.id === itemId);
   if (!it) throw new Error("Item nggak ditemukan");
-  const stok = stokKembali ? stokPatch(s, [it], waktu.slice(0, 10), +1) : {};
+  const n = qty === null ? it.qty : Math.round(Number(qty));
+  if (!(n >= 1 && n <= it.qty)) throw new Error(`Jumlah batal 1 sampai ${it.qty}`);
+  const batal = { ...it, qty: n };
+  const stok = stokKembali ? stokPatch(s, [batal], waktu.slice(0, 10), +1) : {};
   const bills = s.bills.map((x) =>
     x.id !== billId
       ? x
       : {
           ...x,
-          ronde: x.ronde.map((y) => (y.id === rondeId ? { ...y, items: y.items.filter((z) => z.id !== itemId) } : y)).filter((y) => y.items.length),
-          hapus: [...(x.hapus || []), { id: uid(), waktu, oleh, rondeId, item: it, alasan: String(alasan).trim().slice(0, 120), stokKembali: !!stokKembali }],
+          ronde: kurangiItem(x.ronde, { [itemId]: n }),
+          hapus: [...(x.hapus || []), { id: uid(), waktu, oleh, rondeId, item: batal, alasan: String(alasan).trim().slice(0, 120), stokKembali: !!stokKembali }],
         },
   );
   return { bills, ...stok };
+}
+
+/** Rapikan pilihan bayar sebagian: { itemId: qty } dibatasi qty yang ada di bill. */
+export function rapikanPilih(b, pilih) {
+  const out = {};
+  for (const it of itemBill(b)) {
+    const q = Math.min(it.qty, Math.max(0, Math.round(Number(pilih?.[it.id]) || 0)));
+    if (q) out[it.id] = q;
+  }
+  return out;
+}
+
+/** Item yang dipilih untuk dibayar sekarang, siap jadi keranjang Kasir. */
+export function keranjangPilih(b, pilih) {
+  const p = rapikanPilih(b, pilih);
+  return keranjangBill({ ronde: (b.ronde || []).map((r) => ({ ...r, items: r.items.filter((it) => p[it.id]).map((it) => ({ ...it, qty: p[it.id] })) })) });
+}
+
+/** Total item yang dipilih. */
+export const totalPilih = (b, pilih) => subtotal(keranjangPilih(b, pilih));
+
+/** Apakah pilihan = seluruh isi bill (jadi bayar penuh). */
+export const semuaDipilih = (b, pilih) => {
+  const p = rapikanPilih(b, pilih);
+  return itemBill(b).every((it) => p[it.id] === it.qty);
+};
+
+/**
+ * Setelah bayar sebagian: kurangi item yang sudah dibayar & catat pembayaran. Kalau habis, bill ditutup.
+ * Return { bills, lunas }.
+ */
+export function bayarSebagian(s, billId, pilih, { orderId, total, waktu = sekarang() }) {
+  const b = cariBill(s, billId);
+  if (!b) throw new Error("Bill nggak ditemukan");
+  const p = rapikanPilih(b, pilih);
+  const ronde = kurangiItem(b.ronde || [], p);
+  if (!ronde.length) return { ...tutupBill(s, billId), lunas: true };
+  const n = Object.values(p).reduce((a, x) => a + x, 0);
+  const bills = s.bills.map((x) => (x.id === billId ? { ...x, ronde, dibayar: [...(x.dibayar || []), { orderId, waktu, total, n }] } : x));
+  return { bills, lunas: false };
+}
+
+/** Gabung bill: semua ronde (dan riwayat batal/bayar) dari bill asal pindah ke bill tujuan; bill asal hilang. */
+export function gabungBill(s, dariId, keId) {
+  if (dariId === keId) throw new Error("Pilih bill lain");
+  const dari = cariBill(s, dariId);
+  const ke = cariBill(s, keId);
+  if (!dari || !ke || dari.status === "batal" || ke.status === "batal") throw new Error("Bill nggak ditemukan");
+  const gabung = {
+    ...ke,
+    ronde: [...(ke.ronde || []), ...(dari.ronde || [])].sort((a, b) => String(a.waktu).localeCompare(String(b.waktu))),
+    hapus: [...(ke.hapus || []), ...(dari.hapus || [])],
+    ...((ke.dibayar || dari.dibayar) ? { dibayar: [...(ke.dibayar || []), ...(dari.dibayar || [])] } : {}),
+    dibuka: String(dari.dibuka) < String(ke.dibuka) ? dari.dibuka : ke.dibuka,
+    ...(!ke.kode && dari.kode ? { kode: dari.kode, ...(dari.wa ? { wa: dari.wa } : {}) } : {}),
+  };
+  return { bills: s.bills.filter((x) => x.id !== dariId).map((x) => (x.id === keId ? gabung : x)) };
+}
+
+/** Pindah bill ke meja lain. Kalau meja tujuan sudah punya bill buka -> digabung ke sana. */
+export function pindahMeja(s, billId, meja) {
+  const b = cariBill(s, billId);
+  if (!b) throw new Error("Bill nggak ditemukan");
+  const ada = billMeja(s, meja.id);
+  if (ada && ada.id !== billId) return { ...gabungBill(s, billId, ada.id), digabung: ada.id };
+  const namaLama = b.meja?.nama;
+  const nama = !namaLama || b.nama === namaLama ? meja.nama : b.nama.replace(namaLama, meja.nama);
+  return { bills: s.bills.map((x) => (x.id === billId ? { ...x, meja: { id: meja.id, nama: meja.nama }, nama: String(nama).slice(0, 40) } : x)), digabung: null };
 }
 
 /** Batalkan seluruh bill (pemilik/manajer). Bill tetap disimpan sebagai riwayat (status batal). */

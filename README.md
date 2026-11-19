@@ -130,6 +130,8 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - **Simpan ke bill** dari layar bayar (bill baru atau bill yang masih buka), atau **Buka bill** dari tab Bill. Tiap tambahan = **ronde**: stok langsung dipotong & dikirim ke dapur (kalau mode dapur aktif). Uang baru masuk Kas & rekap waktu bill **dilunasi** (jadi 1 order biasa dengan `order.bill`), stok nggak dipotong dua kali.
 - Pesan meja (QR) yang pilih "bayar di kasir" otomatis masuk **bill meja itu** (voucher dari pelanggan ikut tersimpan; status dapur tetap kelihatan di HP pelanggan). Waktu bill lunas, pesanan meja terkait ikut ditandai lunas.
 - Isi bill nggak bisa diubah waktu dibayar (nambah lewat "Tambah pesanan"). Item yang sudah dikirim hanya bisa dibatalkan pemilik/manajer + alasan (pilih stok dikembalikan atau nggak); bill bisa dibatalkan seluruhnya (riwayat disimpan 30 hari). Tutup shift memperingatkan bill yang belum dibayar.
+- **Bayar sebagian / split bill**: di kartu bill "Bayar sebagian" → pilih item & jumlah yang dibayar sekarang (cth per orang) → jadi 1 order (`order.bill.sebagian`), sisanya tetap di bill (riwayat di `bill.dibayar`). Kalau semua dipilih = bayar penuh.
+- **Batal sebagian jumlah** (cth 1 dari 3 es teh), **pindah meja** (kalau meja tujuan sudah punya bill, otomatis digabung) & **gabung bill** (semua ronde, riwayat & voucher ikut pindah).
 - Data di `bills` (sinkron antar HP, ronde dari 2 HP digabung). Logika di `js/bill.js`.
 
 ### Pembayaran campuran

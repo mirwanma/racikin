@@ -152,6 +152,9 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Pilihan varian bisa mengalikan porsi resep (Jumbo 1,5×, bahan kemasan tidak ikut dikali) dan mengganti / menghilangkan bahan resep (susu oat, tanpa gula). Stok, HPP per menu, rekap `opsiMenu`, laporan & cek kesehatan ikut. Data contoh: Es Teh Jumbo 1,5× porsi, pilihan "Tanpa gula".
 - Tanpa perubahan server (harga tetap dari harga tambahan; pesan meja ikut otomatis).
 
+### Fase 30: Open bill tahap 2 (selesai)
+- Bayar sebagian / split bill per orang (pilih item & jumlah), batal sebagian jumlah, pindah meja (otomatis gabung kalau meja tujuan punya bill), gabung bill. Tanpa perubahan server.
+
 ### Fase 29: Monetisasi tahap 1, paket Gratis & Pro (selesai)
 Keputusan pemilik (20 Nov 2026):
 
@@ -173,7 +176,7 @@ Keputusan pemilik (20 Nov 2026):
 
 ### Fase 28: Open bill + pembayaran campuran (selesai)
 - Bill terbuka per meja/pembeli dengan ronde (stok dipotong saat dikirim, Kas saat dilunasi), pesan meja "bayar di kasir" masuk bill meja, batal item/bill (pemilik/manajer + alasan), peringatan tutup shift, pembayaran sebagian tunai + QRIS/transfer. Migrasi `open_bill_kasir` (kasir boleh menulis `bills`).
-- Berikutnya (opsional): split bill per orang / bayar sebagian, pindah & gabung meja, batal sebagian qty.
+- Tahap 2 (split bill, pindah & gabung, batal sebagian) selesai di Fase 30.
 
 ### Fase 27: Promo di server untuk pesan meja + kuota voucher per pelanggan (selesai)
 - `cek_promo_meja` / `place_table_order` (7 argumen, versi lama 5 argumen tetap jalan) menghitung promo otomatis & voucher dari `promoAturan`; `table_orders` + `subtotal`, `promo`. Voucher bisa dibatasi per pelanggan (nomor WA, di-hash di server). Migrasi `promo_meja_server` + `promo_meja_rp`.
@@ -183,7 +186,7 @@ Keputusan pemilik (20 Nov 2026):
 - Desain ulang "pusat kontrol" (gelap, ikut mode terang): periode 7/30/90 hari, grafik omzet & order harian, tabel merchant dengan grafik mini, "Perlu disapa". Migrasi `admin_desain`: `admin_harian` + `seri14`/`order90` di `admin_merchants`.
 
 ### Di luar MVP (fase berikutnya)
-Payment gateway sungguhan (langganan Pro otomatis + QRIS pesan meja), WhatsApp Business API resmi, split bill per orang, multi-cabang.
+Payment gateway sungguhan (langganan Pro otomatis + QRIS pesan meja), WhatsApp Business API resmi, multi-cabang.
 
 ## 6. Arsitektur MVP
 - **Frontend**: PWA statis (HTML + CSS + JS modules, tanpa build) di root repo ini, di-host di GitHub Pages. Data disimpan di `localStorage` (offline-first).
