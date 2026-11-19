@@ -152,6 +152,13 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Pilihan varian bisa mengalikan porsi resep (Jumbo 1,5×, bahan kemasan tidak ikut dikali) dan mengganti / menghilangkan bahan resep (susu oat, tanpa gula). Stok, HPP per menu, rekap `opsiMenu`, laporan & cek kesehatan ikut. Data contoh: Es Teh Jumbo 1,5× porsi, pilihan "Tanpa gula".
 - Tanpa perubahan server (harga tetap dari harga tambahan; pesan meja ikut otomatis).
 
+### Fase 32: Laporan pajak sederhana, PPh Final UMKM 0,5% (selesai)
+- Halaman `#/pajak` (modul di Bisnis, dua tahap usaha; fitur Gratis). Omzet per bulan diambil dari Kas (pemasukan Penjualan, Pre-order, Katering/pesanan: Kasir, impor & manual).
+- Aturan (PP 55/2022 jo. PP 20/2026, dicek Nov 2026): tarif 0,5% dari omzet; orang pribadi bebas untuk Rp500 juta pertama per tahun (dihitung kumulatif, bulan yang melewati batas hanya kena selisihnya); PT perorangan & koperasi kena dari rupiah pertama; CV/firma/PT biasa diarahkan ke tarif umum; peringatan kalau omzet setahun lewat Rp4,8 miliar.
+- Per bulan: omzet, bagian kena pajak, PPh, jatuh tempo (tgl 15 bulan berikutnya), status (bebas / belum / lewat tempo / lunas). Catat bayar (tanggal, nominal, NTPN), opsional sekalian jadi pengeluaran Kas kategori **Pajak** (id `pajak-YYYY-MM`, `ref: "pajak"`), bisa dibatalkan.
+- Cara bayar lewat Coretax (kode billing KAP 411128 / KJS 420), salin rekap omzet setahun untuk SPT Tahunan, pengingat tagihan di Beranda (bukan untuk kasir). Data `pajak` disembunyikan dari kasir (migrasi `pajak_kasir_hidden`).
+- Berikutnya (kalau perlu): ekspor bukti/rekap PDF, pengingat push tanggal 10, dukungan PPN/PB1 restoran daerah.
+
 ### Fase 31: Pengaturan paket dari dashboard admin (selesai)
 - Menu admin **Paket** (`#/admin?tab=paket`): satu halaman untuk **tabel fitur Gratis / Pro** (tim, pesan meja, dapur, open bill, foto AI, impor penjualan; fitur inti selalu gratis), **kuota AI** per paket, **harga** bulanan & tahunan, **masa coba**, **akhir masa transisi**, dan **nomor WA upgrade**. Sekali simpan, konfirmasi menyebut fitur yang berubah.
 - Server membaca konfigurasi ini (`platform_setting.fitur`, `ai_gratis`, `ai_pro`; `fitur_boleh`, `ai_limit`): kunci tim, pesan meja, AI foto & kuota AI ikut berubah tanpa rilis app. App merchant (`bolehFitur`, halaman Paket, Beranda) juga ikut. Migrasi `atur_paket` + `admin_set_paket`.

@@ -31,6 +31,7 @@ import { varian } from "./views/varian.js";
 import { impor } from "./views/impor.js";
 import { sehat } from "./views/sehat.js";
 import { izin } from "./views/izin.js";
+import { pajak } from "./views/pajak.js";
 import { imporJual } from "./views/imporjual.js";
 import { promo } from "./views/promo.js";
 import { wa } from "./views/wa.js";
@@ -41,8 +42,8 @@ import { initMeja } from "./meja.js";
 import { initCloud, onCloudChange, cloud, role } from "./cloud.js";
 import { icon } from "./icons.js";
 
-const routes = { "": home, profil, bisnis, ide, rab, brand, aktivasi, kas, konten, mentor, setelan, akun, stok, resep, pelanggan, kartu, studio, kasir, online, tim, gabung, notif, shift, laporan, belanja, dapur, meja, varian, impor, sehat, izin, "impor-jual": imporJual, promo, wa, admin, paket, m: pesan };
-const tabOf = { "": "", bisnis: "bisnis", ide: "bisnis", rab: "bisnis", brand: "bisnis", aktivasi: "bisnis", kas: "kas", stok: "bisnis", resep: "bisnis", pelanggan: "bisnis", studio: "bisnis", konten: "konten", kasir: "kasir", online: "kasir", tim: "bisnis", notif: "-", shift: "kasir", laporan: "kas", belanja: "bisnis", dapur: "kasir", meja: "bisnis", varian: "bisnis", impor: "bisnis", sehat: "bisnis", izin: "bisnis", "impor-jual": "bisnis", promo: "bisnis", wa: "bisnis", admin: "-", paket: "-", m: "-" };
+const routes = { "": home, profil, bisnis, ide, rab, brand, aktivasi, kas, konten, mentor, setelan, akun, stok, resep, pelanggan, kartu, studio, kasir, online, tim, gabung, notif, shift, laporan, belanja, dapur, meja, varian, impor, sehat, izin, pajak, "impor-jual": imporJual, promo, wa, admin, paket, m: pesan };
+const tabOf = { "": "", bisnis: "bisnis", ide: "bisnis", rab: "bisnis", brand: "bisnis", aktivasi: "bisnis", kas: "kas", stok: "bisnis", resep: "bisnis", pelanggan: "bisnis", studio: "bisnis", konten: "konten", kasir: "kasir", online: "kasir", tim: "bisnis", notif: "-", shift: "kasir", laporan: "kas", belanja: "bisnis", dapur: "kasir", meja: "bisnis", varian: "bisnis", impor: "bisnis", sehat: "bisnis", izin: "bisnis", pajak: "bisnis", "impor-jual": "bisnis", promo: "bisnis", wa: "bisnis", admin: "-", paket: "-", m: "-" };
 // Kasir hanya melihat halaman jualan, pelanggan, dan stok bahan.
 const KASIR_ROUTES = new Set(["kasir", "pelanggan", "stok", "akun", "setelan", "kartu", "tim", "gabung", "notif", "shift", "dapur", "m"]);
 const tabOfKasir = { kasir: "kasir", pelanggan: "pelanggan", stok: "stok", akun: "akun", setelan: "akun", tim: "akun", notif: "akun", shift: "kasir", dapur: "dapur" };
@@ -53,7 +54,7 @@ const ADMIN_ROUTES = new Set(["admin", "akun"]);
 const FREE_ROUTES = ["profil", "setelan", "akun", "kartu", "gabung", "tim", "notif", "m", "admin", "paket"];
 
 // Halaman yang di layar lebar disusun dua kolom (kartu mengalir kiri-kanan).
-const COLS = new Set(["home", "bisnis", "kas", "laporan", "pelanggan", "stok", "belanja", "shift", "tim", "setelan", "akun", "notif", "ide", "rab", "brand", "aktivasi", "konten", "online", "studio", "izin"]);
+const COLS = new Set(["home", "bisnis", "kas", "laporan", "pelanggan", "stok", "belanja", "shift", "tim", "setelan", "akun", "notif", "ide", "rab", "brand", "aktivasi", "konten", "online", "studio", "izin", "pajak"]);
 const view = $("#view");
 let current = home;
 
