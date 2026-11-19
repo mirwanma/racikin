@@ -38,6 +38,10 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - Usaha tahap ide yang sudah **14 hari jualan** di Kasir ditawari pindah ke tampilan "udah jalan" (bisa "Nanti aja"). Isian "udah jalan" tetap disimpan kalau pindah balik ke tahap ide.
 - Data contoh TAHGUY = usaha udah jalan (fokus: untung & stok). Logika di `js/tahap.js`.
 
+### Pajak UMKM (PPh Final 0,5%)
+- Halaman `#/pajak` (modul di Bisnis): omzet per bulan dari Kas, PPh Final 0,5% (orang pribadi: Rp500 juta pertama per tahun bebas; PT perorangan/koperasi: semua omzet; CV/PT biasa: info tarif umum), jatuh tempo tgl 15 bulan berikutnya, status & pengingat di Beranda.
+- Catat bayar (tanggal, nominal, NTPN), opsional jadi pengeluaran Kas kategori Pajak. Cara bayar lewat kode billing Coretax (KAP 411128 / KJS 420) dan salin rekap omzet untuk SPT Tahunan. Logika di `js/pajak.js` (`DICEK`, perbarui kalau aturan berubah), data di `pajak` (tidak dikirim ke kasir).
+
 ### Panduan perizinan
 - Halaman `#/izin` (modul di Bisnis untuk dua tahap usaha): NIB, PIRT (SPP-IRT), sertifikat halal, SLHS, pendaftaran merek. Tiap izin: label **Wajib / Disarankan / Opsional / Belum perlu** + alasannya (dari jenis usaha, konsep & menu di profil, misal PIRT baru perlu untuk produk kemasan, menu daging → catatan halal reguler), biaya, lama, masa berlaku, langkah, checklist dokumen, tombol ke situs resmi (oss.go.id, ptsp.halal.go.id, merek.dgip.go.id).
 - Catat status (Belum / Lagi diurus / Sudah punya), nomor izin, tanggal terbit & berlaku. Masa berlaku dihitung otomatis (PIRT 5 tahun, SLHS 3 tahun, merek 10 tahun) → pengingat di Beranda kalau tinggal ≤ 90 hari atau sudah habis. Status izin ikut jadi konteks Mentor AI (`#/mentor?tanya=izin`). Logika di `js/izin.js`, data di `izin`.

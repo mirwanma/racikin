@@ -15,6 +15,7 @@ const DEFAULT = {
   promo: [],              // promo & voucher (lihat js/promo.js)
   wa: null,               // { usaha, pemilik } nomor WhatsApp (lihat js/wa.js)
   bills: [],              // open bill: pesan dulu bayar belakangan (lihat js/bill.js)
+  pajak: null,            // PPh Final UMKM { bentuk, catatKas, bayar: { "YYYY-MM": { tanggal, nominal, ntpn } } } (lihat js/pajak.js)
   izin: {},               // status perizinan { [nib|pirt|halal|slhs|merek]: { status, nomor, terbit, berlaku, catatan, dok } } (lihat js/izin.js)
   insight: null,
   chat: [],               // { role, content }

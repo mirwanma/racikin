@@ -9,7 +9,7 @@ import { saldoKas } from "../impor.js";
 
 export const KATEGORI = {
   masuk: ["Penjualan", "Pre-order", "Katering/pesanan", "Lainnya"],
-  keluar: ["Bahan Baku", "Kemasan", "Operasional", "Gaji", "Marketing", "Komisi Order Online", "Peralatan", "Lainnya"],
+  keluar: ["Bahan Baku", "Kemasan", "Operasional", "Gaji", "Marketing", "Komisi Order Online", "Peralatan", "Pajak", "Lainnya"],
 };
 
 let ym = todayISO().slice(0, 7);

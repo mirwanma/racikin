@@ -3,7 +3,8 @@ import { cloud, isMember } from "../cloud.js";
 import { journey } from "./home.js";
 import { isJalan } from "../tahap.js";
 import { ringkasIzin } from "../izin.js";
-import { todayISO } from "../ui.js";
+import { hitungPajak, tagihanPajak, namaBulan } from "../pajak.js";
+import { todayISO, short } from "../ui.js";
 
 // Usaha yang sudah jalan: modul perencanaan jadi alat tambahan dengan sudut pandang berbeda.
 const RENCANA_JALAN = [
@@ -43,6 +44,13 @@ export const bisnis = {
     const izinMod = `<a href="#/izin" class="card module">
           <span class="module-num">${icon("doc", 18)}</span>
           <div><h3>Panduan Perizinan</h3><p class="muted small">${iz.selesai || iz.proses ? `${iz.selesai}/${iz.total} izin beres${iz.pengingat.length ? " · ada yang mau habis" : ""}` : "NIB, PIRT, sertifikat halal, SLHS & merek: mana yang perlu, cara & dokumennya"}</p></div>
+          <span class="chev">${icon("chevron", 18)}</span>
+        </a>`;
+    const pj = hitungPajak(s, Number(todayISO().slice(0, 4)), todayISO());
+    const pjT = tagihanPajak(s, todayISO());
+    const pajakMod = `<a href="#/pajak" class="card module">
+          <span class="module-num">${icon("receipt", 18)}</span>
+          <div><h3>Pajak UMKM</h3><p class="muted small">${pjT ? `PPh ${namaBulan(pjT.ym)} belum dibayar` : pj.omzet ? `PPh Final 0,5%: omzet tahun ini Rp${short(pj.omzet)}, PPh Rp${short(pj.pph)}` : "PPh Final 0,5%: hitung per bulan dari Kas, jatuh tempo & cara bayarnya"}</p></div>
           <span class="chev">${icon("chevron", 18)}</span>
         </a>`;
     const rencana = jalan
@@ -123,6 +131,7 @@ export const bisnis = {
         </a>
         ${jalan ? "" : sehatMod + imporMod}
         ${izinMod}
+        ${pajakMod}
         ${rencana}
         <a href="#/mentor" class="card module">
           <span class="module-num">${icon("chat", 18)}</span>
