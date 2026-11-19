@@ -1413,3 +1413,20 @@ body[data-admin="1"] .adm-chart i { background: var(--a-y); }
   .a-tile { padding: 13px 14px; }
   .a-tile.a-flush { padding: 0; }
 }
+
+/* ---------- Open bill ---------- */
+.bill-banner { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin-bottom: 10px; background: var(--yellow-soft); border: 1.5px solid var(--ink); border-radius: var(--radius); font-size: 14px; }
+.bill-banner .btn { margin-left: auto; }
+.bill-baru { display: flex; gap: 8px; align-items: center; }
+.bill-baru input { flex: 1; min-width: 0; }
+.bill-card { display: flex; flex-direction: column; gap: 10px; }
+.bill-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; border: 0; background: none; padding: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.bill-head > span { min-width: 0; }
+.bill-head small { display: block; }
+.bill-head b.mono { font-size: 17px; white-space: nowrap; }
+.bill-detail { border-top: 1px dashed var(--line-2); padding-top: 8px; display: flex; flex-direction: column; gap: 8px; }
+.bill-ronde p { margin: 0 0 2px; }
+.bill-pilih { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; padding: 10px 12px; border: 1.5px solid var(--ink); border-radius: var(--radius); background: var(--card); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.bill-pilih:hover { background: var(--yellow-tint); }
+.bill-bayar { border-color: var(--yellow-deep); }
+.danger-text { color: var(--chili); }

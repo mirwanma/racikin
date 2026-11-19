@@ -6,6 +6,7 @@ import { icon } from "../icons.js";
 import { head } from "./_shared.js";
 import { pelaku, role } from "../cloud.js";
 import { linkWa, nomorPemilik, teksShift } from "../wa.js";
+import { billAktif, billTerbuka, totalBill } from "../bill.js";
 import { shiftAktif, shiftTerbuka, ringkasan, bukaShift, catatLaci, hapusLaci, tutupShift, selisihPerKasir, wajibShift, JENIS_LACI, KATEGORI_LACI, PECAHAN } from "../shift.js";
 
 let jenisLaci = "keluar";
@@ -87,6 +88,11 @@ function aktifCard(s, sh) {
     <section class="card">
       <h2 class="card-title">Tutup shift</h2>
       <p class="small muted">Hitung semua uang di laci, masukkan totalnya. Selisih dibandingkan dengan uang seharusnya.</p>
+      ${
+        billAktif(s) && billTerbuka(s).length
+          ? `<p class="warn-box small">${icon("alert", 14)} Masih ada ${billTerbuka(s).length} bill belum dibayar (${rupiah(billTerbuka(s).reduce((a, b) => a + totalBill(b), 0))}): ${billTerbuka(s).map((b) => esc(b.nama)).join(", ")}. Uangnya belum masuk laci. Lunasi dulu atau oper ke shift berikutnya. <a href="#/kasir" class="link">Buka Kasir</a></p>`
+          : ""
+      }
       ${hitungForm(r, sh.id)}
     </section>`;
 }

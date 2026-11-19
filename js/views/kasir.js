@@ -7,6 +7,7 @@ import { bahanMap, bisaDibuat } from "../stok-utils.js";
 import { program, waLink } from "../loyalty.js";
 import { cloud, markCards, isKasir, pelaku, teamActive } from "../cloud.js";
 import { METODE, metodeNama, subtotal, buatOrder, batalOrder, rekapHari, struk, perKasir } from "../pos.js";
+import { billAktif, billTerbuka, cariBill, billMeja, keranjangBill, totalBill, jumlahItem, lamaBuka, bukaBill, tambahRonde, hapusItem, batalBill, ubahBill, tutupBill, voucherBill, itemBill } from "../bill.js";
 import { dapurAktif, kirimTiket, tiketDari, ubahStatus as statusDapur, daftarTiket, dengar as dengarDapur } from "../dapur.js";
 import { mejaAktif, pesananMasuk, dengarPesanan, ubahPesanan } from "../meja.js";
 import { shiftAktif, ringkasan as ringkasanShift, wajibShift } from "../shift.js";
@@ -16,18 +17,25 @@ import { bacaChatOrder, linkWa, nomorPemilik, teksRekapHari } from "../wa.js";
 import { grupMenu, punyaOpsi, pilihanAwal, pilihanHabis, cekPilihan, hargaItem, kunciItem, labelOpsi, namaLengkap, aturan, tambahanDi } from "../varian.js";
 
 // State layar kasir (tidak disimpan; keranjang hilang kalau app ditutup).
-let tab = "jual"; // jual | rekap
+let tab = "jual"; // jual | bill | rekap
 let step = "menu"; // menu | bayar | struk
 let cart = []; // { key, resepId, nama, harga, qty, opsi? }
 let pilih = null; // sheet varian yang terbuka { resepId, ids: [pilihanId], error }
 let chatWa = null; // sheet "Order dari chat WA" { text, rows: [{ resepId, qty }] | null, sisa, atasNama, catatan }
-let form = { diskon: 0, kode: "", metode: "tunai", bayar: 0, pelangganId: "", atasNama: "", catatanDapur: "" };
+let form = { diskon: 0, kode: "", metode: "tunai", bayar: 0, pelangganId: "", atasNama: "", catatanDapur: "", tunaiSebagian: 0, campur: false };
 let lepasDapur = null;
 let lepasMeja = null;
 let mejaRef = null; // pesanan meja yang sedang dibayar { id, metode, bayar_status, kode, meja_nama }
 let last = null; // { order, stempelInfo }
 let openOrder = null;
 let channel = "toko"; // toko | gofood | grabfood | shopeefood
+// Open bill (opsional, js/bill.js)
+let billTambah = null; // id bill yang sedang ditambah pesanannya (keranjang -> ronde baru)
+let billRef = null; // { id, nama, ronde } bill yang sedang dibayar (keranjang = isi bill, tidak bisa diubah)
+let billSheet = null; // pilih bill untuk "Simpan ke bill": { nama, error }
+let billBuka = null; // id bill yang detailnya dibuka di tab Bill
+const FORM_AWAL = () => ({ diskon: 0, kode: "", metode: "tunai", bayar: 0, pelangganId: "", atasNama: "", catatanDapur: "", tunaiSebagian: 0, campur: false });
+const bolehAtur = () => !isKasir();
 
 /** Ganti saluran: harga item menu di keranjang ikut menyesuaikan. */
 function setChannel(s, id) {
@@ -48,7 +56,7 @@ const waktuNow = () => {
 /** Nomor WA pelanggan untuk voucher per pelanggan: pelanggan kartu stempel yang dipilih, atau yang diisi di pesan meja. */
 function waNow(s) {
   const p = form.pelangganId ? (s.pelanggan || []).find((x) => x.id === form.pelangganId) : null;
-  return p?.wa || mejaRef?.promo?.wa || "";
+  return p?.wa || mejaRef?.promo?.wa || (billRef && cariBill(s, billRef.id)?.wa) || "";
 }
 function promoNow(s = store.get()) {
   // Pesanan meja yang sudah lunas digital: promo dikunci sesuai yang dibayar pelanggan.
@@ -276,7 +284,34 @@ function promoBox(s) {
     ${form.kode && r.kodeError ? `<p class="small neg">${esc(r.kodeError)}</p>` : ""}`}`;
 }
 
+/** Keranjang sedang dipakai untuk nambah pesanan ke bill (bukan dibayar). */
+function billTambahView(s) {
+  const b = cariBill(s, billTambah);
+  if (!b) {
+    billTambah = null;
+    return "";
+  }
+  return `<section class="card bill-tambah">
+      <div class="row-between"><h2 class="card-title" style="margin:0">Tambah ke bill ${esc(b.nama)}</h2>${isWide() ? `<button class="btn ghost sm" data-action="clear">Kosongkan</button>` : `<button class="btn ghost sm" data-action="back">+ Tambah item</button>`}</div>
+      <p class="small muted">Ronde ke-${(b.ronde || []).length + 1}. Stok langsung dipotong${dapurAktif(s) ? " & pesanan dikirim ke dapur" : ""}. Bayarnya nanti dari tab Bill.</p>
+      ${cart
+        .map(
+          (c) => `<div class="pos-line">
+            <div><b>${esc(c.nama)}</b>${c.opsi?.length ? `<p class="small pos-opsi">${esc(labelOpsi(c))}</p>` : ""}<p class="small muted">${rupiah(c.harga)}</p></div>
+            <div class="stepper"><button class="icon-btn sm" data-action="dec" data-key="${esc(c.key)}" aria-label="Kurangi">−</button><b>${c.qty}</b><button class="icon-btn sm" data-action="inc" data-key="${esc(c.key)}" aria-label="Tambah">+</button></div>
+            <b class="pos-line-total">${rupiah(c.harga * c.qty)}</b>
+          </div>`,
+        )
+        .join("")}
+      <div class="row-between pos-sum"><span>Ronde ini</span><b>${rupiah(subtotal(cart))}</b></div>
+      <div class="row-between pos-total"><span>Total bill setelah ini</span><b>${rupiah(totalBill(b) + subtotal(cart))}</b></div>
+      <button class="btn primary block lg" data-action="billKirim" ${!cart.length ? "disabled" : ""}>${dapurAktif(s) ? "Kirim ke dapur & bill" : "Simpan ke bill"} · ${rupiah(subtotal(cart))}</button>
+      <button class="btn ghost block" data-action="billBatalTambah">Batal nambah</button>
+    </section>`;
+}
+
 function bayarView(s) {
+  if (billTambah) return billTambahView(s);
   const total = totalNow();
   const sub = subtotal(cart);
   const online = isOnline(channel);
@@ -295,18 +330,27 @@ function bayarView(s) {
     ? `<section class="card meja-bayar ${mejaRef.metode === "digital" && mejaRef.bayar_status === "lunas" ? "lunas" : ""}"><b>${esc(mejaRef.meja_nama)} · ${esc(mejaRef.nama)}</b> <span class="small">kode <b class="mono">${esc(mejaRef.kode)}</b></span>
         <p class="small">${mejaRef.metode === "digital" && mejaRef.bayar_status === "lunas" ? "Sudah dibayar digital (simulasi). Metode diset QRIS, tinggal tekan Selesaikan." : mejaRef.metode === "digital" ? "Pelanggan memilih bayar digital tapi belum lunas. Terima pembayaran di kasir." : "Pelanggan bayar di kasir."}</p></section>`
     : "";
-  return `${mejaInfo}${dapurForm}
+  const bRef = billRef ? cariBill(s, billRef.id) : null;
+  const billInfo = bRef
+    ? `<section class="card meja-bayar bill-bayar"><b>Bayar bill ${esc(bRef.nama)}</b> <span class="small">${(bRef.ronde || []).length} ronde · dibuka ${lamaBuka(bRef)} lalu</span>
+        <p class="small">Isi bill nggak bisa diubah di sini. Mau nambah? Buka tab Bill, pilih "Tambah pesanan".</p></section>`
+    : "";
+  return `${billInfo}${mejaInfo}${bRef ? "" : dapurForm}
     <section class="card">
-      <div class="row-between"><h2 class="card-title">Pesanan${online ? ` <span class="tag">${esc(channelNama(channel))}</span>` : ""}</h2>${isWide() ? `<button class="btn ghost sm" data-action="clear">Kosongkan</button>` : `<button class="btn ghost sm" data-action="back">+ Tambah item</button>`}</div>
+      <div class="row-between"><h2 class="card-title">Pesanan${online ? ` <span class="tag">${esc(channelNama(channel))}</span>` : ""}</h2>${billRef ? `<button class="btn ghost sm" data-action="clear">Batal bayar</button>` : isWide() ? `<button class="btn ghost sm" data-action="clear">Kosongkan</button>` : `<button class="btn ghost sm" data-action="back">+ Tambah item</button>`}</div>
       ${cart
         .map(
           (c) => `<div class="pos-line">
             <div><b>${esc(c.nama)}</b>${c.opsi?.length ? `<p class="small pos-opsi">${esc(labelOpsi(c))}</p>` : ""}<p class="small muted">${rupiah(c.harga)}</p></div>
-            <div class="stepper">
+            ${
+              billRef
+                ? `<b class="mono">${c.qty}×</b>`
+                : `<div class="stepper">
               <button class="icon-btn sm" data-action="dec" data-key="${esc(c.key)}" aria-label="Kurangi">−</button>
               <b>${c.qty}</b>
               <button class="icon-btn sm" data-action="inc" data-key="${esc(c.key)}" aria-label="Tambah">+</button>
-            </div>
+            </div>`
+            }
             <b class="pos-line-total">${rupiah(c.harga * c.qty)}</b>
           </div>`,
         )
@@ -347,11 +391,168 @@ function bayarView(s) {
           ? `<label class="field"><span>Uang diterima</span><input type="number" inputmode="numeric" min="0" step="500" value="${form.bayar || ""}" placeholder="${total}" data-change="bayar"></label>
             <div class="chips">${quickCash(total).map((v) => `<button type="button" class="chip-btn ${Number(form.bayar) === v ? "on" : ""}" data-action="uang" data-v="${v}">${v === total ? "Uang pas" : rupiah(v)}</button>`).join("")}</div>
             <div class="row-between pos-total"><span>Kembalian</span><b class="${kurang ? "neg" : "pos"}">${kurang ? "Uang kurang" : rupiah(kembali)}</b></div>`
-          : ""
+          : `<label class="impor-cek"><input type="checkbox" data-change="campur" ${form.campur ? "checked" : ""}><span>Sebagian dibayar tunai</span></label>
+            ${
+              form.campur
+                ? `<label class="field"><span>Bagian tunai (Rp)</span><input type="number" inputmode="numeric" min="0" step="500" value="${form.tunaiSebagian || ""}" placeholder="0" data-change="tunaiSebagian"></label>
+                  ${campurError(total) ? `<p class="small neg">${esc(campurError(total))}</p>` : `<div class="row-between pos-sum"><span>Tunai</span><b>${rupiah(form.tunaiSebagian)}</b></div><div class="row-between pos-sum"><span>${esc(metodeNama(form.metode))}</span><b>${rupiah(total - (Number(form.tunaiSebagian) || 0))}</b></div>`}`
+                : ""
+            }`
       }
-      <button class="btn primary block lg" data-action="selesai" ${kurang || !cart.length ? "disabled" : ""}>Selesaikan · ${rupiah(total)}</button>
+      <button class="btn primary block lg" data-action="selesai" ${kurang || !cart.length || (form.campur && form.metode !== "tunai" && campurError(total)) ? "disabled" : ""}>${billRef ? "Lunasi bill" : "Selesaikan"} · ${rupiah(total)}</button>
+      ${billAktif(s) && !billRef && !mejaRef && cart.length ? `<button class="btn soft block" data-action="billSimpanBuka">${icon("receipt", 16)} Simpan ke bill (bayar nanti)</button>` : ""}
     </section>`
     }`;
+}
+
+/** Item pesanan meja -> item keranjang Kasir. */
+function keranjangMeja(s, o) {
+  return o.items.map((x) => {
+    const r = s.resep.find((y) => y.id === x.id);
+    const opsi = Array.isArray(x.opsi) && x.opsi.length ? x.opsi : null;
+    const it = { key: r ? kunciItem(r.id, opsi) : "x-" + uid(), resepId: r ? r.id : null, nama: r || !opsi ? x.nama : namaLengkap(x), harga: x.harga, qty: x.qty };
+    if (r && opsi) it.opsi = opsi;
+    return it;
+  });
+}
+
+/** Pesanan dari QR meja masuk bill meja itu (dibuat kalau belum ada). */
+function masukBillMeja(o, hilang = []) {
+  let s = store.get();
+  let b = billMeja(s, o.meja_id);
+  if (!b) {
+    const r = bukaBill(s, { nama: o.meja_nama, meja: { id: o.meja_id, nama: o.meja_nama }, oleh: pelaku() });
+    store.set(r.patch);
+    b = r.bill;
+  }
+  const ronde = kirimRonde(b.id, { meja: { id: o.id, kode: o.kode }, sumberCart: keranjangMeja(store.get(), o), catatan: [o.nama, o.catatan].filter(Boolean).join(" · ") });
+  if (!ronde) return;
+  if (o.promo?.kode) store.set(voucherBill(store.get(), b.id, { kode: o.promo.kode, wa: o.promo.wa }));
+  ubahPesanan(o.id, { status: "diproses", pos_order_id: ronde.id }).catch((e) => toast("Status pesanan meja gagal diperbarui: " + e.message, "err"));
+  billBuka = b.id;
+  toast(`Pesanan ${o.meja_nama} (${o.nama}) masuk bill ${b.nama}${hilang.length ? `. ${hilang.length} item sudah nggak ada di menu` : ""}`);
+  render();
+}
+
+/** Simpan isi keranjang sebagai ronde baru di bill: potong stok, kirim ke dapur (kalau aktif). */
+function kirimRonde(billId, { meja = null, sumberCart = null, catatan = "" } = {}) {
+  const s = store.get();
+  const b = cariBill(s, billId);
+  if (!b) return toast("Bill nggak ditemukan", "err");
+  let hasil;
+  try {
+    hasil = tambahRonde(s, billId, sumberCart || cart, { oleh: pelaku(), meja });
+  } catch (e) {
+    return toast(e.message, "err");
+  }
+  store.set(hasil.patch);
+  const { ronde } = hasil;
+  const ke = dapurAktif(s);
+  if (ke) {
+    const no = (cariBill(store.get(), billId)?.ronde || []).length;
+    kirimTiket(tiketDari({ id: ronde.id, no, items: ronde.items, channel: "toko", kasir: pelaku(), waktu: ronde.waktu }, { nama: `${b.nama} (bill)`, catatan: catatan || (sumberCart ? "" : form.catatanDapur) })).then((ok) => {
+      if (!ok) toast("Pesanan belum terkirim ke dapur (offline). Dikirim ulang otomatis.", "err");
+    });
+  }
+  if (!sumberCart) {
+    cart = [];
+    billTambah = null;
+    form = FORM_AWAL();
+    step = "menu";
+    tab = "bill";
+    billBuka = billId;
+    toast(`${ke ? "Dikirim ke dapur & d" : "D"}isimpan ke bill ${b.nama} · ${rupiah(subtotal(ronde.items))}`);
+    render();
+    window.scrollTo(0, 0);
+  }
+  return ronde;
+}
+
+/** Pengingat di atas menu saat sedang nambah pesanan ke bill. */
+function billBanner(s) {
+  const b = billTambah ? cariBill(s, billTambah) : null;
+  if (!b) return "";
+  return `<div class="bill-banner">${icon("receipt", 16)}<span>Nambah pesanan ke <b>${esc(b.nama)}</b></span><button class="btn ghost sm" data-action="billBatalTambah">Batal</button></div>`;
+}
+
+/** Validasi pembayaran campuran: bagian tunai harus di antara 0 dan total. */
+function campurError(total) {
+  const t = Number(form.tunaiSebagian) || 0;
+  if (t <= 0) return "Isi berapa yang dibayar tunai";
+  if (t >= total) return "Bagian tunai harus kurang dari total (kalau semua tunai, pilih metode Tunai)";
+  return "";
+}
+
+/** Pilih bill tujuan "Simpan ke bill". */
+function billSheetView(s) {
+  if (!billSheet) return "";
+  const list = billTerbuka(s);
+  return `<div class="sheet-bg" data-action="billSheetTutup"></div>
+    <section class="sheet" role="dialog" aria-modal="true" aria-label="Simpan ke bill">
+      <header class="row-between"><h2 class="card-title" style="margin:0">Simpan ke bill</h2><button class="icon-btn sm" data-action="billSheetTutup" aria-label="Tutup">${icon("x", 14)}</button></header>
+      <div class="sheet-body stack">
+        <form class="row-gap bill-baru" data-form="billBaru">
+          <input name="nama" maxlength="40" placeholder="Bill baru: Meja 3 / nama pembeli" value="${esc(billSheet.nama || form.atasNama || "")}" required aria-label="Nama bill">
+          <button class="btn primary">Buka</button>
+        </form>
+        ${billSheet.error ? `<p class="small neg">${esc(billSheet.error)}</p>` : ""}
+        ${list.length ? `<p class="small muted">Atau tambahkan ke bill yang masih buka:</p>${list.map((b) => `<button class="bill-pilih" data-action="billSimpanKe" data-id="${esc(b.id)}"><b>${esc(b.nama)}</b><small class="muted">${jumlahItem(b)} item · ${rupiah(totalBill(b))} · ${lamaBuka(b)}</small></button>`).join("")}` : ""}
+      </div>
+    </section>`;
+}
+
+/** Tab Bill: daftar bill yang masih buka. */
+function billView(s) {
+  if (!billAktif(s)) {
+    return `<section class="card empty"><div class="empty-icon">${icon("receipt", 30)}</div><h3>Open bill</h3>
+      <p>Buat pembeli yang pesan dulu, nambah-nambah, terus bayar belakangan (makan di tempat). Kasir tetap bisa ngelayanin transaksi lain. Stok dipotong tiap pesanan dikirim, uang masuk Kas waktu bill dibayar.</p>
+      ${bolehAtur() ? `<button class="btn primary" data-action="billNyala">Aktifkan open bill</button>` : `<p class="small muted">Minta pemilik / manajer mengaktifkan.</p>`}</section>`;
+  }
+  const list = billTerbuka(s).sort((a, b) => a.dibuka.localeCompare(b.dibuka));
+  const total = list.reduce((a, b) => a + totalBill(b), 0);
+  return `<form class="card row-gap bill-baru" data-form="billBaru">
+      <input name="nama" maxlength="40" placeholder="Bill baru: Meja 3 / nama pembeli" required aria-label="Nama bill baru">
+      <button class="btn primary">${icon("plus", 14)} Buka bill</button>
+    </form>
+    ${list.length ? `<p class="small muted">${list.length} bill belum dibayar · total ${rupiah(total)}</p>` : `<section class="card empty"><p class="muted">Belum ada bill yang buka. Bikin bill baru, atau di layar bayar pilih "Simpan ke bill".</p></section>`}
+    ${list
+      .map((b) => {
+        const open = billBuka === b.id;
+        return `<section class="card bill-card ${open ? "open" : ""}">
+          <button class="bill-head" data-action="billDetail" data-id="${esc(b.id)}" aria-expanded="${open}">
+            <span><b>${esc(b.nama)}</b>${b.meja ? ` <span class="tag">QR ${esc(b.meja.nama)}</span>` : ""}<small class="muted">${jumlahItem(b)} item · ${(b.ronde || []).length} ronde · ${lamaBuka(b)}</small></span>
+            <b class="mono">${rupiah(totalBill(b))}</b>
+          </button>
+          <div class="row2">
+            <button class="btn soft" data-action="billTambahMulai" data-id="${esc(b.id)}">${icon("plus", 14)} Tambah pesanan</button>
+            <button class="btn primary" data-action="billBayar" data-id="${esc(b.id)}" ${jumlahItem(b) ? "" : "disabled"}>Bayar</button>
+          </div>
+          ${
+            open
+              ? `<div class="bill-detail">
+                  ${(b.ronde || [])
+                    .map(
+                      (r, i) => `<div class="bill-ronde"><p class="small muted">Ronde ${i + 1} · ${jam(r.waktu)}${r.oleh?.nama ? ` · ${esc(r.oleh.nama)}` : ""}${r.meja ? ` · dari QR (${esc(r.meja.kode)})` : ""}</p>
+                      ${r.items
+                        .map(
+                          (it) => `<div class="row-between pos-sum"><span>${it.qty}× ${esc(it.nama)}${it.opsi?.length ? `<small class="struk-opsi">${esc(labelOpsi(it))}</small>` : ""}</span>
+                          <span class="row-gap"><b>${rupiah(it.harga * it.qty)}</b>${bolehAtur() ? `<button class="icon-btn sm" data-action="billHapusItem" data-id="${esc(b.id)}" data-r="${esc(r.id)}" data-i="${esc(it.id)}" aria-label="Batalkan item">${icon("x", 12)}</button>` : ""}</span></div>`,
+                        )
+                        .join("")}</div>`,
+                    )
+                    .join("") || `<p class="small muted">Belum ada pesanan.</p>`}
+                  ${(b.hapus || []).length ? `<p class="small muted">Dibatalkan: ${b.hapus.map((h) => `${h.item.qty}× ${esc(h.item.nama)} (${esc(h.alasan)})`).join(", ")}</p>` : ""}
+                  <div class="row-gap">
+                    <button class="btn ghost sm" data-action="billGantiNama" data-id="${esc(b.id)}">Ganti nama</button>
+                    ${bolehAtur() ? `<button class="btn ghost sm danger-text" data-action="billBatal" data-id="${esc(b.id)}">Batalkan bill</button>` : ""}
+                  </div>
+                </div>`
+              : ""
+          }
+        </section>`;
+      })
+      .join("")}
+    ${bolehAtur() && !list.length ? `<button class="btn ghost sm block" data-action="billMati">Matikan open bill</button>` : ""}`;
 }
 
 function strukView(s) {
@@ -371,7 +572,9 @@ function strukView(s) {
           ? `<div class="row-between"><span>${esc(channelNama(o.channel))}</span><span>dibayar di aplikasi</span></div>
              <div class="row-between muted"><span>Komisi</span><span>−${rupiah(o.komisi)}</span></div>
              <div class="row-between struk-kembali"><span>Kamu terima</span><b>${rupiah(o.total - o.komisi)}</b></div>`
-          : `<div class="row-between"><span>${metodeNama(o.metode)}</span><span>${rupiah(o.bayar)}</span></div>`
+          : o.pembayaran
+            ? o.pembayaran.map((x) => `<div class="row-between"><span>${metodeNama(x.metode)}</span><span>${rupiah(x.jumlah)}</span></div>`).join("")
+            : `<div class="row-between"><span>${metodeNama(o.metode)}</span><span>${rupiah(o.bayar)}</span></div>`
       }
       ${o.metode === "tunai" ? `<div class="row-between struk-kembali"><span>Kembalian</span><b>${rupiah(o.kembali)}</b></div>` : ""}
       ${si?.nama ? `<p class="struk-note">${si.siap ? `${esc(si.nama)} dapat hadiah! (${si.stempel}/${si.target})` : `+1 stempel ${esc(si.nama)} (${si.stempel}/${si.target})`}</p>` : ""}
@@ -497,8 +700,12 @@ export const kasir = {
       tab = "rekap";
       history.replaceState(null, "", "#/kasir");
     }
-    const tabs = `<div class="seg">
+    const nBill = billAktif(s) ? billTerbuka(s).length : 0;
+    const adaTabBill = billAktif(s) || bolehAtur();
+    if (tab === "bill" && !adaTabBill) tab = "jual";
+    const tabs = `<div class="seg ${adaTabBill ? "seg3" : ""}">
       <label><input type="radio" name="tab" value="jual" data-change="tab" ${tab === "jual" ? "checked" : ""}><span>Jual</span></label>
+      ${adaTabBill ? `<label><input type="radio" name="tab" value="bill" data-change="tab" ${tab === "bill" ? "checked" : ""}><span>Bill${nBill ? ` <b class="kds-n">${nBill}</b>` : ""}</span></label>` : ""}
       <label><input type="radio" name="tab" value="rekap" data-change="tab" ${tab === "rekap" ? "checked" : ""}><span>Hari ini</span></label>
     </div>`;
     if (isWide() && tab === "jual") {
@@ -508,10 +715,10 @@ export const kasir = {
         : step === "struk" && last
           ? strukView(s)
           : `<section class="card empty pos-empty"><div class="empty-icon">${icon("register", 30)}</div><h3>Keranjang kosong</h3><p>Ketuk menu di kiri untuk mulai pesanan.</p></section>`;
-      return `${head("Kasir", "#/")}${tabs}<div class="pos-split"><div class="pos-left">${menuView(s)}</div><aside class="pos-right">${panel}</aside></div>${pilihSheet(s)}${chatSheet(s)}`;
+      return `${head("Kasir", "#/")}${tabs}<div class="pos-split"><div class="pos-left">${billBanner(s)}${menuView(s)}</div><aside class="pos-right">${panel}</aside></div>${pilihSheet(s)}${chatSheet(s)}${billSheetView(s)}`;
     }
-    const body = tab === "rekap" ? rekapView(s) : step === "struk" && last ? strukView(s) : step === "bayar" && cart.length ? bayarView(s) : menuView(s);
-    return `${head("Kasir", "#/")}${tabs}${body}${tab === "jual" ? pilihSheet(s) + chatSheet(s) : ""}`;
+    const body = tab === "rekap" ? rekapView(s) : tab === "bill" ? billView(s) : step === "struk" && last ? strukView(s) : step === "bayar" && cart.length ? bayarView(s) : billBanner(s) + menuView(s);
+    return `${head("Kasir", "#/")}${tabs}${body}${tab === "jual" ? pilihSheet(s) + chatSheet(s) + billSheetView(s) : ""}`;
   },
 
   actions: {
@@ -634,6 +841,12 @@ export const kasir = {
     clear() {
       cart = [];
       mejaRef = null;
+      if (billRef) {
+        billRef = null;
+        form = FORM_AWAL();
+        tab = "bill";
+      }
+      step = "menu";
       render();
     },
     checkout() {
@@ -653,12 +866,36 @@ export const kasir = {
     selesai() {
       const s = store.get();
       if (wajibShift(s) && !shiftAktif(s, pelaku())) return toast("Buka shift dulu sebelum jualan", "err");
-      const { patch, order, stempelInfo } = buatOrder(s, { cart, ...form, promo: promoNow(s).promo, channel, kasir: pelaku(), shiftId: shiftAktif(s, pelaku())?.id || null });
+      const bRef = billRef ? cariBill(s, billRef.id) : null;
+      if (billRef && !bRef) {
+        billRef = null;
+        cart = [];
+        step = "menu";
+        return toast("Bill ini sudah dibayar / dibatalkan di HP lain", "err");
+      }
+      const { patch, order, stempelInfo } = buatOrder(s, {
+        cart,
+        ...form,
+        tunaiSebagian: form.campur ? form.tunaiSebagian : 0,
+        promo: promoNow(s).promo,
+        channel,
+        kasir: pelaku(),
+        shiftId: shiftAktif(s, pelaku())?.id || null,
+        // Open bill: stok sudah dipotong per ronde.
+        stok: !bRef,
+        bill: bRef ? { id: bRef.id, nama: bRef.nama, ronde: (bRef.ronde || []).length } : null,
+      });
       if (mejaRef) order.meja = { id: mejaRef.id, nama: mejaRef.meja_nama, kode: mejaRef.kode };
-      const keDapur = dapurAktif(s);
-      if (form.atasNama.trim()) order.atasNama = form.atasNama.trim().slice(0, 40);
+      const keDapur = dapurAktif(s) && !bRef; // bill: tiap ronde sudah dikirim ke dapur
+      if (bRef) order.atasNama = bRef.nama.slice(0, 40);
+      else if (form.atasNama.trim()) order.atasNama = form.atasNama.trim().slice(0, 40);
       if (form.catatanDapur.trim()) order.catatanDapur = form.catatanDapur.trim().slice(0, 200);
-      store.set(patch);
+      store.set(bRef ? { ...patch, ...tutupBill(s, bRef.id) } : patch);
+      if (bRef) {
+        // Pesanan dari QR meja yang masuk bill ini ikut lunas.
+        for (const r of bRef.ronde || []) if (r.meja?.id) ubahPesanan(r.meja.id, { bayar_status: "lunas" }).catch(() => {});
+        billRef = null;
+      }
       if (keDapur) {
         kirimTiket(tiketDari(order, { nama: order.atasNama, catatan: order.catatanDapur })).then((ok) => {
           if (last?.order.id === order.id) last.dapur = ok ? "terkirim" : "antre";
@@ -674,7 +911,7 @@ export const kasir = {
         ubahPesanan(ref.id, { status: "diproses", bayar_status: "lunas", pos_order_id: order.id }).catch((e) => toast("Status pesanan meja gagal diperbarui: " + e.message, "err"));
       }
       cart = [];
-      form = { diskon: 0, kode: "", metode: "tunai", bayar: 0, pelangganId: "", atasNama: "", catatanDapur: "" }; // tiap order baru mulai dari Tunai
+      form = FORM_AWAL(); // tiap order baru mulai dari Tunai
       step = "struk";
       toast(`Order #${order.no} · ${rupiah(order.total)} tercatat`);
       render();
@@ -685,6 +922,113 @@ export const kasir = {
       last = null;
       render();
     },
+    // ---------- Open bill ----------
+    billNyala() {
+      store.set((s) => ({ posSetting: { ...(s.posSetting || {}), openBill: true } }));
+      toast("Open bill aktif");
+      render();
+    },
+    billMati() {
+      if (billTerbuka(store.get()).length) return toast("Masih ada bill yang belum dibayar", "err");
+      store.set((s) => ({ posSetting: { ...(s.posSetting || {}), openBill: false } }));
+      tab = "jual";
+      render();
+    },
+    billDetail(el) {
+      billBuka = billBuka === el.dataset.id ? null : el.dataset.id;
+      render();
+    },
+    billTambahMulai(el) {
+      if (cart.length && !billTambah && !confirm("Keranjang sekarang akan dikosongkan. Lanjut?")) return;
+      billTambah = el.dataset.id;
+      billRef = null;
+      mejaRef = null;
+      cart = [];
+      channel = "toko";
+      tab = "jual";
+      step = "menu";
+      render();
+      window.scrollTo(0, 0);
+    },
+    billBatalTambah() {
+      const id = billTambah;
+      billTambah = null;
+      cart = [];
+      step = "menu";
+      tab = id ? "bill" : "jual";
+      render();
+    },
+    billKirim() {
+      kirimRonde(billTambah);
+    },
+    billSimpanBuka() {
+      billSheet = { nama: form.atasNama || "", error: "" };
+      render();
+    },
+    billSheetTutup() {
+      billSheet = null;
+      render();
+    },
+    billSimpanKe(el) {
+      billSheet = null;
+      kirimRonde(el.dataset.id);
+    },
+    billBayar(el) {
+      const s = store.get();
+      const b = cariBill(s, el.dataset.id);
+      if (!b || !jumlahItem(b)) return;
+      if (cart.length && !billRef && !confirm("Keranjang sekarang akan diganti dengan isi bill ini. Lanjut?")) return;
+      billRef = { id: b.id, nama: b.nama };
+      billTambah = null;
+      mejaRef = null;
+      channel = "toko";
+      cart = keranjangBill(b);
+      form = { ...FORM_AWAL(), kode: b.kode || "" };
+      tab = "jual";
+      step = "bayar";
+      render();
+      window.scrollTo(0, 0);
+    },
+    billHapusItem(el) {
+      const s = store.get();
+      const b = cariBill(s, el.dataset.id);
+      const it = b?.ronde.find((r) => r.id === el.dataset.r)?.items.find((x) => x.id === el.dataset.i);
+      if (!it) return;
+      const alasan = prompt(`Batalkan ${it.qty}× ${it.nama} dari bill ${b.nama}? Tulis alasannya:`, "Salah input");
+      if (alasan === null) return;
+      if (!alasan.trim()) return toast("Alasan wajib diisi", "err");
+      const stokKembali = confirm("Kembalikan stok bahannya? (OK kalau belum sempat dibuat, Batal kalau sudah dibuat / terbuang)");
+      store.set(hapusItem(s, b.id, el.dataset.r, it.id, { alasan, oleh: pelaku(), stokKembali }));
+      toast(`${it.nama} dibatalkan dari bill`);
+      render();
+    },
+    billBatal(el) {
+      const s = store.get();
+      const b = cariBill(s, el.dataset.id);
+      if (!b) return;
+      const alasan = prompt(`Batalkan seluruh bill ${b.nama} (${rupiah(totalBill(b))})? Tulis alasannya:`, "");
+      if (alasan === null) return;
+      if (!alasan.trim()) return toast("Alasan wajib diisi", "err");
+      const stokKembali = itemBill(b).length ? confirm("Kembalikan stok bahannya? (OK kalau belum sempat dibuat, Batal kalau sudah dibuat / terbuang)") : false;
+      store.set(batalBill(s, b.id, { alasan, oleh: pelaku(), stokKembali }));
+      if (billTambah === b.id) billTambah = null;
+      if (billRef?.id === b.id) {
+        billRef = null;
+        cart = [];
+      }
+      toast(`Bill ${b.nama} dibatalkan`);
+      render();
+    },
+    billGantiNama(el) {
+      const s = store.get();
+      const b = cariBill(s, el.dataset.id);
+      if (!b) return;
+      const nama = prompt("Nama bill:", b.nama);
+      if (nama === null) return;
+      store.set(ubahBill(s, b.id, { nama }));
+      render();
+    },
+
     order(el) {
       openOrder = openOrder === el.dataset.id ? null : el.dataset.id;
       render();
@@ -695,14 +1039,10 @@ export const kasir = {
       if (cart.length && !mejaRef && !confirm("Keranjang sekarang akan diganti dengan pesanan meja ini. Lanjut?")) return;
       const s = store.get();
       const hilang = o.items.filter((x) => !s.resep.some((r) => r.id === x.id));
+      // Open bill aktif: pesanan "bayar di kasir" masuk ke bill meja itu (bayar nanti).
+      if (billAktif(s) && !(o.metode === "digital" && o.bayar_status === "lunas")) return masukBillMeja(o, hilang);
       channel = "toko";
-      cart = o.items.map((x) => {
-        const r = s.resep.find((y) => y.id === x.id);
-        const opsi = Array.isArray(x.opsi) && x.opsi.length ? x.opsi : null;
-        const it = { key: r ? kunciItem(r.id, opsi) : "x-" + uid(), resepId: r ? r.id : null, nama: r || !opsi ? x.nama : namaLengkap(x), harga: x.harga, qty: x.qty };
-        if (r && opsi) it.opsi = opsi;
-        return it;
-      });
+      cart = keranjangMeja(s, o);
       mejaRef = o;
       form = {
         ...form,
@@ -764,6 +1104,15 @@ export const kasir = {
       form.diskon = Number(el.value) || 0;
       render();
     },
+    campur(el) {
+      form.campur = el.checked;
+      if (!form.campur) form.tunaiSebagian = 0;
+      render();
+    },
+    tunaiSebagian(el) {
+      form.tunaiSebagian = Math.max(0, Math.round(Number(el.value) || 0));
+      render();
+    },
     kode(el) {
       form.kode = el.value.trim().toUpperCase();
       render();
@@ -799,6 +1148,31 @@ export const kasir = {
   },
 
   forms: {
+    billBaru(form_) {
+      const nama = String(new FormData(form_).get("nama") || "").trim();
+      const s = store.get();
+      let r;
+      try {
+        r = bukaBill(s, { nama, oleh: pelaku() });
+      } catch (e) {
+        if (billSheet) billSheet.error = e.message;
+        return toast(e.message, "err");
+      }
+      store.set(r.patch);
+      if (billSheet) {
+        // Dari layar bayar: isi keranjang langsung jadi ronde pertama
+        billSheet = null;
+        return kirimRonde(r.bill.id);
+      }
+      // Dari tab Bill: langsung pilih menu untuk bill ini
+      billTambah = r.bill.id;
+      cart = [];
+      tab = "jual";
+      step = "menu";
+      toast(`Bill ${r.bill.nama} dibuka. Pilih menunya`);
+      render();
+      window.scrollTo(0, 0);
+    },
     custom(form_) {
       const fd = new FormData(form_);
       const nama = String(fd.get("nama")).trim();
