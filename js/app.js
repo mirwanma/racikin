@@ -34,13 +34,15 @@ import { izin } from "./views/izin.js";
 import { imporJual } from "./views/imporjual.js";
 import { promo } from "./views/promo.js";
 import { wa } from "./views/wa.js";
+import { paket } from "./views/paket.js";
+import { initPaket, onPaket } from "./paket.js";
 import { admin, isAdminMode, adminDiketahui, cekAdmin, tabAdmin } from "./views/admin.js";
 import { initMeja } from "./meja.js";
 import { initCloud, onCloudChange, cloud, role } from "./cloud.js";
 import { icon } from "./icons.js";
 
-const routes = { "": home, profil, bisnis, ide, rab, brand, aktivasi, kas, konten, mentor, setelan, akun, stok, resep, pelanggan, kartu, studio, kasir, online, tim, gabung, notif, shift, laporan, belanja, dapur, meja, varian, impor, sehat, izin, "impor-jual": imporJual, promo, wa, admin, m: pesan };
-const tabOf = { "": "", bisnis: "bisnis", ide: "bisnis", rab: "bisnis", brand: "bisnis", aktivasi: "bisnis", kas: "kas", stok: "bisnis", resep: "bisnis", pelanggan: "bisnis", studio: "bisnis", konten: "konten", kasir: "kasir", online: "kasir", tim: "bisnis", notif: "-", shift: "kasir", laporan: "kas", belanja: "bisnis", dapur: "kasir", meja: "bisnis", varian: "bisnis", impor: "bisnis", sehat: "bisnis", izin: "bisnis", "impor-jual": "bisnis", promo: "bisnis", wa: "bisnis", admin: "-", m: "-" };
+const routes = { "": home, profil, bisnis, ide, rab, brand, aktivasi, kas, konten, mentor, setelan, akun, stok, resep, pelanggan, kartu, studio, kasir, online, tim, gabung, notif, shift, laporan, belanja, dapur, meja, varian, impor, sehat, izin, "impor-jual": imporJual, promo, wa, admin, paket, m: pesan };
+const tabOf = { "": "", bisnis: "bisnis", ide: "bisnis", rab: "bisnis", brand: "bisnis", aktivasi: "bisnis", kas: "kas", stok: "bisnis", resep: "bisnis", pelanggan: "bisnis", studio: "bisnis", konten: "konten", kasir: "kasir", online: "kasir", tim: "bisnis", notif: "-", shift: "kasir", laporan: "kas", belanja: "bisnis", dapur: "kasir", meja: "bisnis", varian: "bisnis", impor: "bisnis", sehat: "bisnis", izin: "bisnis", "impor-jual": "bisnis", promo: "bisnis", wa: "bisnis", admin: "-", paket: "-", m: "-" };
 // Kasir hanya melihat halaman jualan, pelanggan, dan stok bahan.
 const KASIR_ROUTES = new Set(["kasir", "pelanggan", "stok", "akun", "setelan", "kartu", "tim", "gabung", "notif", "shift", "dapur", "m"]);
 const tabOfKasir = { kasir: "kasir", pelanggan: "pelanggan", stok: "stok", akun: "akun", setelan: "akun", tim: "akun", notif: "akun", shift: "kasir", dapur: "dapur" };
@@ -48,7 +50,7 @@ const tabOfKasir = { kasir: "kasir", pelanggan: "pelanggan", stok: "stok", akun:
 const DAPUR_ROUTES = new Set(["dapur", "akun", "setelan", "tim", "gabung", "notif", "m"]);
 // Mode admin platform: hanya dashboard admin & akun (menu usaha disembunyikan).
 const ADMIN_ROUTES = new Set(["admin", "akun"]);
-const FREE_ROUTES = ["profil", "setelan", "akun", "kartu", "gabung", "tim", "notif", "m", "admin"];
+const FREE_ROUTES = ["profil", "setelan", "akun", "kartu", "gabung", "tim", "notif", "m", "admin", "paket"];
 
 // Halaman yang di layar lebar disusun dua kolom (kartu mengalir kiri-kanan).
 const COLS = new Set(["home", "bisnis", "kas", "laporan", "pelanggan", "stok", "belanja", "shift", "tim", "setelan", "akun", "notif", "ide", "rab", "brand", "aktivasi", "konten", "online", "studio", "izin"]);
@@ -105,7 +107,7 @@ function waitingTeam() {
   return `<section class="card empty">
     <div class="empty-icon">${icon("sync", 30)}</div>
     <h3>Lagi ambil data ${t?.bisnis ? esc(t.bisnis) : "usaha"}…</h3>
-    <p>${cloud.status === "error" ? esc(cloud.error) : cloud.status === "offline" ? "Kamu lagi offline. Data muncul begitu tersambung internet." : "Kamu anggota tim. Data menu, stok & pelanggan diambil dari akun pemilik."}</p>
+    <p>${t?.pro === false ? "Paket Pro usaha ini sudah habis, jadi akun tim sementara nggak bisa dipakai. Minta pemilik memperpanjang di halaman Paket." : cloud.status === "error" ? esc(cloud.error) : cloud.status === "offline" ? "Kamu lagi offline. Data muncul begitu tersambung internet." : "Kamu anggota tim. Data menu, stok & pelanggan diambil dari akun pemilik."}</p>
     <a href="#/tim" class="btn ghost">Info tim</a>
   </section>`;
 }
@@ -171,6 +173,8 @@ if (typeof matchMedia === "function") {
 }
 initCloud();
 initMeja();
+initPaket();
+onPaket(() => softRender());
 onCloudChange(softRender);
 store.subscribe((s, source) => {
   if (source !== "cloud") return;

@@ -1,6 +1,8 @@
 // Impor riwayat penjualan (#/impor-jual): CSV atau tabel yang di-copy dari Excel / Google Sheets.
 // Langkah: masukin data -> cek kolom -> ringkasan & simpan. Riwayat impor bisa dibatalkan.
 import { icon } from "../icons.js";
+import { bolehPro } from "../paket.js";
+import { kunciPro } from "./paket.js";
 import { store } from "../store.js";
 import { esc, rupiah, toast, todayISO, fmtDate, download } from "../ui.js";
 import { render } from "../app.js";
@@ -136,6 +138,7 @@ function selesaiView(s) {
 
 export const imporJual = {
   render(s) {
+    if (!bolehPro()) return `${head("Impor Penjualan Lama", "#/bisnis")}${kunciPro("imporJual")}`;
     st ||= awal();
     const body = st.step === "kolom" ? kolomView() : st.step === "ringkas" ? ringkasView(s) : st.step === "selesai" ? selesaiView(s) : inputView(s);
     return `${head("Impor Penjualan Lama", "#/bisnis")}${body}`;

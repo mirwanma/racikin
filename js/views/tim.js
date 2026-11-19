@@ -1,5 +1,7 @@
 // Mode tim: pemilik mengundang karyawan (kasir / manajer); karyawan bergabung pakai kode.
 import { esc, toast, copy } from "../ui.js";
+import { bolehPro } from "../paket.js";
+import { kunciPro } from "./paket.js";
 import { render, go } from "../app.js";
 import { icon } from "../icons.js";
 import { head } from "./_shared.js";
@@ -114,7 +116,8 @@ function ownerView(s) {
   return `${head("Tim & Karyawan", "#/bisnis")}
     <p class="muted small">Ajak karyawan pakai Racikin di HP masing-masing. Penjualan dari semua HP masuk ke data usahamu, dan tiap order tercatat siapa kasirnya.</p>
     ${inviteCard(s)}
-    <form class="card stack" data-form="undang">
+    ${bolehPro() ? "" : kunciPro("tim", anggota.length ? "Anggota tim yang sudah ada nggak bisa masuk sampai usaha ini Pro lagi. Upgrade buat buka lagi." : "")}
+    <form class="card stack ${bolehPro() ? "" : "hidden"}" data-form="undang">
       <h2 class="card-title">Undang anggota</h2>
       <label class="field"><span>Nama panggilan</span><input name="nama" maxlength="40" placeholder="cth: Rina" required></label>
       <div class="seg seg3">

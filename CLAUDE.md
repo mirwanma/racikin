@@ -11,7 +11,7 @@ Racikin ("Racik ide jadi cuan") = PWA co-founder AI untuk usaha F&B kecil di Ind
 ## Arsitektur
 - **Frontend tanpa build**: vanilla ES modules, router hash (`js/app.js`), event delegation `data-action` (click) / `data-change` / `data-form`. View = objek `{ render(s), after(root), actions, changes, forms }` yang mengembalikan template string.
 - **State**: satu objek di `localStorage` (`racikin:v1`, `js/store.js`). `store.set(patch)` → render ulang. `DEFAULT` di store.js = daftar semua key.
-- **Service worker** `sw.js`: naikkan `VERSION` (saat ini `racikin-v37`) di setiap rilis dan tambahkan file baru ke `SHELL`.
+- **Service worker** `sw.js`: naikkan `VERSION` (saat ini `racikin-v38`) di setiap rilis dan tambahkan file baru ke `SHELL`.
 - **Desain "papan warung"**: kuning marigold `#FFC531`, ink `#1B1916`, paper `#F6EFDC`; font Archivo + IBM Plex Mono; token warna di `:root` + mode gelap. Layar ≥ 900px: rail navigasi kiri, halaman di `COLS` (app.js) dua kolom, Kasir dua panel.
 - **Peran** (`js/cloud.js`): `owner`, `manajer`, `kasir` (hanya Kasir/Pelanggan/Stok; boleh menulis `bills`), `dapur` (hanya layar dapur). Rute dibatasi di `app.js` (`KASIR_ROUTES`, `DAPUR_ROUTES`), dan server juga membatasi.
 
@@ -27,6 +27,9 @@ Racikin ("Racik ide jadi cuan") = PWA co-founder AI untuk usaha F&B kecil di Ind
 ## Tes
 Lihat `tests/README.md`. Unit: `cd tests && npm run unit`. E2E: jalankan `python3 -m http.server 8766` di root lalu `node tests/e2e/<nama>.js <folder-screenshot>`. Tes yang butuh akun memakai akun `*@racikin.test`, dengan password lewat variabel lingkungan. Kosongkan data akun tes sebelum menjalankan tes cloud. Sebelum PR: jalankan unit test + E2E yang relevan + regresi `mvp.js`, `kasir.js`, `dummy.js`.
 
+## Paket Gratis & Pro
+Server yang menentukan paket (`paket_info` / `paket_saya`, tabel `langganan` & `platform_setting`): Pro berbayar → masa transisi (akun lama s/d 20 Feb 2027) → masa coba 14 hari → Gratis. Server mengunci kuota AI (20 vs 300/hari), AI foto, tim (`team_role`, `create_invite`, `join_team`) & pesan meja (`meja_dari_token`). Di app: `bolehPro()` (`js/paket.js`, tanpa akun = boleh dicoba) + `kunciPro(fitur)` (`js/views/paket.js`). Fitur Pro baru: tambahkan ke `FITUR_PRO` dan kunci di server kalau datanya lewat server.
+
 ## Kasir: open bill & pembayaran campuran
 Open bill opsional (`posSetting.openBill`, `js/bill.js`, data `bills`): ronde memotong stok saat dikirim, uang masuk Kas hanya saat bill dilunasi (`buatOrder(..., { stok: false, bill })`). Pembayaran campuran: `order.pembayaran` + `metode: "campur"`; semua hitungan per metode harus lewat `porsiMetode` (pos.js) / porsi di shift.js.
 
@@ -37,4 +40,4 @@ Open bill opsional (`posSetting.openBill`, `js/bill.js`, data `bills`): ronde me
 `js/dummy.js` (tombol di Setelan / onboarding), profil tahap `jalan`: 15 menu (sebagian dengan varian: level pedas, topping, ukuran (Jumbo 1,5× porsi), tingkat manis (ada "Tanpa gula" yang menghilangkan gula)), 3 promo (happy hour, es teh weekend, voucher TAHGUY5), 25 bahan, ±2.000 order 60 hari, Kas, stok, 35 pelanggan, 5 supplier, shift 30 hari atas nama tim, 8 meja. Semua angka harus tetap konsisten: Kas = rekap kasir per hari, stok = total `stokLog`, stempel = total `stempelLog`. Data hari ini hanya sampai jam sekarang.
 
 ## Ide berikutnya (belum dikerjakan)
-Payment gateway sungguhan untuk pesan meja (QRIS saat ini SIMULASI di `pay_table_order_dummy`); WhatsApp Business API resmi (integrasi wa.me sudah ada: `js/wa.js`, `#/wa`, order dari chat di Kasir); monetisasi.
+Payment gateway sungguhan untuk pesan meja (QRIS saat ini SIMULASI di `pay_table_order_dummy`); WhatsApp Business API resmi (integrasi wa.me sudah ada: `js/wa.js`, `#/wa`, order dari chat di Kasir); split bill / pindah meja; payment gateway untuk langganan Pro (pembayaran Pro saat ini manual lewat WA admin).

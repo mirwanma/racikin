@@ -188,3 +188,38 @@ export function perluDisapa(list, today) {
   }
   return out.sort((a, b) => b.bobot - a.bobot);
 }
+
+// ---------- Paket & langganan (monetisasi) ----------
+export const PAKET_NAMA = { bayar: "Pro", coba: "Coba", transisi: "Transisi", gratis: "Gratis" };
+/** Jenis paket merchant: bayar | coba | transisi | gratis. */
+export const jenisPaket = (p) => (p?.paket === "pro" ? p.sumber || "bayar" : "gratis");
+
+/** Ringkasan langganan platform. paket = { [id]: paket_info }, harga = { harga_bulan, harga_tahun }. */
+export function ringkasPaket(list, paket, harga = {}) {
+  const hb = Number(harga.harga_bulan ?? 49000);
+  const ht = Number(harga.harga_tahun ?? 490000);
+  const out = { bayar: 0, coba: 0, transisi: 0, gratis: 0, mrr: 0, tahunan: 0 };
+  for (const m of list) {
+    const p = paket?.[m.id];
+    const j = jenisPaket(p);
+    out[j] += 1;
+    if (j === "bayar") {
+      if (p.periode === "tahun") {
+        out.tahunan += 1;
+        out.mrr += ht / 12;
+      } else out.mrr += hb;
+    }
+  }
+  out.mrr = Math.round(out.mrr);
+  out.konversi = out.bayar + out.gratis ? Math.round((out.bayar / (out.bayar + out.gratis)) * 100) : null;
+  return out;
+}
+
+/** Tanggal perpanjangan: dari sisa Pro berbayar (kalau masih aktif) atau dari hari ini. */
+export function perpanjang(p, periode, now = new Date()) {
+  const dasar = p?.paket === "pro" && p.sumber === "bayar" && new Date(p.sampai) > now ? new Date(p.sampai) : now;
+  const d = new Date(dasar);
+  if (periode === "tahun") d.setFullYear(d.getFullYear() + 1);
+  else d.setMonth(d.getMonth() + 1);
+  return d.toISOString();
+}

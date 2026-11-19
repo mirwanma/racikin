@@ -4,9 +4,9 @@ import { icon } from "../icons.js";
 import { esc, rupiah, short, todayISO, fmtDate, download, toast } from "../ui.js";
 import { render } from "../app.js";
 import { sb, cloud } from "../cloud.js";
-import { FITUR, STATUS, statusMerchant, ringkasPlatform, saringMerchant, URUT, toCSV, isTes, PERIODE, ringkasHarian, persen, angkaPeriode, perluDisapa } from "../admin.js";
+import { FITUR, STATUS, statusMerchant, ringkasPlatform, saringMerchant, URUT, toCSV, isTes, PERIODE, ringkasHarian, persen, angkaPeriode, perluDisapa, ringkasPaket, jenisPaket, PAKET_NAMA, perpanjang } from "../admin.js";
 
-let data = { status: "idle", list: [], harian: [], at: null, error: "" }; // idle | loading | ok | bukan | error
+let data = { status: "idle", list: [], harian: [], paket: {}, setting: null, at: null, error: "" }; // idle | loading | ok | bukan | error
 let f = { q: "", status: "", tahap: "", urut: "aktif", tes: false, periode: 30 };
 let buka = null; // id merchant yang detailnya dibuka
 let gulir = null; // id merchant yang perlu di-scroll setelah dibuka dari Ringkasan
@@ -94,9 +94,15 @@ async function muat() {
     if (!(await cekAdmin())) {
       data = { status: "bukan", list: [], harian: [], at: null, error: "" };
     } else {
-      const [m, h] = await Promise.all([sb().rpc("admin_merchants"), sb().rpc("admin_harian", { p_hari: 90, p_tes: f.tes })]);
+      const [m, h, pk, set] = await Promise.all([
+        sb().rpc("admin_merchants"),
+        sb().rpc("admin_harian", { p_hari: 90, p_tes: f.tes }),
+        sb().rpc("admin_paket"),
+        sb().rpc("admin_setting"),
+      ]);
       if (m.error) throw new Error(m.error.message);
-      data = { status: "ok", list: Array.isArray(m.data) ? m.data : [], harian: !h.error && Array.isArray(h.data) ? h.data : [], at: new Date(), error: "" };
+      const paket = Object.fromEntries((Array.isArray(pk.data) ? pk.data : []).map((x) => [x.id, x]));
+      data = { status: "ok", list: Array.isArray(m.data) ? m.data : [], harian: !h.error && Array.isArray(h.data) ? h.data : [], paket, setting: set.error ? null : set.data, at: new Date(), error: "" };
       detail.clear();
     }
   } catch (e) {
@@ -185,7 +191,64 @@ function detailView(m) {
         <p class="a-mut">${m.menu} menu · ${m.bahan} bahan · ${m.pelanggan} pelanggan stempel</p></div>
     </div>
     <div class="a-tags">${FITUR.map(([k, n]) => `<span class="${m.fitur?.[k] ? "on" : ""}">${n}</span>`).join("")}</div>
+    ${paketPanel(m)}
   </div>`;
+}
+
+const pkTag = (m) => {
+  const j = jenisPaket(data.paket[m.id]);
+  return data.paket[m.id] ? `<span class="a-pk ${j}">${PAKET_NAMA[j]}</span>` : "";
+};
+const catatanPro = {}; // catatan pembayaran yang diketik admin per merchant
+
+/** Panel paket di detail merchant: status + aktifkan / perpanjang / hentikan Pro. */
+function paketPanel(m) {
+  const p = data.paket[m.id];
+  if (!p) return "";
+  const j = jenisPaket(p);
+  const ket =
+    j === "gratis"
+      ? `Gratis${p.pro_terakhir ? ` · Pro terakhir ${tgl(p.pro_terakhir)}` : ""}`
+      : `${PAKET_NAMA[j]} sampai ${tgl(p.sampai)}${j === "bayar" ? ` · ${p.periode === "tahun" ? "tahunan" : "bulanan"}` : ""}`;
+  return `<div class="a-panel a-paket">
+    <h4>Paket</h4>
+    <p><span class="a-pk ${j}">${PAKET_NAMA[j]}</span> ${esc(ket)}</p>
+    ${p.catatan ? `<p class="a-mut">Catatan: ${esc(p.catatan)}</p>` : ""}
+    <input class="a-input" value="${esc(catatanPro[m.id] || "")}" maxlength="200" placeholder="Catatan pembayaran (cth: transfer BCA 20/11)" data-change="catatanPro" data-id="${esc(m.id)}" aria-label="Catatan pembayaran">
+    <div class="a-paket-act">
+      <button class="a-btn" data-action="proSet" data-id="${esc(m.id)}" data-periode="bulan">${j === "bayar" ? "Perpanjang" : "Aktifkan"} 1 bulan</button>
+      <button class="a-btn" data-action="proSet" data-id="${esc(m.id)}" data-periode="tahun">${j === "bayar" ? "Perpanjang" : "Aktifkan"} 1 tahun</button>
+      ${j === "bayar" ? `<button class="a-btn neg" data-action="proHenti" data-id="${esc(m.id)}">Hentikan</button>` : ""}
+    </div>
+  </div>`;
+}
+
+/** Setelan platform (harga & nomor WA upgrade), dipakai di halaman Akun mode admin. */
+export function platformCard() {
+  if (data.status !== "ok") {
+    if (data.status === "idle" && cloud.user) muat();
+    return "";
+  }
+  const st = data.setting || {};
+  return `<form class="card stack" data-form="platform">
+    <h2 class="card-title" style="margin:0">Setelan paket Pro</h2>
+    <label class="field"><span>Nomor WA admin (tombol upgrade merchant)</span><input name="wa" type="tel" inputmode="tel" value="${esc(st.wa || "")}" placeholder="08xx / 628xx" maxlength="20"></label>
+    <div class="row2">
+      <label class="field"><span>Harga bulanan (Rp)</span><input name="bulan" type="number" min="0" step="1000" value="${st.harga_bulan ?? 49000}"></label>
+      <label class="field"><span>Harga tahunan (Rp)</span><input name="tahun" type="number" min="0" step="1000" value="${st.harga_tahun ?? 490000}"></label>
+    </div>
+    <p class="small muted">Masa coba ${st.coba_hari ?? 14} hari untuk pendaftar baru. Akun lama gratis Pro sampai ${tgl(st.transisi_sampai)} (masa transisi).</p>
+    <button class="btn primary">Simpan setelan</button>
+  </form>`;
+}
+
+export async function simpanPlatform(form) {
+  const fd = new FormData(form);
+  const { data: st, error } = await sb().rpc("admin_set_setting", { p_wa: String(fd.get("wa") || ""), p_harga_bulan: Number(fd.get("bulan")) || 0, p_harga_tahun: Number(fd.get("tahun")) || 0 });
+  if (error) throw new Error(error.message);
+  data = { ...data, setting: st };
+  toast("Setelan paket disimpan");
+  render();
 }
 
 // ---------- Bagian halaman ----------
@@ -216,7 +279,7 @@ function tabelMerchant(rows, { ringkas = false } = {}) {
         const t = m.st.tren;
         return `<div class="a-row ${buka === m.id ? "open" : ""}">
           <button class="a-tr" data-action="detail" data-id="${esc(m.id)}" role="row" aria-expanded="${buka === m.id}">
-            <span class="a-usaha">${avatar(m)}<span><b>${esc(m.nama)}</b><small>${esc([m.kota, m.jenis].filter(Boolean).join(" · ") || "-")}${isTes(m) ? " · tes" : ""}</small></span></span>
+            <span class="a-usaha">${avatar(m)}<span><b>${esc(m.nama)}</b><small>${pkTag(m)} ${esc([m.kota, m.jenis].filter(Boolean).join(" · ") || "-")}${isTes(m) ? " · tes" : ""}</small></span></span>
             <span>${status(m.st.status)}<small class="a-sm-only">${sepiTxt(m.st)}</small></span>
             <span class="a-hide-sm a-spark ${m.st.status === "berisiko" ? "neg" : ""}">${garis(m.seri14 || [], { h: 26 })}</span>
             <span class="num">${a.order.toLocaleString("id-ID")}</span>
@@ -268,6 +331,7 @@ function ringkasanTab() {
       ${tile("Berisiko berhenti", `<div class="a-big-row"><b class="a-big ${nBerisiko ? "neg" : ""}">${nBerisiko}</b></div><p class="a-mut">${nBerisiko ? `${esc(berisiko[0].nama)}${nBerisiko > 1 ? ` +${nBerisiko - 1} lagi` : ""} · ${sepiTxt(berisiko[0].st)}` : "Semua masih jualan"}</p>`, nBerisiko ? "warn" : "")}
       ${tile("Pemakaian AI", `<div class="a-big-row"><b class="a-big">${(adaHarian ? h.ai : r.ai30).toLocaleString("id-ID")}</b>${adaHarian && h.adaPrev ? naik(persen(h.ai, h.prev.ai)) : ""}</div><div class="a-mini-chart sky">${adaHarian ? garis(h.seri.map((d) => d.ai), { h: 30 }) : ""}</div>`)}
     </div>
+    ${langgananTiles(semua)}
     <div class="a-split">
       <section class="a-tile a-flush">
         <div class="a-tile-head"><h2>Merchant teratas</h2><a class="a-link" href="#/admin?tab=merchant">Lihat semua ${icon("chevron", 13)}</a></div>
@@ -278,6 +342,16 @@ function ringkasanTab() {
         ${tile("Adopsi fitur", meter([...r.fitur].sort((a, b) => b.n - a.n).slice(0, 6), r.total))}
       </div>
     </div>`;
+}
+
+function langgananTiles(semua) {
+  const r = ringkasPaket(semua, data.paket, data.setting || {});
+  return `<div class="a-bento a-bento-4">
+    ${tile("Pendapatan / bulan (MRR)", `<div class="a-big-row"><b class="a-big">${rp(r.mrr)}</b></div><p class="a-mut">${r.bayar} Pro berbayar${r.tahunan ? ` (${r.tahunan} tahunan)` : ""}</p>`)}
+    ${tile("Pro berbayar", `<div class="a-big-row"><b class="a-big">${r.bayar}</b></div><p class="a-mut">${r.konversi === null ? "belum ada yang selesai coba" : `${r.konversi}% dari yang selesai coba`}</p>`)}
+    ${tile("Masa coba / transisi", `<div class="a-big-row"><b class="a-big">${r.coba + r.transisi}</b></div><p class="a-mut">${r.coba} coba · ${r.transisi} transisi</p>`)}
+    ${tile("Gratis", `<div class="a-big-row"><b class="a-big">${r.gratis}</b></div><p class="a-mut">calon pelanggan Pro</p>`)}
+  </div>`;
 }
 
 const CHIP = [["", "Semua"], ["aktif", "Aktif"], ["berisiko", "Berisiko"], ["baru", "Baru"], ["tidur", "Belum jualan"]];
@@ -396,6 +470,9 @@ export const admin = {
       f.urut = el.value;
       render();
     },
+    catatanPro(el) {
+      catatanPro[el.dataset.id] = el.value;
+    },
     tes(el) {
       f.tes = el.checked;
       render();
@@ -406,6 +483,29 @@ export const admin = {
     muat: () => muat(),
     periode(el) {
       f.periode = Number(el.dataset.n) || 30;
+      render();
+    },
+    async proSet(el) {
+      const id = el.dataset.id;
+      const m = data.list.find((x) => x.id === id);
+      const p = data.paket[id];
+      const sampai = perpanjang(p, el.dataset.periode);
+      if (!confirm(`${jenisPaket(p) === "bayar" ? "Perpanjang" : "Aktifkan"} Pro ${m?.nama || ""} sampai ${tgl(sampai)}?`)) return;
+      const { data: info, error } = await sb().rpc("admin_set_langganan", { p_owner: id, p_sampai: sampai, p_periode: el.dataset.periode, p_catatan: catatanPro[id] || "" });
+      if (error) return toast(error.message, "err");
+      data.paket = { ...data.paket, [id]: { ...info, id, catatan: catatanPro[id] || "" } };
+      delete catatanPro[id];
+      toast(`Pro ${m?.nama || ""} aktif sampai ${tgl(sampai)}`);
+      render();
+    },
+    async proHenti(el) {
+      const id = el.dataset.id;
+      const m = data.list.find((x) => x.id === id);
+      if (!confirm(`Hentikan Pro berbayar ${m?.nama || ""} sekarang?`)) return;
+      const { data: info, error } = await sb().rpc("admin_set_langganan", { p_owner: id, p_sampai: null, p_periode: "lain", p_catatan: catatanPro[id] || "dihentikan admin" });
+      if (error) return toast(error.message, "err");
+      data.paket = { ...data.paket, [id]: { ...info, id, catatan: "" } };
+      toast("Pro berbayar dihentikan");
       render();
     },
     chip(el) {

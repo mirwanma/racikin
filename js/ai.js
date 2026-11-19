@@ -1,6 +1,7 @@
 // Klien AI: mode "online" memanggil Supabase Edge Function racikin-ai (wajib login),
 // mode "demo" memakai generator lokal (tanpa internet / tanpa akun).
 import { store } from "./store.js";
+import { paketKini, AI_HARI } from "./paket.js";
 import { demo } from "./demo.js";
 import { SUPABASE_URL, SUPABASE_ANON_KEY, accessToken, cloud } from "./cloud.js";
 
@@ -34,7 +35,11 @@ export async function ai(task, input = {}) {
   }
   const body = await res.json().catch(() => ({}));
   if (res.status === 401) throw new AuthRequiredError(body.error || "Sesi login habis. Masuk lagi ya.");
-  if (!res.ok) throw new Error(body.error || `Server AI error (${res.status})`);
+  if (!res.ok) {
+    const pesan = body.error || `Server AI error (${res.status})`;
+    // Kuota harian paket Gratis habis -> ajak upgrade.
+    throw new Error(res.status === 429 && /harian/i.test(pesan) && paketKini().paket === "gratis" ? `${pesan} Upgrade ke Pro biar ${AI_HARI.pro}x/hari.` : pesan);
+  }
   if (body.quota) cloud.quota = body.quota;
   return body.data;
 }
