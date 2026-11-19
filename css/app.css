@@ -1457,3 +1457,4 @@ body[data-admin="1"] .adm-chart i { background: var(--a-y); }
 .a-input { width: 100%; background: var(--a-bg); border: 1px solid var(--a-line); color: var(--a-ink); border-radius: 9px; padding: 8px 10px; font: 13px var(--font); box-shadow: none; }
 .a-paket-act { display: flex; gap: 6px; flex-wrap: wrap; }
 .a-btn.neg { color: var(--a-r); }
+.split-line.on { background: var(--yellow-tint); border-radius: 8px; }
