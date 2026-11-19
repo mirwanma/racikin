@@ -45,9 +45,18 @@ const waktuNow = () => {
   return d.toISOString().slice(0, 16);
 };
 /** Promo terbaik untuk keranjang sekarang. Pesanan meja yang sudah lunas digital tidak dapat promo (harga sudah dibayar). */
+/** Nomor WA pelanggan untuk voucher per pelanggan: pelanggan kartu stempel yang dipilih, atau yang diisi di pesan meja. */
+function waNow(s) {
+  const p = form.pelangganId ? (s.pelanggan || []).find((x) => x.id === form.pelangganId) : null;
+  return p?.wa || mejaRef?.promo?.wa || "";
+}
 function promoNow(s = store.get()) {
-  if (mejaRef?.metode === "digital" && mejaRef?.bayar_status === "lunas") return { promo: null, hint: "", kodeError: "" };
-  return pilihPromo(s, cart, { channel, waktu: waktuNow(), kode: form.kode });
+  // Pesanan meja yang sudah lunas digital: promo dikunci sesuai yang dibayar pelanggan.
+  if (mejaRef?.metode === "digital" && mejaRef?.bayar_status === "lunas") {
+    const p = mejaRef.promo;
+    return { promo: p ? { id: p.id, nama: p.nama, potongan: Number(p.potongan) || 0, ...(p.kode ? { kode: p.kode } : {}), ...(p.wa ? { wa: p.wa } : {}) } : null, hint: "", kodeError: "", kunci: true };
+  }
+  return pilihPromo(s, cart, { channel, waktu: waktuNow(), kode: form.kode, wa: waNow(s) });
 }
 const potonganNow = () => promoNow().promo?.potongan || 0;
 const totalNow = () => {
@@ -161,7 +170,7 @@ function mejaInbox() {
         (o) => `<div class="mi-row ${mejaRef?.id === o.id ? "on" : ""}">
           <div><b>${esc(o.meja_nama)} · ${esc(o.nama)}</b>
             <p class="small">${o.items.map((x) => `${x.qty}× ${esc(namaLengkap(x))}`).join(", ")}</p>
-            <p class="small muted">Kode <b class="mono">${esc(o.kode)}</b> · ${rupiah(o.total)} · ${
+            <p class="small muted">Kode <b class="mono">${esc(o.kode)}</b> · ${rupiah(o.total)}${o.promo ? ` (${esc(o.promo.nama)} −${rupiah(o.promo.potongan)})` : ""} · ${
               o.metode === "digital" ? (o.bayar_status === "lunas" ? `<span class="pos">lunas digital (simulasi)</span>` : `<span class="neg">menunggu bayar digital</span>`) : "bayar di kasir"
             }${o.catatan ? ` · "${esc(o.catatan)}"` : ""}</p></div>
           <div class="mi-act">
@@ -263,7 +272,7 @@ function promoBox(s) {
   if (!adaPromo && !form.kode) return "";
   return `${r.promo ? `<div class="row-between pos-sum promo-line"><span>${icon("spark", 14)} ${esc(r.promo.nama)}${r.promo.kode ? ` <small class="mono">${esc(r.promo.kode)}</small>` : ""}</span><b class="pos">−${rupiah(r.promo.potongan)}</b></div>` : ""}
     ${r.hint ? `<p class="small muted promo-hint">${esc(r.hint)}</p>` : ""}
-    ${lunasDigital ? `<p class="small muted">Pesanan meja sudah dibayar digital, promo nggak dihitung lagi.</p>` : `<label class="row-between pos-sum"><span>Kode voucher</span><input class="pos-kode" value="${esc(form.kode)}" maxlength="20" placeholder="opsional" autocapitalize="characters" data-change="kode"></label>
+    ${lunasDigital ? `<p class="small muted">Pesanan meja sudah dibayar digital, promo ikut yang dibayar pelanggan.</p>` : `<label class="row-between pos-sum"><span>Kode voucher</span><input class="pos-kode" value="${esc(form.kode)}" maxlength="20" placeholder="opsional" autocapitalize="characters" data-change="kode"></label>
     ${form.kode && r.kodeError ? `<p class="small neg">${esc(r.kodeError)}</p>` : ""}`}`;
 }
 
@@ -701,6 +710,7 @@ export const kasir = {
         metode: o.metode === "digital" && o.bayar_status === "lunas" ? "qris" : "tunai",
         bayar: 0,
         atasNama: `${o.meja_nama} · ${o.nama}`.slice(0, 40),
+        kode: o.promo?.kode || "",
         catatanDapur: o.catatan || "",
       };
       step = "bayar";

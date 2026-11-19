@@ -6,7 +6,7 @@ import { store, uid } from "./store.js";
 import { sb, cloud, role, onCloudChange } from "./cloud.js";
 import { bahanMap, bisaDibuat } from "./stok-utils.js";
 import { grupMenu, pilihanHabis } from "./varian.js";
-import { promoHariIni, ketPromo } from "./promo.js";
+import { promoHariIni, ketPromo, aturanPromoMeja } from "./promo.js";
 import { todayISO } from "./ui.js";
 
 export const mejaAktif = (s) => !!s.posSetting?.pesanMeja;
@@ -44,13 +44,33 @@ export function menuPublik(s) {
       return { id: r.id, nama: r.nama, harga: Math.round(Number(r.harga) || 0), habis: bisaDibuat(r, map).porsi === 0, ...(r.foto?.url ? { foto: r.foto.url } : {}), ...(g.length ? { opsi: g } : {}) };
     }),
     opsi: opsiPublik(s, map),
-    // Promo otomatis yang berlaku hari ini (tanpa kode voucher). Hanya info: potongan dihitung kasir saat pesanan diterima.
+    // Promo otomatis yang berlaku hari ini (info untuk pelanggan, tanpa kode voucher).
     promo: promoHariIni(s, todayISO()).map((p) => ({ nama: p.nama, ket: ketPromo(p, s) })).slice(0, 5),
+    // Aturan promo untuk dihitung server (TIDAK dikirim ke pelanggan oleh get_table_menu). Nomor WA di pakaiWa di-hash saat diunggah.
+    promoAturan: aturanPromoMeja(s),
     meja: (s.meja || []).map((m) => ({ id: m.id, nama: m.nama, token: m.token })),
   };
 }
 
 // ---------- Publikasi menu (pemilik/manajer) ----------
+/** Hash nomor WA (sama dengan meja_hash_wa di SQL): sha256("racikin:" + nomor) dalam hex. */
+export async function hashWa(wa) {
+  if (!wa) return "";
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("racikin:" + wa));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+/** Ganti nomor WA di promoAturan[].pakaiWa dengan hash-nya sebelum diunggah. */
+export async function hashPakaiWa(data) {
+  const promoAturan = await Promise.all(
+    (data.promoAturan || []).map(async (a) => {
+      if (!a.pakaiWa) return a;
+      const pakaiWa = {};
+      for (const [wa, n] of Object.entries(a.pakaiWa)) pakaiWa[await hashWa(wa)] = n;
+      return { ...a, pakaiWa };
+    }),
+  );
+  return { ...data, promoAturan };
+}
 const DIGEST_KEY = "racikin:menu-publik";
 let pubTimer = null;
 export const statusPublik = { at: null, error: "" };
@@ -60,7 +80,7 @@ export async function publikasi(force = false) {
   const s = store.get();
   if (!cloud.user || !cloud.team || !["owner", "manajer"].includes(role())) return false;
   if (!(s.meja || []).length && !force) return false;
-  const data = menuPublik(s);
+  const data = await hashPakaiWa(menuPublik(s));
   const digest = JSON.stringify(data);
   let lama = null;
   try {
@@ -110,7 +130,7 @@ export async function muatPesanan() {
   const sejak = new Date(Date.now() - 18 * 3600 * 1000).toISOString();
   const { data, error } = await sb()
     .from("table_orders")
-    .select("id,meja_id,meja_nama,no,kode,nama,catatan,items,total,metode,bayar_status,status,alasan,pos_order_id,created_at")
+    .select("id,meja_id,meja_nama,no,kode,nama,catatan,items,subtotal,promo,total,metode,bayar_status,status,alasan,pos_order_id,created_at")
     .eq("owner_id", cloud.team.ownerId)
     .gte("created_at", sejak)
     .order("created_at");
@@ -179,7 +199,10 @@ async function rpc(fn, args) {
 }
 export const ambilMenu = (token) => rpc("get_table_menu", { p_token: token });
 // items = [{ id, qty, opsi?: [pilihanId] }]; harga & validasi pilihan dihitung ulang di server.
-export const kirimPesanan = (token, items, nama, catatan, metode) => rpc("place_table_order", { p_token: token, p_items: items, p_nama: nama, p_catatan: catatan, p_metode: metode });
+export const kirimPesanan = (token, items, nama, catatan, metode, kode = "", wa = "") =>
+  rpc("place_table_order", { p_token: token, p_items: items, p_nama: nama, p_catatan: catatan, p_metode: metode, p_kode: kode || "", p_wa: wa || "" });
+/** Hitung promo (otomatis + voucher) di server sebelum pesan: { subtotal, promo, total, kodeError, hint, butuhWa }. */
+export const cekPromo = (token, items, kode = "", wa = "") => rpc("cek_promo_meja", { p_token: token, p_items: items, p_kode: kode || "", p_wa: wa || "" });
 export const cekPesanan = (id, secret) => rpc("get_table_order", { p_id: id, p_secret: secret });
 export const bayarSimulasi = (id, secret) => rpc("pay_table_order_dummy", { p_id: id, p_secret: secret });
 

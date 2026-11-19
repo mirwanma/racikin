@@ -3,7 +3,7 @@
 import { esc, rupiah, toast } from "../ui.js";
 import { render } from "../app.js";
 import { icon } from "../icons.js";
-import { ambilMenu, kirimPesanan, cekPesanan, bayarSimulasi, qrSvg } from "../meja.js";
+import { ambilMenu, kirimPesanan, cekPesanan, bayarSimulasi, qrSvg, cekPromo } from "../meja.js";
 import { grupMenu, cekPilihan, pilihanAwal, aturan, kunciItem, labelOpsi } from "../varian.js";
 
 let token = null;
@@ -18,6 +18,10 @@ let busy = false;
 let order = null; // status terakhir dari server
 let qr = "";
 let pollT = null;
+// Promo dihitung server (cek_promo_meja): { kode, wa, hasil, kunci (isi pesanan yang dihitung), jalan }
+let vc = { kode: "", wa: "", hasil: null, kunci: "", jalan: false, error: "" };
+let cekT = null;
+let isian = { nama: null, catatan: "", metode: "kasir" }; // isian form checkout (biar nggak hilang saat halaman digambar ulang)
 
 const KEY = () => `racikin:pesan:${token}`;
 const simpan = (v) => {
@@ -32,6 +36,13 @@ const baca = () => {
     return JSON.parse(localStorage.getItem(KEY())) || null;
   } catch {
     return null;
+  }
+};
+const waTersimpan = () => {
+  try {
+    return localStorage.getItem("racikin:pesan-wa") || "";
+  } catch {
+    return "";
   }
 };
 const namaTersimpan = () => {
@@ -63,6 +74,31 @@ const tambahCart = (id, opsi = []) => {
   cart.set(key, { id, opsi, qty: (c?.qty || 0) + 1 });
 };
 const jumlah = () => items().reduce((a, x) => a + x.qty, 0);
+const payload = () => items().map((x) => ({ id: x.m.id, qty: x.qty, ...(x.opsi.length ? { opsi: x.opsi.map((o) => o.id) } : {}) }));
+const kunciCek = () => JSON.stringify([payload(), vc.kode, vc.kode ? vc.wa : ""]);
+/** Hasil promo dari server untuk isi pesanan sekarang (null kalau belum dihitung / sudah berubah). */
+const promoKini = () => (vc.hasil && vc.kunci === kunciCek() ? vc.hasil : null);
+
+/** Minta server menghitung promo (otomatis + voucher) untuk isi pesanan sekarang. */
+function cekPromoNanti(segera = false) {
+  clearTimeout(cekT);
+  const k = kunciCek();
+  if (!jumlah() || (vc.kunci === k && (vc.hasil || vc.jalan))) return;
+  cekT = setTimeout(async () => {
+    const kunci = kunciCek();
+    vc.jalan = true;
+    try {
+      const h = await cekPromo(token, payload(), vc.kode, vc.kode ? vc.wa : "");
+      // Server lama / tanpa promo: tetap bisa pesan dengan harga normal.
+      const aman = h && typeof h.total === "number" ? h : { subtotal: total(), promo: null, total: total(), kodeError: "", hint: "", butuhWa: false };
+      if (kunci === kunciCek()) vc = { ...vc, hasil: aman, kunci, error: "" };
+    } catch (e) {
+      if (kunci === kunciCek()) vc = { ...vc, hasil: null, kunci, error: e.message };
+    }
+    vc.jalan = false;
+    if (step === "checkout") render();
+  }, segera ? 0 : 350);
+}
 
 async function muat() {
   if (loading) return;
@@ -105,13 +141,13 @@ function header() {
   </header>`;
 }
 
-/** Info promo yang lagi jalan (potongan dihitung kasir). */
+/** Info promo yang lagi jalan (potongan dihitung otomatis waktu checkout). */
 function promoBanner() {
   const list = (menu?.promo || []).filter((p) => p && p.nama);
   if (!list.length) return "";
   return `<section class="card accent pm-promo">
     ${list.map((p) => `<p>${icon("spark", 14)}<span><b>${esc(p.nama)}</b> · ${esc(p.ket || "")}</span></p>`).join("")}
-    <p class="small muted">Potongan promo dihitung kasir waktu pesananmu diterima (bayar di kasir).</p>
+    <p class="small muted">Potongan promo otomatis dihitung waktu kamu checkout (promo nggak numpuk, dipilih yang paling untung).</p>
   </section>`;
 }
 
@@ -187,17 +223,34 @@ function checkoutView() {
           </div>`,
         )
         .join("")}
-      <div class="row-between pos-total"><span>Total</span><b>${rupiah(total())}</b></div>
+      ${promoRincian()}
     </section>
     <form class="card stack" data-form="pesan">
-      <label class="field"><span>Nama kamu</span><input name="nama" maxlength="40" required value="${esc(namaTersimpan())}" placeholder="Biar kasir & dapur tahu pesanan siapa" autocomplete="given-name"></label>
-      <label class="field"><span>Catatan (opsional)</span><input name="catatan" maxlength="200" placeholder="cth: pedas level 3, tanpa bawang"></label>
+      <label class="field"><span>Nama kamu</span><input name="nama" maxlength="40" required value="${esc(isian.nama ?? namaTersimpan())}" placeholder="Biar kasir & dapur tahu pesanan siapa" autocomplete="given-name"></label>
+      <label class="field"><span>Catatan (opsional)</span><input name="catatan" maxlength="200" value="${esc(isian.catatan)}" placeholder="cth: pedas level 3, tanpa bawang"></label>
       <div class="field"><span>Pembayaran</span>
-        <label class="pm-pay"><input type="radio" name="metode" value="kasir" checked><span><b>Bayar di kasir</b><small class="muted">Tunai / QRIS di kasir. Sebutkan kode pesanan.</small></span></label>
-        ${menu.digital ? `<label class="pm-pay"><input type="radio" name="metode" value="digital"><span><b>Bayar digital (QRIS)</b><small class="muted">Mode demo: simulasi, belum ada uang yang ditarik.</small></span></label>` : ""}
+        <label class="pm-pay"><input type="radio" name="metode" value="kasir" ${isian.metode !== "digital" ? "checked" : ""}><span><b>Bayar di kasir</b><small class="muted">Tunai / QRIS di kasir. Sebutkan kode pesanan.</small></span></label>
+        ${menu.digital ? `<label class="pm-pay"><input type="radio" name="metode" value="digital" ${isian.metode === "digital" ? "checked" : ""}><span><b>Bayar digital (QRIS)</b><small class="muted">Mode demo: simulasi, belum ada uang yang ditarik.</small></span></label>` : ""}
       </div>
-      <button class="btn primary block lg" ${busy ? "disabled" : ""}>${busy ? "Mengirim…" : `Pesan sekarang · ${rupiah(total())}`}</button>
+      <button class="btn primary block lg" ${busy || (!promoKini() && !vc.error) ? "disabled" : ""}>${busy ? "Mengirim…" : promoKini() || vc.error ? `Pesan sekarang · ${rupiah(promoKini()?.total ?? total())}` : "Menghitung promo…"}</button>
     </form>`;
+}
+
+/** Subtotal, promo, kode voucher (+ nomor WA kalau voucher-nya dibatasi per orang), total. */
+function promoRincian() {
+  const h = promoKini();
+  const sub = h?.subtotal ?? total();
+  const butuhWa = h?.butuhWa || (vc.kode && vc.wa);
+  return `<div class="row-between pos-sum"><span>Subtotal</span><b>${rupiah(sub)}</b></div>
+    ${h?.promo ? `<div class="row-between pos-sum promo-line"><span>${icon("spark", 14)} ${esc(h.promo.nama)}${h.promo.kode ? ` <small class="mono">${esc(h.promo.kode)}</small>` : ""}</span><b class="pos">−${rupiah(h.promo.potongan)}</b></div>` : ""}
+    ${h?.hint ? `<p class="small muted promo-hint">${esc(h.hint)}</p>` : ""}
+    <div class="pm-voucher">
+      <label class="row-between pos-sum"><span>Kode voucher</span><input class="pos-kode" value="${esc(vc.kode)}" maxlength="20" placeholder="opsional" autocapitalize="characters" data-change="kode" aria-label="Kode voucher"></label>
+      ${butuhWa ? `<label class="row-between pos-sum"><span>Nomor WA kamu</span><input class="pos-kode" type="tel" inputmode="tel" value="${esc(vc.wa)}" maxlength="20" placeholder="08xx" data-change="wa" aria-label="Nomor WA"></label><p class="small muted">Voucher ini dibatasi per orang, jadi dicek pakai nomor WA.</p>` : ""}
+      ${vc.kode && h?.kodeError ? `<p class="small neg">${esc(h.kodeError)}</p>` : ""}
+    </div>
+    ${vc.error ? `<p class="small neg">${esc(vc.error)}</p>` : ""}
+    <div class="row-between pos-total"><span>Total</span><b>${h ? rupiah(h.total) : `<span class="muted small">menghitung…</span>`}</b></div>`;
 }
 
 function bayarView() {
@@ -255,6 +308,7 @@ function statusView() {
     </section>
     <section class="card">
       ${(o.items || []).map((x) => `<div class="row-between pos-sum"><span>${x.qty}× ${esc(x.nama)}${x.opsi?.length ? `<small class="struk-opsi">${esc(labelOpsi(x))}</small>` : ""}</span><b>${rupiah(x.harga * x.qty)}</b></div>`).join("")}
+      ${o.promo ? `<div class="row-between pos-sum"><span>Subtotal</span><b>${rupiah(o.subtotal)}</b></div><div class="row-between pos-sum promo-line"><span>${icon("spark", 14)} ${esc(o.promo.nama)}</span><b class="pos">−${rupiah(o.promo.potongan)}</b></div>` : ""}
       <div class="row-between pos-total"><span>Total</span><b>${rupiah(o.total)}</b></div>
       ${o.catatan ? `<p class="small muted">Catatan: ${esc(o.catatan)}</p>` : ""}
     </section>
@@ -288,11 +342,23 @@ export const pesan = {
       if (!qr) qrSvg(`DEMO-RACIKIN-${order.kode}-${order.total}`, 5).then((v) => ((qr = v), render()));
       return bayarView();
     }
-    if (step === "checkout" && jumlah()) return checkoutView();
+    if (step === "checkout" && jumlah()) {
+      cekPromoNanti();
+      return checkoutView();
+    }
     return menuView();
   },
 
   after(root) {
+    const f = root.querySelector("form[data-form=pesan]");
+    f?.addEventListener("input", (e) => {
+      if (e.target.name === "nama") isian.nama = e.target.value;
+      if (e.target.name === "catatan") isian.catatan = e.target.value;
+      if (e.target.name === "metode") isian.metode = e.target.value;
+    });
+    f?.addEventListener("change", (e) => {
+      if (e.target.name === "metode") isian.metode = e.target.value;
+    });
     const c = root.querySelector(".pm-cari");
     c?.addEventListener("input", () => {
       cari = c.value;
@@ -302,6 +368,20 @@ export const pesan = {
       n?.focus();
       n?.setSelectionRange(pos, pos);
     });
+  },
+
+  changes: {
+    kode(el) {
+      vc.kode = el.value.trim().toUpperCase().replace(/\s+/g, "").slice(0, 20);
+      if (vc.kode && !vc.wa) vc.wa = waTersimpan();
+      cekPromoNanti(true);
+      render();
+    },
+    wa(el) {
+      vc.wa = el.value.replace(/[^\d+ -]/g, "").slice(0, 20);
+      cekPromoNanti(true);
+      render();
+    },
   },
 
   actions: {
@@ -408,10 +488,22 @@ export const pesan = {
         } catch {
           /* abaikan */
         }
-        const r = await kirimPesanan(token, items().map((x) => ({ id: x.m.id, qty: x.qty, ...(x.opsi.length ? { opsi: x.opsi.map((o) => o.id) } : {}) })), nama, String(fd.get("catatan") || ""), metode);
+        // Kode voucher hanya dikirim kalau memang kepakai (biar pesanan nggak gagal gara-gara voucher).
+        const h = promoKini();
+        const pakaiKode = h?.promo?.kode && h.promo.kode === vc.kode ? vc.kode : "";
+        if (pakaiKode && vc.wa) {
+          try {
+            localStorage.setItem("racikin:pesan-wa", vc.wa);
+          } catch {
+            /* abaikan */
+          }
+        }
+        const r = await kirimPesanan(token, payload(), nama, String(fd.get("catatan") || ""), metode, pakaiKode, pakaiKode ? vc.wa : "");
         simpan({ id: r.id, secret: r.secret });
         order = await cekPesanan(r.id, r.secret);
         cart = new Map();
+        vc = { kode: "", wa: vc.wa, hasil: null, kunci: "", jalan: false, error: "" };
+        isian = { nama: null, catatan: "", metode: "kasir" };
         if (metode === "digital") {
           qr = await qrSvg(`DEMO-RACIKIN-${r.kode}-${r.total}`, 5);
           step = "bayar";
