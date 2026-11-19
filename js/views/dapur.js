@@ -1,6 +1,6 @@
 // Layar Dapur (Kitchen Display): Baru -> Dimasak -> Siap. Paling pas di tablet landscape.
 import { store } from "../store.js";
-import { bolehPro } from "../paket.js";
+import { bolehFitur } from "../paket.js";
 import { kunciPro } from "./paket.js";
 import { esc, toast } from "../ui.js";
 import { render } from "../app.js";
@@ -73,7 +73,7 @@ export const dapur = {
     if (!cloud.user) {
       return `${h}<section class="card empty"><div class="empty-icon">${icon("bowl", 30)}</div><h3>Masuk dulu</h3><p>Mode dapur mengirim pesanan dari HP kasir ke layar dapur lewat internet, jadi perlu akun.</p><a href="#/akun" class="btn primary">Masuk / Daftar</a></section>`;
     }
-    if (!dapurAktif(s) && !bolehPro()) return `${h}${kunciPro("dapur")}`;
+    if (!dapurAktif(s) && !bolehFitur("dapur")) return `${h}${kunciPro("dapur")}`;
     if (!dapurAktif(s)) {
       return `${h}<section class="card accent">
         <h2 class="card-title">Mode dapur</h2>

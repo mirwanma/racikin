@@ -5,7 +5,7 @@ import { render, go } from "../app.js";
 import { cloud, signIn, signUp, sendReset, setNewPassword, signOut, syncNow, isMember } from "../cloud.js";
 import { peranNama } from "./tim.js";
 import { paketKini, labelPaket } from "../paket.js";
-import { cekAdmin, adminDiketahui, isAdminMode, modeUsaha, setModeUsaha, lupakanAdmin, platformCard, simpanPlatform } from "./admin.js";
+import { cekAdmin, adminDiketahui, isAdminMode, modeUsaha, setModeUsaha, lupakanAdmin, platformCard } from "./admin.js";
 
 let mode = "masuk"; // masuk | daftar | lupa
 let busy = false;
@@ -206,9 +206,6 @@ export const akun = {
   },
 
   forms: {
-    platform(form) {
-      return run(() => simpanPlatform(form));
-    },
     auth(form) {
       const fd = new FormData(form);
       const email = fd.get("email").trim();

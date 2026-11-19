@@ -1201,7 +1201,7 @@ label.btn.disabled { opacity: .5; pointer-events: none; }
 
 /* ---------- Mode admin platform ---------- */
 .tabbar a.only-admin { display: none; }
-body[data-admin="1"] .tabbar { grid-template-columns: repeat(4, 1fr); }
+body[data-admin="1"] .tabbar { grid-template-columns: repeat(5, 1fr); }
 body[data-admin="1"] .tabbar a { display: none; }
 body[data-admin="1"] .tabbar a.only-admin, body[data-admin="1"] .tabbar a[data-tab="akun"] { display: flex; }
 @media (min-width: 900px) {
@@ -1458,3 +1458,26 @@ body[data-admin="1"] .adm-chart i { background: var(--a-y); }
 .a-paket-act { display: flex; gap: 6px; flex-wrap: wrap; }
 .a-btn.neg { color: var(--a-r); }
 .split-line.on { background: var(--yellow-tint); border-radius: 8px; }
+
+/* Admin: halaman Paket & harga */
+.a-ptable .a-tr { grid-template-columns: minmax(0, 1fr) auto; }
+.a-tetap { opacity: 0.75; }
+.a-seg-sm label { position: relative; padding: 5px 12px; border-radius: 6px; font: 600 12.5px var(--font); color: var(--a-mut); cursor: pointer; }
+.a-seg-sm label.on { background: var(--a-panel2); color: var(--a-ink); box-shadow: 0 0 0 1px var(--a-line); }
+.a-seg-sm label:first-child.on { color: var(--a-g); }
+.a-seg-sm label:last-child.on { color: var(--a-yl); }
+.a-seg-sm input { position: absolute; opacity: 0; pointer-events: none; }
+.a-ai-kuota { display: flex; gap: 8px; }
+.a-ai-kuota label { display: flex; flex-direction: column; gap: 3px; font-size: 11.5px; color: var(--a-mut); }
+.a-ai-kuota .a-input { width: 84px; }
+.a-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 6px 0; }
+.a-form-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--a-mut); }
+.a-tile > h3 + .a-form-grid { margin-top: 2px; }
+.a-big.sm { font-size: 18px; }
+.a-save { display: flex; justify-content: flex-end; }
+@media (max-width: 680px) {
+  .a-ptable .a-tr { grid-template-columns: 1fr; gap: 6px; }
+  .a-ptable .a-tr > :nth-child(2) { grid-column: 1; grid-row: auto; padding-left: 0; }
+  .a-form-grid { grid-template-columns: 1fr; }
+  .a-save .btn { width: 100%; }
+}

@@ -13,7 +13,7 @@ import { mejaAktif, pesananMasuk, dengarPesanan, ubahPesanan } from "../meja.js"
 import { shiftAktif, ringkasan as ringkasanShift, wajibShift } from "../shift.js";
 import { activeChannels, channelCfg, channelNama, hargaDi, isOnline, komisiRp } from "../online.js";
 import { pilihPromo } from "../promo.js";
-import { bolehPro } from "../paket.js";
+import { bolehFitur } from "../paket.js";
 import { kunciPro } from "./paket.js";
 import { bacaChatOrder, linkWa, nomorPemilik, teksRekapHari } from "../wa.js";
 import { grupMenu, punyaOpsi, pilihanAwal, pilihanHabis, cekPilihan, hargaItem, kunciItem, labelOpsi, namaLengkap, aturan, tambahanDi } from "../varian.js";
@@ -407,7 +407,7 @@ function bayarView(s) {
             }`
       }
       <button class="btn primary block lg" data-action="selesai" ${kurang || !cart.length || (form.campur && form.metode !== "tunai" && campurError(total)) ? "disabled" : ""}>${billRef ? (billRef.pilih ? "Bayar bagian ini" : "Lunasi bill") : "Selesaikan"} · ${rupiah(total)}</button>
-      ${billAktif(s) && bolehPro() && !billRef && !mejaRef && cart.length ? `<button class="btn soft block" data-action="billSimpanBuka">${icon("receipt", 16)} Simpan ke bill (bayar nanti)</button>` : ""}
+      ${billAktif(s) && bolehFitur("bill") && !billRef && !mejaRef && cart.length ? `<button class="btn soft block" data-action="billSimpanBuka">${icon("receipt", 16)} Simpan ke bill (bayar nanti)</button>` : ""}
     </section>`
     }`;
 }
@@ -570,7 +570,7 @@ function billPindahView(s) {
 
 /** Tab Bill: daftar bill yang masih buka. */
 function billView(s) {
-  if (!billAktif(s) && !bolehPro()) return kunciPro("bill");
+  if (!billAktif(s) && !bolehFitur("bill")) return kunciPro("bill");
   if (!billAktif(s)) {
     return `<section class="card empty"><div class="empty-icon">${icon("receipt", 30)}</div><h3>Open bill</h3>
       <p>Buat pembeli yang pesan dulu, nambah-nambah, terus bayar belakangan (makan di tempat). Kasir tetap bisa ngelayanin transaksi lain. Stok dipotong tiap pesanan dikirim, uang masuk Kas waktu bill dibayar.</p>
@@ -579,7 +579,7 @@ function billView(s) {
   const list = billTerbuka(s).sort((a, b) => a.dibuka.localeCompare(b.dibuka));
   const total = list.reduce((a, b) => a + totalBill(b), 0);
   return `${
-    bolehPro()
+    bolehFitur("bill")
       ? `<form class="card row-gap bill-baru" data-form="billBaru">
       <input name="nama" maxlength="40" placeholder="Bill baru: Meja 3 / nama pembeli" required aria-label="Nama bill baru">
       <button class="btn primary">${icon("plus", 14)} Buka bill</button>
@@ -597,7 +597,7 @@ function billView(s) {
           </button>
           ${(b.dibayar || []).length ? `<p class="small pos">${icon("check", 13)} Sudah dibayar sebagian: ${rupiah(b.dibayar.reduce((a, x) => a + (Number(x.total) || 0), 0))} (${b.dibayar.length}x)</p>` : ""}
           <div class="row2">
-            <button class="btn soft" data-action="billTambahMulai" data-id="${esc(b.id)}" ${bolehPro() ? "" : "disabled"}>${icon("plus", 14)} Tambah pesanan</button>
+            <button class="btn soft" data-action="billTambahMulai" data-id="${esc(b.id)}" ${bolehFitur("bill") ? "" : "disabled"}>${icon("plus", 14)} Tambah pesanan</button>
             <button class="btn primary" data-action="billBayar" data-id="${esc(b.id)}" ${jumlahItem(b) ? "" : "disabled"}>Bayar semua</button>
           </div>
           <div class="row2">
@@ -1004,7 +1004,7 @@ export const kasir = {
     },
     // ---------- Open bill ----------
     billNyala() {
-      if (!bolehPro()) return (location.hash = "#/paket");
+      if (!bolehFitur("bill")) return (location.hash = "#/paket");
       store.set((s) => ({ posSetting: { ...(s.posSetting || {}), openBill: true } }));
       toast("Open bill aktif");
       render();
@@ -1199,7 +1199,7 @@ export const kasir = {
       const s = store.get();
       const hilang = o.items.filter((x) => !s.resep.some((r) => r.id === x.id));
       // Open bill aktif: pesanan "bayar di kasir" masuk ke bill meja itu (bayar nanti).
-      if (billAktif(s) && bolehPro() && !(o.metode === "digital" && o.bayar_status === "lunas")) return masukBillMeja(o, hilang);
+      if (billAktif(s) && bolehFitur("bill") && !(o.metode === "digital" && o.bayar_status === "lunas")) return masukBillMeja(o, hilang);
       channel = "toko";
       cart = keranjangMeja(s, o);
       mejaRef = o;
@@ -1308,7 +1308,7 @@ export const kasir = {
 
   forms: {
     billBaru(form_) {
-      if (!bolehPro()) return toast("Open bill khusus paket Pro", "err");
+      if (!bolehFitur("bill")) return toast("Open bill khusus paket Pro", "err");
       const nama = String(new FormData(form_).get("nama") || "").trim();
       const s = store.get();
       let r;

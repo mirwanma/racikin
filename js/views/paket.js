@@ -3,7 +3,7 @@ import { icon } from "../icons.js";
 import { esc, rupiah, fmtDate } from "../ui.js";
 import { cloud } from "../cloud.js";
 import { head } from "./_shared.js";
-import { FITUR_PRO, FITUR_GRATIS, HARGA, AI_HARI, paketKini, muatPaket, labelPaket, sisaHari, hematTahun, linkUpgrade, namaFitur, perluIngat } from "../paket.js";
+import { HARGA, paketKini, muatPaket, labelPaket, sisaHari, hematTahun, linkUpgrade, namaFitur, perluIngat, isiPaket, kuotaAi } from "../paket.js";
 
 const tgl = (t) => (t ? fmtDate(String(t).slice(0, 10), { day: "numeric", month: "long", year: "numeric" }) : "-");
 const usahaOf = (s) => s.brand?.terpilih?.nama || s.profile?.nama || "";
@@ -29,7 +29,7 @@ export function paketCard() {
       : "Paket kamu sekarang Gratis";
   return `<a href="#/paket" class="card paket-mini ${ingat.jenis}">
     <span class="pro-tag">${icon("spark", 13)} PRO</span>
-    <span><b>${esc(teks)}</b><small class="muted">${ingat.jenis === "habis" ? "Perpanjang biar tim, pesan meja & fitur Pro lain tetap jalan." : "Tim, pesan meja, dapur, open bill & foto AI terkunci. Upgrade buat buka lagi."}</small></span>
+    <span><b>${esc(teks)}</b><small class="muted">${ingat.jenis === "habis" ? "Perpanjang biar fitur Pro tetap jalan." : `${isiPaket(p).pro.map((f) => f.nama).slice(0, 3).join(", ")} terkunci. Upgrade buat buka lagi.`}</small></span>
     ${icon("chevron", 18)}
   </a>`;
 }
@@ -41,6 +41,8 @@ export const paket = {
     const h = { bulan: p.harga_bulan ?? HARGA.bulan, tahun: p.harga_tahun ?? HARGA.tahun };
     const hemat = hematTahun(h);
     const pro = p.paket === "pro";
+    const isi = isiPaket(p);
+    const ai = kuotaAi(p);
     const n = sisaHari(p);
     const link = (periode) => linkUpgrade(p, { email: cloud.user?.email, usaha: usahaOf(s), periode });
     const status =
@@ -56,7 +58,7 @@ export const paket = {
                 ? `<p class="small">Semua fitur Pro kebuka sampai <b>${tgl(p.sampai)}</b>${n !== null ? ` (${n} hari lagi)` : ""}. Setelah itu otomatis jadi Gratis, data tetap aman.</p>`
                 : pro
                   ? `<p class="small">Aktif sampai <b>${tgl(p.sampai)}</b>${n !== null ? ` (${n} hari lagi)` : ""}. Terima kasih udah dukung Racikin!</p>`
-                  : `<p class="small">Fitur inti tetap gratis selamanya. Upgrade buat buka tim, pesan meja, dapur, open bill, foto AI & kuota AI lebih besar.</p>`
+                  : `<p class="small">Fitur inti tetap gratis selamanya. Upgrade buat buka ${esc(isi.pro.map((f) => f.nama.toLowerCase()).join(", "))}.</p>`
             }
             ${p.memuat ? `<p class="small muted">Lagi ngecek paket…</p>` : ""}
           </section>`;
@@ -67,14 +69,14 @@ export const paket = {
         <section class="card paket-kol">
           <h3>Gratis</h3>
           <b class="paket-harga">Rp0</b>
-          <ul class="checks">${FITUR_GRATIS.map((f) => `<li>${esc(f)}</li>`).join("")}</ul>
+          <ul class="checks">${isi.gratis.map((f) => `<li>${esc(f)}</li>`).join("")}</ul>
         </section>
         <section class="card paket-kol pro">
           <h3>Pro <span class="pro-tag">${icon("spark", 12)} PALING LENGKAP</span></h3>
           <b class="paket-harga">${rupiah(h.bulan)}<small>/bulan</small></b>
           <p class="small">atau ${rupiah(h.tahun)}/tahun (hemat ${rupiah(hemat.rp)}, ±${hemat.bulan} bulan gratis)</p>
           <p class="small muted">Semua fitur Gratis, plus:</p>
-          <ul class="checks">${FITUR_PRO.map((f) => `<li><b>${esc(f.nama)}</b><small class="muted"> · ${esc(f.ket)}</small></li>`).join("")}</ul>
+          <ul class="checks">${isi.pro.map((f) => `<li><b>${esc(f.nama)}</b><small class="muted"> · ${esc(f.ket)}</small></li>`).join("")}</ul>
           ${
             p.paket === "lokal"
               ? ""
@@ -88,6 +90,6 @@ export const paket = {
           }
         </section>
       </div>
-      <p class="small muted center">Kuota AI per akun: Gratis ${AI_HARI.gratis}x/hari, Pro ${AI_HARI.pro}x/hari. Harga sudah termasuk semua update fitur.</p>`;
+      <p class="small muted center">Kuota AI per akun: Gratis ${ai.gratis}x/hari, Pro ${ai.pro}x/hari. Harga sudah termasuk semua update fitur.</p>`;
   },
 };

@@ -7,26 +7,46 @@ import { normWa } from "./loyalty.js";
 export const HARGA = { bulan: 49000, tahun: 490000 };
 export const AI_HARI = { gratis: 20, pro: 300 };
 
-// Fitur yang dikunci untuk paket Gratis (id dipakai di kunciPro / bolehPro).
-export const FITUR_PRO = [
+// Fitur yang bisa diatur Gratis / Pro oleh admin (halaman Paket di dashboard admin, platform_setting.fitur).
+// Sama dengan paket_fitur_ids() di SQL. Default: semuanya Pro.
+export const FITUR = [
   { id: "tim", nama: "Tim lebih dari 1 orang", ket: "Undang kasir, manajer & dapur, jualan dari banyak HP" },
   { id: "meja", nama: "Pesan lewat QR meja", ket: "Pelanggan scan, pesan & bayar dari HP, promo dihitung otomatis" },
   { id: "dapur", nama: "Layar dapur", ket: "Pesanan langsung muncul di dapur, status siap ke kasir" },
   { id: "bill", nama: "Open bill", ket: "Pesan dulu, nambah-nambah, bayar belakangan" },
   { id: "foto", nama: "Foto menu AI", ket: "Foto HP jadi foto menu ala studio" },
   { id: "imporJual", nama: "Impor penjualan lama", ket: "Pindahin data dari Excel / app kasir lain" },
-  { id: "ai", nama: `Kuota AI ${AI_HARI.pro}/hari`, ket: `Gratis ${AI_HARI.gratis}/hari` },
 ];
-export const FITUR_GRATIS = [
+// Fitur inti yang selalu gratis (nggak bisa dikunci).
+export const SELALU_GRATIS = [
   "Kasir, struk & rekap harian",
   "Kas & laporan laba rugi",
   "Resep, HPP & stok bahan",
   "Promo, voucher & kartu stempel",
   "WhatsApp (link pesan, broadcast, rekap)",
   "Cek kesehatan usaha & panduan izin",
-  `Mentor & AI ${AI_HARI.gratis}x/hari`,
 ];
-export const namaFitur = (id) => FITUR_PRO.find((f) => f.id === id)?.nama || "Fitur ini";
+export const FITUR_DEFAULT = Object.fromEntries(FITUR.map((f) => [f.id, "pro"]));
+export const namaFitur = (id) => FITUR.find((f) => f.id === id)?.nama || "Fitur ini";
+
+/** Konfigurasi fitur dari paket (fitur yang nggak tercantum = Pro). */
+export const aturFitur = (p) => ({ ...FITUR_DEFAULT, ...(p?.fitur || {}) });
+/** Kuota AI per paket dari konfigurasi. */
+export const kuotaAi = (p) => ({ gratis: Number(p?.ai_gratis ?? AI_HARI.gratis), pro: Number(p?.ai_pro ?? AI_HARI.pro) });
+
+/** Isi kolom Gratis & Pro di halaman Paket sesuai konfigurasi. */
+export function isiPaket(p) {
+  const f = aturFitur(p);
+  const ai = kuotaAi(p);
+  return {
+    gratis: [...SELALU_GRATIS, ...FITUR.filter((x) => f[x.id] === "gratis").map((x) => x.nama), `Mentor & AI ${ai.gratis}x/hari`],
+    pro: [...FITUR.filter((x) => f[x.id] !== "gratis"), ...(ai.pro > ai.gratis ? [{ id: "ai", nama: `Kuota AI ${ai.pro}/hari`, ket: `Gratis ${ai.gratis}/hari` }] : [])],
+  };
+}
+
+// Kompatibel dengan kode lama: daftar fitur Pro bawaan & isi kolom Gratis bawaan.
+export const FITUR_PRO = isiPaket(null).pro;
+export const FITUR_GRATIS = isiPaket(null).gratis;
 
 const hari = (a, b) => Math.ceil((new Date(b) - new Date(a)) / 864e5);
 
@@ -117,6 +137,12 @@ export function paketKini() {
 
 /** Boleh pakai fitur Pro? (tanpa akun = boleh dicoba di HP ini) */
 export const bolehPro = () => paketKini().paket !== "gratis";
+
+/** Boleh pakai fitur ini? Fitur yang diatur admin jadi Gratis selalu boleh. */
+export function bolehFitur(id, p = paketKini()) {
+  if (p.paket !== "gratis") return true;
+  return aturFitur(p)[id] === "gratis";
+}
 
 export function initPaket() {
   onCloudChange(() => {

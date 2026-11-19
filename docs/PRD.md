@@ -152,6 +152,10 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Pilihan varian bisa mengalikan porsi resep (Jumbo 1,5×, bahan kemasan tidak ikut dikali) dan mengganti / menghilangkan bahan resep (susu oat, tanpa gula). Stok, HPP per menu, rekap `opsiMenu`, laporan & cek kesehatan ikut. Data contoh: Es Teh Jumbo 1,5× porsi, pilihan "Tanpa gula".
 - Tanpa perubahan server (harga tetap dari harga tambahan; pesan meja ikut otomatis).
 
+### Fase 31: Pengaturan paket dari dashboard admin (selesai)
+- Menu admin **Paket** (`#/admin?tab=paket`): satu halaman untuk **tabel fitur Gratis / Pro** (tim, pesan meja, dapur, open bill, foto AI, impor penjualan; fitur inti selalu gratis), **kuota AI** per paket, **harga** bulanan & tahunan, **masa coba**, **akhir masa transisi**, dan **nomor WA upgrade**. Sekali simpan, konfirmasi menyebut fitur yang berubah.
+- Server membaca konfigurasi ini (`platform_setting.fitur`, `ai_gratis`, `ai_pro`; `fitur_boleh`, `ai_limit`): kunci tim, pesan meja, AI foto & kuota AI ikut berubah tanpa rilis app. App merchant (`bolehFitur`, halaman Paket, Beranda) juga ikut. Migrasi `atur_paket` + `admin_set_paket`.
+
 ### Fase 30: Open bill tahap 2 (selesai)
 - Bayar sebagian / split bill per orang (pilih item & jumlah), batal sebagian jumlah, pindah meja (otomatis gabung kalau meja tujuan punya bill), gabung bill. Tanpa perubahan server.
 
@@ -160,7 +164,7 @@ Keputusan pemilik (20 Nov 2026):
 
 | Hal | Keputusan |
 |---|---|
-| Harga Pro | **Rp49.000/bulan** atau **Rp490.000/tahun** (hemat ±2 bulan). Bisa diubah admin di Akun mode admin. |
+| Harga Pro | **Rp49.000/bulan** atau **Rp490.000/tahun** (hemat ±2 bulan). Bisa diubah admin (Fase 31: halaman Paket & harga). |
 | Masa coba | Pendaftar baru dapat **Pro 14 hari**, lalu otomatis Gratis (data tetap aman). |
 | Masa transisi | Akun yang daftar sebelum fitur ini rilis dapat **Pro gratis sampai 20 Feb 2027**. |
 | Fitur Pro | Tim > 1 orang (kasir/manajer/dapur), pesan meja QR, layar dapur, open bill, foto menu AI, impor penjualan lama, kuota AI **300/hari**. |
