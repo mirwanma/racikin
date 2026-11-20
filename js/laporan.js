@@ -12,6 +12,8 @@ import { kumpulOpsi, hppOpsiTerjual } from "./varian.js";
 
 export const KAT_HPP = ["Bahan Baku", "Kemasan"];
 export const KAT_ASET = ["Peralatan"];
+// Pinjam & potong kasbon karyawan cuma pindah uang (piutang), bukan pendapatan / biaya (lihat js/gaji.js).
+export const KAT_PIUTANG = ["Kasbon karyawan", "Potong kasbon karyawan"];
 const ONLINE = new Set(CHANNELS.map((c) => c.id));
 const sum = (arr, f = (x) => x) => arr.reduce((a, x) => a + f(x), 0);
 
@@ -63,7 +65,7 @@ export function labaRugi(s, ym, metode = metodeDefault(s, ym), sampaiHari = 31) 
   const kasirToko = sum(posMasuk, (t) => t.nominal) - kasirOnline + kasbon;
   const manual = sum(masuk.filter((t) => t.ref !== "pos" && t.kategori === "Penjualan"), (t) => t.nominal);
   const pesanan = sum(masuk.filter((t) => t.ref !== "pos" && (t.kategori === "Pre-order" || t.kategori === "Katering/pesanan")), (t) => t.nominal);
-  const lain = sum(masuk.filter((t) => t.ref !== "pos" && t.ref !== "kasbon" && !["Penjualan", "Pre-order", "Katering/pesanan"].includes(t.kategori)), (t) => t.nominal);
+  const lain = sum(masuk.filter((t) => t.ref !== "pos" && t.ref !== "kasbon" && !KAT_PIUTANG.includes(t.kategori) && !["Penjualan", "Pre-order", "Katering/pesanan"].includes(t.kategori)), (t) => t.nominal);
   const pendapatan = kasirToko + kasirOnline + manual + pesanan;
 
   // --- HPP ---
@@ -97,7 +99,7 @@ export function labaRugi(s, ym, metode = metodeDefault(s, ym), sampaiHari = 31) 
   // --- Biaya ---
   const biayaKat = {};
   for (const t of keluar) {
-    if (KAT_HPP.includes(t.kategori) || KAT_ASET.includes(t.kategori)) continue;
+    if (KAT_HPP.includes(t.kategori) || KAT_ASET.includes(t.kategori) || KAT_PIUTANG.includes(t.kategori)) continue;
     biayaKat[t.kategori] = (biayaKat[t.kategori] || 0) + t.nominal;
   }
   const biaya = sum(Object.values(biayaKat));

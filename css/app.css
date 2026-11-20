@@ -1548,3 +1548,8 @@ body[data-admin="1"] .adm-chart i { background: var(--a-y); }
 .posisi-list .chip-btn { display: inline-flex; align-items: center; gap: 6px; }
 .posisi-list .chip-btn small { font-family: var(--mono); opacity: .8; }
 .file-btn { cursor: pointer; }
+
+/* Gaji */
+.gaji-set { border: 1.5px dashed var(--line-2); border-radius: 8px; padding: 10px 12px; margin: 0; }
+.gaji-set legend { font-weight: 700; font-size: 13px; padding: 0 6px; }
+.gaji-card.lunas { border-left: 4px solid var(--leaf); }

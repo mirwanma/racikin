@@ -53,7 +53,7 @@ function saldoCard(s) {
 const namaBulan = () => new Date(ym + "-01T00:00:00").toLocaleDateString("id-ID", { month: "long", year: "numeric" });
 
 // Transaksi otomatis dari fitur lain: diubah / dihapus dari halamannya supaya catatannya tetap cocok.
-const TERKAIT = { utang: ["Utang", "#/belanja?tab=utang"], kasbon: ["Kasbon", "#/kasbon"], pajak: ["Pajak", "#/pajak"] };
+const TERKAIT = { utang: ["Utang", "#/belanja?tab=utang"], kasbon: ["Kasbon", "#/kasbon"], pajak: ["Pajak", "#/pajak"], gaji: ["Gaji", "#/karyawan?tab=gaji"] };
 
 function txRow(t) {
   return `<div class="tx ${t.jenis}"><div><b>${esc(t.kategori)}</b>${t.catatan ? `<p class="muted small">${esc(t.catatan)}</p>` : ""}</div><b>${t.jenis === "masuk" ? "+" : "−"}${rupiah(t.nominal)}</b>${

@@ -66,7 +66,7 @@ export const bisnis = {
     const ab = ringkasHari(s, todayISO());
     const karyawanMod = `<a href="#/karyawan" class="card module">
           <span class="module-num">${icon("team", 18)}</span>
-          <div><h3>Karyawan & Absen</h3><p class="muted small">${absenAktif(s) && ab.total ? `Hari ini ${ab.tercatat}/${ab.total} tercatat · ${ab.hadir} hadir` : "Absen harian, otomatis dari shift kasir, impor dari mesin fingerprint"}</p></div>
+          <div><h3>Karyawan, Absen & Gaji</h3><p class="muted small">${absenAktif(s) && ab.total ? `Hari ini ${ab.tercatat}/${ab.total} tercatat · ${ab.hadir} hadir` : "Absen harian, impor mesin fingerprint, hitung & bayar gaji, kasbon karyawan"}</p></div>
           <span class="chev">${icon("chevron", 18)}</span>
         </a>`;
     const rencana = jalan
