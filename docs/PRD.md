@@ -152,6 +152,9 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Pilihan varian bisa mengalikan porsi resep (Jumbo 1,5×, bahan kemasan tidak ikut dikali) dan mengganti / menghilangkan bahan resep (susu oat, tanpa gula). Stok, HPP per menu, rekap `opsiMenu`, laporan & cek kesehatan ikut. Data contoh: Es Teh Jumbo 1,5× porsi, pilihan "Tanpa gula".
 - Tanpa perubahan server (harga tetap dari harga tambahan; pesan meja ikut otomatis).
 
+### Fase 39: Pengingat push untuk tagihan & jadwal (selesai)
+- Pengingat di Beranda dari fitur Fase 32–38 sekarang juga dikirim ke HP lewat `racikin-push` (`notif.ts`): pajak UMKM, utang supplier, kasbon pelanggan, gajian & THR (pagi), jadwal kerja besok (malam). Bisa dimatikan per jenis di `#/notif`; kasir/dapur dapat jadwalnya sendiri. Logika dihitung ulang di Edge Function (porting ringkas dari js/pajak.js, utang.js, kasbon.js, gaji.js, jadwal.js), tanpa migrasi.
+
 ### Fase 38: Jadwal kerja / shift (selesai)
 - Keputusan: template shift default yang bisa diubah; telat & lembur ikut jadwal; pemilik + manajer boleh atur; kasir bisa lihat jadwalnya sendiri.
 - Tab Jadwal (mingguan / bulanan, kuas, pola & gilir, salin), terhubung ke absen (telat, libur) & gaji (lembur), kirim WA, Beranda, `#/jadwal` untuk kasir. Ekspor jadwal seluruh karyawan ke Excel & PDF (permintaan pemilik, PR yang sama). Data `jadwal` terlihat oleh kasir (bukan bagian keuangan), tidak bisa ditulis kasir.

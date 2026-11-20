@@ -286,7 +286,7 @@ export const jadwalSaya = {
       location.hash = "#/karyawan?tab=jadwal";
       return "";
     }
-    const back = "#/kasir";
+    const back = role() === "dapur" ? "#/dapur" : "#/kasir";
     const id = cloud.user?.id;
     const ini = rentang("minggu", todayISO());
     const depan = rentang("minggu", geserAnchor("minggu", todayISO(), 1));

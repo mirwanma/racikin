@@ -94,7 +94,7 @@ async function run() {
     const r = roleOf.get(s.user_id)!;
     const doc = docOf.get(r.owner);
     if (!doc) continue;
-    const due = dueNotifs(doc, { role: r.role, prefs: s.prefs, tz: s.tz, now, sent: s.sent || {} });
+    const due = dueNotifs(doc, { role: r.role, prefs: s.prefs, tz: s.tz, now, sent: s.sent || {}, userId: s.user_id });
     if (!due.length) continue;
     const sent = { ...(s.sent || {}) };
     const tanggal = new Intl.DateTimeFormat("en-CA", { timeZone: safeTz(s.tz) }).format(now);
@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
       const vapid = await getVapid();
       let sent = 0;
       for (const row of rows) {
-        if (await deliver(row, { kind: "test", title: "Pengingat Racikin aktif", body: "Mantap! Nanti pengingat stok, jadwal posting & rekap kasir muncul seperti ini.", url: "#/notif" }, vapid)) sent++;
+        if (await deliver(row, { kind: "test", title: "Pengingat Racikin aktif", body: "Mantap! Nanti pengingat stok, tagihan, gajian & jadwal muncul seperti ini.", url: "#/notif" }, vapid)) sent++;
         await rest(`push_subscriptions?endpoint=eq.${encodeURIComponent(row.endpoint)}`, { method: "PATCH", body: JSON.stringify({ sent: { ...(row.sent || {}), test: new Date().toISOString() } }), headers: { Prefer: "return=minimal" } });
       }
       return json({ sent });

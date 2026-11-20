@@ -2,7 +2,7 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY, sb, cloud, accessToken } from "./cloud.js";
 
 const FN = `${SUPABASE_URL}/functions/v1/racikin-push`;
-export const DEFAULT_PREFS = { konten: true, stok: true, ajak: true, rekap: true, pagi: 8, malam: 21 };
+export const DEFAULT_PREFS = { konten: true, stok: true, ajak: true, rekap: true, pajak: true, utang: true, kasbon: true, gaji: true, jadwal: true, pagi: 8, malam: 21 };
 
 const ua = () => navigator.userAgent || "";
 export const isIOS = () => /iPhone|iPad|iPod/.test(ua()) || (ua().includes("Mac") && navigator.maxTouchPoints > 1);

@@ -11,8 +11,14 @@ const JENIS = [
   { id: "stok", nama: "Bahan menipis", desc: "Bahan yang stoknya sudah di bawah batas minimum", waktu: "pagi" },
   { id: "ajak", nama: "Pelanggan perlu diajak balik", desc: "Tiap Senin: pelanggan yang ≥ 3 minggu nggak mampir", waktu: "pagi" },
   { id: "rekap", nama: "Rekap tutup kasir", desc: "Omzet, jumlah order & menu terlaris hari ini", waktu: "malam" },
+  { id: "pajak", nama: "Setor pajak UMKM", desc: "PPh Final bulan lalu belum dicatat lunas: tgl 10–15, lewat tempo tiap Senin", waktu: "pagi" },
+  { id: "utang", nama: "Utang supplier jatuh tempo", desc: "Nota yang jatuh tempo ≤ 3 hari lagi atau sudah lewat", waktu: "pagi" },
+  { id: "kasbon", nama: "Kasbon pelanggan lama", desc: "Tiap Senin: kasbon yang belum lunas lebih dari 2 minggu", waktu: "pagi" },
+  { id: "gaji", nama: "Gajian & THR", desc: "Gaji periode lalu belum dibayar, THR menjelang batas H-7", waktu: "pagi" },
+  { id: "jadwal", nama: "Jadwal kerja besok", desc: "Shift besok (punyamu sendiri, atau siapa saja yang masuk buat pemilik/manajer)", waktu: "malam" },
 ];
-const KASIR = ["stok", "rekap"];
+const KASIR = ["stok", "rekap", "jadwal"];
+const DAPUR = ["jadwal"];
 
 let st = { loaded: false, loading: false, sub: null, prefs: null, error: "" };
 let busy = false;
@@ -70,7 +76,7 @@ export const notif = {
         <p>Pengingat dikirim server ke HP kamu, jadi perlu akun supaya tahu data usaha mana yang dicek.</p>
         <a href="#/akun" class="btn primary">Masuk / Daftar</a></section>`;
     }
-    const kinds = role() === "kasir" ? KASIR : JENIS.map((j) => j.id);
+    const kinds = role() === "kasir" ? KASIR : role() === "dapur" ? DAPUR : JENIS.map((j) => j.id);
     const sup = support();
     if (sup === "ios-install") {
       return `${back}<section class="card warn-card"><h2 class="card-title">Pasang dulu ke Layar Utama</h2>
@@ -117,7 +123,7 @@ export const notif = {
           .join("")}
         <div class="row2">
           ${kinds.some((k) => JENIS.find((j) => j.id === k).waktu === "pagi") ? `<label class="field"><span>Jam pagi</span><select data-change="jam" data-k="pagi">${jamOpts(5, 12, p.pagi)}</select></label>` : ""}
-          ${kinds.includes("rekap") ? `<label class="field"><span>Jam tutup</span><select data-change="jam" data-k="malam">${jamOpts(15, 23, p.malam)}</select></label>` : ""}
+          ${kinds.some((k) => JENIS.find((j) => j.id === k).waktu === "malam") ? `<label class="field"><span>Jam malam</span><select data-change="jam" data-k="malam">${jamOpts(15, 23, p.malam)}</select></label>` : ""}
         </div>
         <p class="small muted">Pengingat dicek tiap 15 menit, jadi bisa datang sampai ±15 menit setelah jam yang dipilih.</p>
       </section>`;
