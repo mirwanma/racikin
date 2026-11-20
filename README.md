@@ -155,6 +155,7 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - **Supplier**: nama, WA, catatan, bahan yang dibeli di sana, total belanja 30 hari.
 - **Harga bahan**: harga naik/turun dibanding ±3 minggu sebelumnya + dampaknya ke HPP per porsi tiap menu; riwayat pembelian per bahan.
 - Form "+ Beli" di Stok juga bisa memilih supplier & menyimpan riwayat harga. Logika di `js/belanja.js`.
+- **Utang / tempo ke supplier**: di "Sudah belanja" centang **Belum dibayar** + jatuh tempo (default 7 hari). Stok & harga langsung ter-update, tapi pengeluaran Kas belum dicatat (satu nota per belanja, data `utangSupplier`). Tab **Utang** (muncul kalau pernah ada utang): total, per supplier & nota (status belum / segera ≤ 3 hari / lewat tempo), bayar cicil (tunai/transfer/QRIS, tanggal) → pengeluaran Kas kategori Bahan Baku / Kemasan sesuai isi nota (dibagi proporsional, `ref: "utang"`), lunasi semua, ubah jatuh tempo, hapus catatan bayar / nota. Pengingat di Beranda & info di modul Bisnis. Transaksi Kas dari utang/kasbon/pajak diberi tag dan diubah dari halamannya. Logika di `js/utang.js`.
 
 ## Kas: daftar transaksi
 - Default hanya menampilkan **transaksi hari ini** (halaman Kas langsung ringan walau ada ribuan transaksi). Ringkasan bulanan di atas (masuk/keluar/laba, grafik, per kategori) tetap per bulan.

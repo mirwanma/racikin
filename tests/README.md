@@ -15,6 +15,7 @@ cd tests && npm run unit
 
 | File | Menguji |
 |---|---|
+| `unit/utang.test.mjs` | utang supplier: belanja tempo (stok masuk, Kas belum), status jatuh tempo, cicil (Kas proporsional per kategori), lunasi semua, hapus, pengingat |
 | `unit/kasbon.test.mjs` | kasbon pelanggan: batas, order kasbon + DP, Kas saat lunas, cicilan, batal order, FIFO, laci shift, laba rugi, reconcile |
 | `unit/pajak.test.mjs` | PPh Final UMKM: bebas Rp500 juta kumulatif, bentuk usaha, jatuh tempo & status, catat/batal bayar ke Kas, rekap SPT |
 | `unit/izin.test.mjs` | panduan perizinan: rekomendasi per jenis usaha, masa berlaku, pengingat, progres |
@@ -48,7 +49,7 @@ mkdir -p /tmp/shots && node tests/e2e/kasir.js /tmp/shots
 
 `RACIKIN_URL` mengganti alamat app (default `http://localhost:8766/`).
 
-**Tanpa akun** (cukup app lokal): `mvp.js`, `kasir.js`, `online.js`, `tracked.js`, `studio.js`, `dummy.js`, `shift.js`, `laporan.js`, `belanja.js`, `kasfilter.js`, `tablet.js` (argumen opsional: lebar tinggi daftar-rute), `rotate.js`, `varian.js` (halaman pelanggan QR diuji dengan RPC mock), `tahap.js`, `impor.js` (Mode Demo; baca foto lewat AI Online dicoba manual), `sehat.js`, `imporjual.js`, `promo.js`, `wa.js` (link wa.me di-intercept, WhatsApp tidak benar-benar dibuka), `admin.js` (sesi & RPC Supabase di-mock, tidak menyentuh data asli), `izin.js`, `pajak.js`, `kasbon.js`, `varian-resep.js`, `promo-meja.js` (halaman pelanggan QR dengan RPC mock; perhitungan aslinya dites langsung di SQL), `bill.js`, `split-bill.js`, `paket.js` (sesi & RPC di-mock; penguncian aslinya dites di SQL).
+**Tanpa akun** (cukup app lokal): `mvp.js`, `kasir.js`, `online.js`, `tracked.js`, `studio.js`, `dummy.js`, `shift.js`, `laporan.js`, `belanja.js`, `kasfilter.js`, `tablet.js` (argumen opsional: lebar tinggi daftar-rute), `rotate.js`, `varian.js` (halaman pelanggan QR diuji dengan RPC mock), `tahap.js`, `impor.js` (Mode Demo; baca foto lewat AI Online dicoba manual), `sehat.js`, `imporjual.js`, `promo.js`, `wa.js` (link wa.me di-intercept, WhatsApp tidak benar-benar dibuka), `admin.js` (sesi & RPC Supabase di-mock, tidak menyentuh data asli), `izin.js`, `pajak.js`, `kasbon.js`, `utang.js`, `varian-resep.js`, `promo-meja.js` (halaman pelanggan QR dengan RPC mock; perhitungan aslinya dites langsung di SQL), `bill.js`, `split-bill.js`, `paket.js` (sesi & RPC di-mock; penguncian aslinya dites di SQL).
 
 **Butuh Supabase & akun tes** (password lewat variabel lingkungan, tidak disimpan di repo):
 

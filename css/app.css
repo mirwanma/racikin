@@ -1513,3 +1513,13 @@ body[data-admin="1"] .adm-chart i { background: var(--a-y); }
 .kasbon-row .num { text-align: right; font-family: var(--mono); font-size: 14px; }
 .kasbon-detail { border-left: 4px solid var(--yellow-deep); }
 .kasbon-riwayat .pos-sum small { font-size: 12px; }
+
+/* Utang supplier */
+.seg.seg4 { grid-template-columns: repeat(4, 1fr); }
+.seg.seg4 span { font-size: 12.5px; padding: 8px 2px; }
+.utang-nota { border-top: 1px dashed var(--line); }
+.utang-head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; width: 100%; padding: 10px 0; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.utang-head small { display: block; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.utang-head .num { text-align: right; font-family: var(--mono); font-size: 14px; }
+.utang-nota.on .utang-head b:first-child { text-decoration: underline; text-decoration-color: var(--yellow); text-decoration-thickness: 3px; }
+.utang-tempo[hidden], .kas-cek[hidden] { display: none !important; }

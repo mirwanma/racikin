@@ -31,6 +31,7 @@ const DEFAULT = {
   pelanggan: [],          // { id, nama, wa, stempel, kunjungan, hadiahDiambil, terakhir, dibuat, token }
   stempelLog: [],         // { id, tanggal, pelangganId, delta, alasan: beli|tukar|koreksi, catatan }
   shifts: [],             // shift kasir (lihat js/shift.js)
+  utangSupplier: [],      // utang ke supplier per nota belanja { id, supplierId, tanggal, tempo, total, rincian, bayar } (lihat js/utang.js)
   supplier: [],           // { id, nama, wa, catatan } (lihat js/belanja.js)
   meja: [],               // { id, nama, token } untuk pesan lewat QR meja (lihat js/meja.js)
   posSetting: null,       // { wajibShift, openBill, kasbon, kasbonBatas }

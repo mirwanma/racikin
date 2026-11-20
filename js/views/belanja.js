@@ -1,14 +1,18 @@
 // Belanja & Supplier: daftar belanja otomatis, supplier, riwayat harga bahan.
 import { store, uid } from "../store.js";
-import { esc, rupiah, short, toast, copy, fmtDate } from "../ui.js";
+import { esc, rupiah, short, toast, copy, fmtDate, todayISO } from "../ui.js";
 import { render } from "../app.js";
 import { icon } from "../icons.js";
 import { head } from "./_shared.js";
 import { fmtQty } from "../stok-utils.js";
 import { normWa, waLink } from "../loyalty.js";
 import { rencanaBelanja, perSupplier, pesanWA, perubahanHarga, riwayatHarga, belanjaSupplier, catatBelanja } from "../belanja.js";
+import { TEMPO_DEFAULT, METODE_BAYAR, tambahHari, ringkasUtang, pengingatUtang, notaSupplier, sisaNota, dibayar, statusNota, bayarUtang, lunasiSupplier, hapusBayarUtang, hapusNota, ubahTempo } from "../utang.js";
 
-let tab = "daftar"; // daftar | supplier | harga
+let tab = "daftar"; // daftar | supplier | harga | utang
+let utangCek = false; // form "Sudah belanja": belum dibayar
+let bukaNota = null; // nota utang yang dibuka (form bayar)
+let bukaRiwayat = null; // supplierId yang riwayat notanya dibuka
 let hari = 3;
 let skip = new Set(); // bahanId yang tidak ikut dibeli
 let qtyEdit = {}; // bahanId -> qty (diubah manual)
@@ -55,7 +59,13 @@ function catatForm(g) {
           <label><small>Rp</small><input type="number" inputmode="numeric" min="0" step="1" name="t-${it.bahan.id}" value="${Math.round(it.estimasi / 500) * 500}"></label></div>`,
       )
       .join("")}
-    <label class="todo"><input type="checkbox" name="kas" checked><span>Catat pengeluaran ke Kas</span></label>
+    ${
+      g.supplier
+        ? `<label class="impor-cek"><input type="checkbox" name="utang" data-change="utangCek" ${utangCek ? "checked" : ""}><span>Belum dibayar (utang / tempo ke ${esc(g.supplier.nama)})</span></label>
+          <div class="utang-tempo stack" ${utangCek ? "" : "hidden"}><label class="field"><span>Jatuh tempo bayar</span><input type="date" name="tempo" min="${todayISO()}" value="${tambahHari(todayISO(), TEMPO_DEFAULT)}" required ${utangCek ? "" : "disabled"}></label><p class="small muted">Stok & harga tetap ter-update sekarang. Pengeluaran Kas dicatat waktu utangnya dibayar (tab Utang).</p></div>`
+        : ""
+    }
+    <label class="todo kas-cek" ${utangCek && g.supplier ? "hidden" : ""}><input type="checkbox" name="kas" checked><span>Catat pengeluaran ke Kas</span></label>
     <div class="row2"><button type="button" class="btn ghost" data-action="batalCatat">Batal</button><button class="btn primary">Simpan belanja</button></div>
   </form>`;
 }
@@ -177,17 +187,111 @@ function riwayat(s, b, sup) {
   </tbody></table>`;
 }
 
+const tglPendek = (iso) => fmtDate(iso, { day: "numeric", month: "short" });
+const STATUS_NOTA = { telat: ["Lewat tempo", "neg"], segera: ["Segera", "warn"], belum: ["Belum", "muted"], lunas: ["Lunas", "pos"] };
+
+function notaRow(s, n, today) {
+  const st = statusNota(n, today);
+  const [nm, cls] = STATUS_NOTA[st];
+  const buka = bukaNota === n.id;
+  const sisa = sisaNota(n);
+  return `<div class="utang-nota ${buka ? "on" : ""}">
+    <button class="utang-head" data-action="bukaNota" data-id="${n.id}">
+      <span><b>${tglPendek(n.tanggal)}</b><small class="muted">${esc(n.catatan || "belanja")}</small></span>
+      <span class="num"><b>${rupiah(sisa || n.total)}</b><small class="${cls === "neg" ? "neg" : "muted"}">${sisa ? `tempo ${tglPendek(n.tempo)}` : "lunas"}</small></span>
+      <span class="sehat-pill ${cls}">${nm}</span>
+    </button>
+    ${
+      buka
+        ? `<div class="inline-form stack">
+        <p class="small muted">Total ${rupiah(n.total)}${dibayar(n) ? ` · sudah dibayar ${rupiah(dibayar(n))}` : ""}</p>
+        ${(n.bayar || []).map((b) => `<div class="row-between pos-sum"><span>Bayar ${esc(METODE_BAYAR.find((m) => m.id === b.metode)?.nama || "")} · ${tglPendek(b.tanggal)}</span><span><b>${rupiah(b.nominal)}</b> <button class="link small" data-action="hapusBayar" data-nota="${n.id}" data-id="${b.id}">hapus</button></span></div>`).join("")}
+        ${
+          sisa
+            ? `<form class="stack" data-form="bayarUtang" data-id="${n.id}">
+            <div class="chips">${METODE_BAYAR.map((m, i) => `<label class="chip"><input type="radio" name="metode" value="${m.id}" ${m.id === "transfer" ? "checked" : ""}><span>${m.nama}</span></label>`).join("")}</div>
+            <div class="row2">
+              <label class="field"><span>Bayar (Rp)</span><input type="number" inputmode="numeric" name="nominal" min="1" max="${sisa}" step="1" value="${sisa}" required></label>
+              <label class="field"><span>Tanggal</span><input type="date" name="tanggal" value="${today}" required></label>
+            </div>
+            <button class="btn primary block">${icon("check", 16)} Catat bayar (masuk Kas)</button>
+          </form>
+          <label class="field"><span>Ubah jatuh tempo</span><input type="date" value="${n.tempo}" min="${n.tanggal}" data-change="tempo" data-id="${n.id}"></label>`
+            : ""
+        }
+        ${(n.bayar || []).length ? "" : `<button class="link small" data-action="hapusNota" data-id="${n.id}">Hapus catatan utang ini (salah catat)</button>`}
+      </div>`
+        : ""
+    }
+  </div>`;
+}
+
+/** Pengingat Beranda: utang supplier lewat / mendekati jatuh tempo. */
+export function utangCard(s) {
+  const p = pengingatUtang(s, todayISO());
+  if (!p) return "";
+  return `<a href="#/belanja?tab=utang" class="card pajak-mini ${p.telat ? "neg" : ""}">
+    ${icon("box", 22)}
+    <span><b>Utang supplier ${rupiah(p.total)}</b><small class="muted">${p.telat ? `${p.telat} nota lewat jatuh tempo` : `${esc(p.nama)} jatuh tempo ${tglPendek(p.tempo)}`}${p.n > 1 ? ` · ${p.n} nota` : ""}</small></span>
+    ${icon("chevron", 18)}
+  </a>`;
+}
+
+function utangTab(s) {
+  const today = todayISO();
+  const r = ringkasUtang(s, today);
+  const sup = s.supplier || [];
+  const lunasSup = sup.filter((x) => !r.supplier.some((y) => y.supplierId === x.id) && notaSupplier(s, x.id).length);
+  return `
+    <section class="card accent">
+      <div class="stats3">
+        <div><small>Total utang</small><b>${rupiah(r.total)}</b></div>
+        <div><small>Nota</small><b>${r.n}</b></div>
+        <div><small>Lewat tempo</small><b class="${r.telat.length ? "neg" : ""}">${r.telat.length}</b></div>
+      </div>
+      <p class="small muted" style="margin:0">Utang dicatat dari Daftar belanja > Sudah belanja (centang "Belum dibayar"). Bayarnya masuk Kas sebagai pengeluaran Bahan Baku / Kemasan.</p>
+    </section>
+    ${
+      r.supplier.length
+        ? r.supplier
+            .map(
+              (x) => `<section class="card stack utang-sup">
+          <div class="row-between"><div><h2 class="card-title" style="margin:0">${esc(x.nama)}</h2><p class="small muted">${x.nota.length} nota${x.telat ? ` · <span class="neg">${x.telat} lewat tempo</span>` : ""}</p></div><b class="neg">${rupiah(x.sisa)}</b></div>
+          ${x.nota.map((n) => notaRow(s, n, today)).join("")}
+          ${x.nota.length > 1 ? `<button class="btn soft sm" data-action="lunasiSup" data-id="${x.supplierId}">Lunasi semua ${rupiah(x.sisa)} (transfer hari ini)</button>` : ""}
+          ${notaSupplier(s, x.supplierId).some((n) => !sisaNota(n)) ? `<button class="link small" data-action="riwayatSup" data-id="${x.supplierId}">${bukaRiwayat === x.supplierId ? "Tutup riwayat" : "Riwayat lunas"}</button>${bukaRiwayat === x.supplierId ? notaSupplier(s, x.supplierId).filter((n) => !sisaNota(n)).slice(0, 10).map((n) => notaRow(s, n, today)).join("") : ""}` : ""}
+        </section>`,
+            )
+            .join("")
+        : `<section class="card"><p class="small muted" style="margin:0">Nggak ada utang ke supplier. Aman.</p></section>`
+    }
+    ${
+      lunasSup.length
+        ? `<section class="card stack"><h2 class="card-title" style="margin:0">Sudah lunas</h2>${lunasSup
+            .map((x) => `<button class="link small" data-action="riwayatSup" data-id="${x.id}">${esc(x.nama)} (${notaSupplier(s, x.id).length} nota)</button>${bukaRiwayat === x.id ? notaSupplier(s, x.id).slice(0, 10).map((n) => notaRow(s, n, today)).join("") : ""}`)
+            .join("")}</section>`
+        : ""
+    }`;
+}
+
 export const belanja = {
   render(s) {
     if (location.hash.includes("tab=supplier")) {
       tab = "supplier";
       history.replaceState(null, "", "#/belanja");
     }
-    const tabs = `<div class="seg seg3">
-      ${[["daftar", "Daftar belanja"], ["supplier", "Supplier"], ["harga", "Harga bahan"]].map(([k, v]) => `<label><input type="radio" name="tab" value="${k}" data-change="tab" ${tab === k ? "checked" : ""}><span>${v}</span></label>`).join("")}
+    if (location.hash.includes("tab=utang")) {
+      tab = "utang";
+      history.replaceState(null, "", "#/belanja");
+    }
+    const adaUtang = (s.utangSupplier || []).length > 0;
+    if (tab === "utang" && !adaUtang) tab = "daftar";
+    const nUtang = ringkasUtang(s, todayISO()).n;
+    const tabs = `<div class="seg ${adaUtang ? "seg4" : "seg3"}">
+      ${(adaUtang ? [["daftar", "Daftar"], ["supplier", "Supplier"], ["harga", "Harga"], ["utang", `Utang${nUtang ? ` <b class="kds-n">${nUtang}</b>` : ""}`]] : [["daftar", "Daftar belanja"], ["supplier", "Supplier"], ["harga", "Harga bahan"]]).map(([k, v]) => `<label><input type="radio" name="tab" value="${k}" data-change="tab" ${tab === k ? "checked" : ""}><span>${v}</span></label>`).join("")}
     </div>`;
     if (!s.bahan.length) return `${head("Belanja & Supplier", "#/stok")}<section class="card empty"><div class="empty-icon">${icon("box", 30)}</div><h3>Belum ada bahan</h3><p>Bikin resep dulu supaya bahan & stoknya tercatat.</p><a href="#/resep?id=new" class="btn primary">Bikin resep</a></section>`;
-    return `${head("Belanja & Supplier", "#/stok")}${tabs}${tab === "supplier" ? supplierTab(s) : tab === "harga" ? hargaTab(s) : daftarTab(s)}`;
+    return `${head("Belanja & Supplier", "#/stok")}${tabs}${tab === "supplier" ? supplierTab(s) : tab === "harga" ? hargaTab(s) : tab === "utang" ? utangTab(s) : daftarTab(s)}`;
   },
 
   actions: {
@@ -203,6 +307,7 @@ export const belanja = {
     },
     catat(el) {
       catat = el.dataset.k;
+      utangCek = false;
       render();
     },
     batalCatat() {
@@ -222,9 +327,42 @@ export const belanja = {
     hapusSup(el) {
       const s = store.get();
       const sp = s.supplier.find((x) => x.id === el.dataset.id);
+      if (ringkasUtang(s, todayISO()).supplier.some((x) => x.supplierId === sp.id)) return toast(`Masih ada utang ke ${sp.nama}, lunasi dulu`, "err");
       if (!confirm(`Hapus supplier ${sp.nama}? Bahan-bahannya jadi "belum ada supplier".`)) return;
       store.set({ supplier: s.supplier.filter((x) => x.id !== sp.id), bahan: s.bahan.map((b) => (b.supplierId === sp.id ? { ...b, supplierId: null } : b)) });
       editSup = null;
+      render();
+    },
+    bukaNota(el) {
+      bukaNota = bukaNota === el.dataset.id ? null : el.dataset.id;
+      render();
+    },
+    riwayatSup(el) {
+      bukaRiwayat = bukaRiwayat === el.dataset.id ? null : el.dataset.id;
+      render();
+    },
+    lunasiSup(el) {
+      const s = store.get();
+      const x = ringkasUtang(s, todayISO()).supplier.find((y) => y.supplierId === el.dataset.id);
+      if (!x || !confirm(`Lunasi semua utang ke ${x.nama}: ${rupiah(x.sisa)} (transfer, hari ini)? Pengeluaran Kas ikut dicatat.`)) return;
+      store.set(lunasiSupplier(s, x.supplierId, { tanggal: todayISO(), metode: "transfer" }));
+      bukaNota = null;
+      toast(`Utang ke ${x.nama} lunas`);
+      render();
+    },
+    hapusBayar(el) {
+      if (!confirm("Hapus catatan bayar ini? Pengeluaran Kas-nya ikut dihapus.")) return;
+      store.set(hapusBayarUtang(store.get(), el.dataset.nota, el.dataset.id));
+      render();
+    },
+    hapusNota(el) {
+      if (!confirm("Hapus catatan utang ini? Stok yang sudah masuk nggak berubah.")) return;
+      try {
+        store.set(hapusNota(store.get(), el.dataset.id));
+      } catch (e) {
+        return toast(e.message, "err");
+      }
+      bukaNota = null;
       render();
     },
     openHarga(el) {
@@ -237,6 +375,20 @@ export const belanja = {
     tab(el) {
       tab = el.value;
       catat = null;
+      render();
+    },
+    utangCek(el) {
+      // Tanpa render ulang: angka yang sudah diketik di form tetap.
+      utangCek = el.checked;
+      const f = el.closest("form");
+      f.querySelector(".utang-tempo").hidden = !utangCek;
+      f.querySelector(".utang-tempo input").disabled = !utangCek;
+      f.querySelector(".kas-cek").hidden = utangCek;
+    },
+    tempo(el) {
+      if (!el.value) return;
+      store.set(ubahTempo(store.get(), el.dataset.id, el.value));
+      toast(`Jatuh tempo jadi ${tglPendek(el.value)}`);
       render();
     },
     ikut(el) {
@@ -266,13 +418,32 @@ export const belanja = {
         .map((r) => ({ r, b: s.bahan.find((x) => x.id === r.bahanId) }))
         .filter(({ r, b }) => r.qty > 0 && r.total > 0 && Number(b?.harga) > 0 && (r.total / r.qty > b.harga * 2 || r.total / r.qty < b.harga / 2));
       if (aneh.length && !confirm(`Harga berubah jauh, cek lagi totalnya:\n\n${aneh.map(({ r, b }) => `${b.nama}: ${rupiah(b.harga)} → ${rupiah(r.total / r.qty)} per ${b.satuan}`).join("\n")}\n\nTetap simpan?`)) return;
-      store.set(catatBelanja(s, rows, { supplierId: form.dataset.sup || null, kas: !!fd.get("kas") }));
+      const utang = fd.get("utang") ? { tempo: String(fd.get("tempo") || "") } : null;
+      try {
+        store.set(catatBelanja(s, rows, { supplierId: form.dataset.sup || null, kas: !!fd.get("kas"), utang }));
+      } catch (e) {
+        return toast(e.message, "err");
+      }
       for (const r of rows) {
         delete qtyEdit[r.bahanId];
         extra = extra.filter((x) => x !== r.bahanId);
       }
       catat = null;
-      toast(`Belanja tercatat · stok ${rows.filter((r) => r.qty > 0).length} bahan bertambah`);
+      utangCek = false;
+      toast(`Belanja tercatat${utang ? " sebagai utang" : ""} · stok ${rows.filter((r) => r.qty > 0).length} bahan bertambah`);
+      render();
+    },
+    bayarUtang(form) {
+      const fd = new FormData(form);
+      const s = store.get();
+      try {
+        store.set(bayarUtang(s, form.dataset.id, { nominal: fd.get("nominal"), tanggal: String(fd.get("tanggal")), metode: String(fd.get("metode") || "transfer") }));
+      } catch (e) {
+        return toast(e.message, "err");
+      }
+      const n = store.get().utangSupplier.find((x) => x.id === form.dataset.id);
+      toast(sisaNota(n) ? `Tercatat. Sisa nota ini ${rupiah(sisaNota(n))}` : "Nota lunas");
+      if (!sisaNota(n)) bukaNota = null;
       render();
     },
     sup(form) {
