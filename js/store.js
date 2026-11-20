@@ -33,7 +33,8 @@ const DEFAULT = {
   shifts: [],             // shift kasir (lihat js/shift.js)
   supplier: [],           // { id, nama, wa, catatan } (lihat js/belanja.js)
   meja: [],               // { id, nama, token } untuk pesan lewat QR meja (lihat js/meja.js)
-  posSetting: null,       // { wajibShift }
+  posSetting: null,       // { wajibShift, openBill, kasbon, kasbonBatas }
+  kasbon: [],             // kasbon pelanggan: utang dari Kasir & pelunasan (lihat js/kasbon.js)
   settings: { aiMode: "demo", endpoint: "", anonKey: "" },
 };
 

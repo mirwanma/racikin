@@ -115,6 +115,8 @@ b, strong { font-weight: 700; }
   text-decoration: underline; text-decoration-color: var(--yellow); text-decoration-thickness: 3px; text-underline-offset: 3px;
 }
 .link:hover { text-decoration-color: var(--yellow-deep); }
+button.link { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; width: auto; align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; }
+button.link.small { font-size: 13px; }
 
 /* ---------- Kartu ---------- */
 .card {
@@ -1500,3 +1502,14 @@ body[data-admin="1"] .adm-chart i { background: var(--a-y); }
 .pajak-th { font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding-top: 0; }
 .pajak-row .chip-btn { white-space: nowrap; font-size: .74rem; padding: 4px 8px; border-radius: 99px; border: 1.5px solid currentColor; background: none; color: var(--yellow-deep); cursor: pointer; }
 .pajak-row .chip-btn.neg { color: var(--chili); }
+
+/* Kasbon pelanggan */
+.kasbon-box { gap: 10px; }
+.kasbon-baru { align-items: center; }
+.kasbon-row { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; background: none; border: 0; border-bottom: 1px dashed var(--line); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.kasbon-row:last-child { border-bottom: 0; }
+.kasbon-row.on b { text-decoration: underline; text-decoration-color: var(--yellow); text-decoration-thickness: 3px; }
+.kasbon-row small { display: block; font-size: 12px; }
+.kasbon-row .num { text-align: right; font-family: var(--mono); font-size: 14px; }
+.kasbon-detail { border-left: 4px solid var(--yellow-deep); }
+.kasbon-riwayat .pos-sum small { font-size: 12px; }

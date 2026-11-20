@@ -83,7 +83,7 @@ export const pajak = {
             : ""
         }
         ${h.lewatBatas ? `<p class="warn-box small">${icon("alert", 14)} Omzet setahun lewat ${rupiah(BATAS_OMZET)}: mulai tahun depan nggak bisa pakai PPh Final 0,5% lagi (pakai tarif umum + pembukuan). Ngobrol sama konsultan pajak ya.</p>` : ""}
-        <p class="small muted">Omzet diambil dari Kas: pemasukan Penjualan, Pre-order & Katering/pesanan (Kasir, impor & catatan manual). Makin rapi nyatet, makin pas hitungannya.</p>
+        <p class="small muted">Omzet diambil dari Kas: pemasukan Penjualan, Pre-order, Katering/pesanan & Pelunasan kasbon (Kasir, impor & catatan manual). Makin rapi nyatet, makin pas hitungannya.</p>
       </section>`
       }
       ${pilih ? formBayar(s, pilih) : !b.umum && tagihan.length ? `<section class="card pajak-tagih ${tagihan[0].status}"><div class="row-between"><div><b>PPh ${esc(namaBulan(tagihan[0].ym))}: ${rupiah(tagihan[0].pph)}</b><p class="small muted">${tagihan[0].status === "telat" ? `Lewat jatuh tempo ${tgl(tagihan[0].tempo)}` : `Bayar paling lambat ${tgl(tagihan[0].tempo)}`}</p></div><button class="btn primary sm" data-action="bayar" data-ym="${tagihan[0].ym}">Catat bayar</button></div></section>` : ""}

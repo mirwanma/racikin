@@ -54,11 +54,14 @@ export function ringkasan(s, shift) {
   const keluar = sum(laci.filter((l) => l.jenis === "keluar"), (l) => l.nominal);
   const tambah = sum(laci.filter((l) => l.jenis === "tambah"), (l) => l.nominal);
   const ambil = sum(laci.filter((l) => l.jenis === "ambil"), (l) => l.nominal);
-  const seharusnya = (Number(shift.modal) || 0) + tunai + tambah - keluar - ambil;
+  // Pelunasan kasbon tunai yang diterima selama shift ikut masuk laci.
+  const kasbon = sum((s.kasbon || []).filter((k) => k.jenis === "bayar" && k.shiftId === shift.id && (k.metode || "tunai") === "tunai"), (k) => Number(k.nominal) || 0);
+  const seharusnya = (Number(shift.modal) || 0) + tunai + kasbon + tambah - keluar - ambil;
   return {
     order: orders.length,
     omzet: tunai + nonTunai + online,
     tunai,
+    kasbon,
     nonTunai,
     online,
     keluar,

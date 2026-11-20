@@ -12,6 +12,7 @@ import { saldoKas } from "../impor.js";
 import { sehatCard } from "./sehat.js";
 import { izinCard } from "./izin.js";
 import { pajakCard } from "./pajak.js";
+import { kasbonCard } from "./kasbon.js";
 import { paketCard } from "./paket.js";
 
 /** Langkah di Beranda (beda untuk usaha baru vs yang sudah jalan, lihat js/tahap.js). */
@@ -102,6 +103,7 @@ export const home = {
       ${isJalan(s) || hariJualan(s) >= 7 ? sehatCard(s) : ""}
       ${izinCard(s)}
       ${isMember() && cloud.team?.role === "kasir" ? "" : pajakCard(s)}
+      ${kasbonCard(s)}
       ${cloud.user && !isMember() ? paketCard() : ""}
       <section class="card journey">
         <div class="row-between">

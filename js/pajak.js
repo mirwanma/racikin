@@ -21,7 +21,8 @@ export const BENTUK = {
   lain: { nama: "CV / firma / PT biasa", bebas: false, umum: true },
 };
 // Kategori pemasukan Kas yang dihitung sebagai omzet usaha.
-export const KAT_OMZET = ["Penjualan", "Pre-order", "Katering/pesanan"];
+// "Pelunasan kasbon": penjualan kasbon dihitung omzet saat uangnya diterima (lihat js/kasbon.js).
+export const KAT_OMZET = ["Penjualan", "Pre-order", "Katering/pesanan", "Pelunasan kasbon"];
 export const KAT_PAJAK = "Pajak";
 
 export const bentukDari = (s) => (BENTUK[s.pajak?.bentuk] ? s.pajak.bentuk : "op");

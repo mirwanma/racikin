@@ -152,6 +152,11 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Pilihan varian bisa mengalikan porsi resep (Jumbo 1,5×, bahan kemasan tidak ikut dikali) dan mengganti / menghilangkan bahan resep (susu oat, tanpa gula). Stok, HPP per menu, rekap `opsiMenu`, laporan & cek kesehatan ikut. Data contoh: Es Teh Jumbo 1,5× porsi, pilihan "Tanpa gula".
 - Tanpa perubahan server (harga tetap dari harga tambahan; pesan meja ikut otomatis).
 
+### Fase 33: Kasbon pelanggan (selesai)
+- Keputusan: omzet kasbon dihitung saat order (akrual, rekap & laba rugi), Kas saat dilunasi; kasir boleh memberi & menerima pelunasan dengan batas per pelanggan; fitur Gratis; opsional (default nonaktif).
+- Metode bayar Kasbon di Kasir (+ DP tunai), halaman `#/kasbon` (daftar, cicilan, tagih WA, batas khusus), pengingat Beranda > 14 hari, pelunasan tunai masuk laci shift, Kas pelunasan dihitung ulang setelah sinkron. Migrasi `kasbon_kasir` (kasir boleh menulis `kasbon`).
+- Berikutnya: utang ke supplier (belanja bayar nanti + jatuh tempo) sebagai PR terpisah.
+
 ### Fase 32: Laporan pajak sederhana, PPh Final UMKM 0,5% (selesai)
 - Halaman `#/pajak` (modul di Bisnis, dua tahap usaha; fitur Gratis). Omzet per bulan diambil dari Kas (pemasukan Penjualan, Pre-order, Katering/pesanan: Kasir, impor & manual).
 - Aturan (PP 55/2022 jo. PP 20/2026, dicek Nov 2026): tarif 0,5% dari omzet; orang pribadi bebas untuk Rp500 juta pertama per tahun (dihitung kumulatif, bulan yang melewati batas hanya kena selisihnya); PT perorangan & koperasi kena dari rupiah pertama; CV/firma/PT biasa diarahkan ke tarif umum; peringatan kalau omzet setahun lewat Rp4,8 miliar.

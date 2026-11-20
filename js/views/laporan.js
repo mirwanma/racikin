@@ -65,7 +65,7 @@ function statement(r, s) {
   return `<section class="card lr-statement">
     <div class="lr-head"><div><small class="mono muted">LAPORAN LABA RUGI</small><h2>${esc(bisnisOf(s))}</h2><p class="small muted">${esc(namaBulan(r.ym))}${esc(sd)} · HPP ${r.metode === "resep" ? "dari resep" : "dari belanja bahan"}</p></div></div>
     <h4>Pendapatan</h4>
-    ${p.kasirToko ? baris("Penjualan toko (kasir)", rupiah(p.kasirToko)) : ""}
+    ${p.kasirToko ? baris("Penjualan toko (kasir)", rupiah(p.kasirToko), "", p.kasbon ? `termasuk kasbon ${rupiah(p.kasbon)}` : "") : ""}
     ${p.kasirOnline ? baris("Penjualan order online", rupiah(p.kasirOnline), "", "harga ke pembeli") : ""}
     ${p.manual ? baris("Penjualan dicatat manual", rupiah(p.manual)) : ""}
     ${p.pesanan ? baris("Pesanan / katering", rupiah(p.pesanan)) : ""}

@@ -31,11 +31,12 @@ function rows(r) {
   return `
     <div class="row-between pos-sum"><span>Modal awal laci</span><b>${rupiah(r.modal)}</b></div>
     <div class="row-between pos-sum"><span>Penjualan tunai</span><b class="pos">+${rupiah(r.tunai)}</b></div>
+    ${r.kasbon ? `<div class="row-between pos-sum"><span>Pelunasan kasbon tunai</span><b class="pos">+${rupiah(r.kasbon)}</b></div>` : ""}
     ${r.tambah ? `<div class="row-between pos-sum"><span>Tambah uang</span><b class="pos">+${rupiah(r.tambah)}</b></div>` : ""}
     ${r.keluar ? `<div class="row-between pos-sum"><span>Pengeluaran dari laci</span><b class="neg">−${rupiah(r.keluar)}</b></div>` : ""}
     ${r.ambil ? `<div class="row-between pos-sum"><span>Disetor / diambil</span><b class="neg">−${rupiah(r.ambil)}</b></div>` : ""}
     <div class="row-between pos-total"><span>Uang seharusnya di laci</span><b>${rupiah(r.seharusnya)}</b></div>
-    <p class="small muted">${r.order} order · omzet ${rupiah(r.omzet)}${r.nonTunai ? ` · QRIS/transfer ${rupiah(r.nonTunai)}` : ""}${r.online ? ` · online ${rupiah(r.online)}` : ""}${r.batal ? ` · ${r.batal} batal` : ""}</p>`;
+    <p class="small muted">${r.order} order · omzet ${rupiah(r.omzet)}${r.nonTunai ? ` · non-tunai/kasbon ${rupiah(r.nonTunai)}` : ""}${r.online ? ` · online ${rupiah(r.online)}` : ""}${r.batal ? ` · ${r.batal} batal` : ""}</p>`;
 }
 
 function hitungForm(r, id, label = "Tutup shift") {

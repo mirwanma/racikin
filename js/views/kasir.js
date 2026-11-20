@@ -4,7 +4,8 @@ import { render } from "../app.js";
 import { icon } from "../icons.js";
 import { head } from "./_shared.js";
 import { bahanMap, bisaDibuat } from "../stok-utils.js";
-import { program, waLink } from "../loyalty.js";
+import { program, waLink, normWa, newToken } from "../loyalty.js";
+import { kasbonAktif, cekKasbon, saldoKasbon, batasKasbon } from "../kasbon.js";
 import { cloud, markCards, isKasir, pelaku, teamActive } from "../cloud.js";
 import { METODE, metodeNama, subtotal, buatOrder, batalOrder, rekapHari, struk, perKasir } from "../pos.js";
 import { billAktif, billTerbuka, cariBill, billMeja, keranjangBill, totalBill, jumlahItem, lamaBuka, bukaBill, tambahRonde, hapusItem, batalBill, ubahBill, tutupBill, voucherBill, itemBill, rapikanPilih, keranjangPilih, totalPilih, semuaDipilih, bayarSebagian, gabungBill, pindahMeja } from "../bill.js";
@@ -24,6 +25,7 @@ let step = "menu"; // menu | bayar | struk
 let cart = []; // { key, resepId, nama, harga, qty, opsi? }
 let pilih = null; // sheet varian yang terbuka { resepId, ids: [pilihanId], error }
 let chatWa = null; // sheet "Order dari chat WA" { text, rows: [{ resepId, qty }] | null, sisa, atasNama, catatan }
+let kasbonBaru = false; // form tambah pelanggan cepat untuk kasbon
 let form = { diskon: 0, kode: "", metode: "tunai", bayar: 0, pelangganId: "", atasNama: "", catatanDapur: "", tunaiSebagian: 0, campur: false };
 let lepasDapur = null;
 let lepasMeja = null;
@@ -369,7 +371,7 @@ function bayarView(s) {
     </section>
 
     ${
-      pelanggan
+      pelanggan && form.metode !== "kasbon"
         ? `<section class="card"><label class="field"><span>Pelanggan (kartu stempel)</span>
             <select data-change="pelanggan"><option value="">Tanpa kartu stempel</option>${[...s.pelanggan]
               .sort((a, b) => a.nama.localeCompare(b.nama, "id"))
@@ -392,9 +394,11 @@ function bayarView(s) {
           </section>`
         : `<section class="card stack">
       <h2 class="card-title" style="margin:0">Pembayaran</h2>
-      <div class="chips">${METODE.map((m) => `<label class="chip"><input type="radio" name="metode" value="${m.id}" data-change="metode" ${form.metode === m.id ? "checked" : ""}><span>${m.nama}</span></label>`).join("")}</div>
+      <div class="chips">${metodeKasir(s).map((m) => `<label class="chip"><input type="radio" name="metode" value="${m.id}" data-change="metode" ${form.metode === m.id ? "checked" : ""}><span>${m.nama}</span></label>`).join("")}</div>
       ${
-        form.metode === "tunai"
+        form.metode === "kasbon"
+          ? kasbonBox(s, total)
+          : form.metode === "tunai"
           ? `<label class="field"><span>Uang diterima</span><input type="number" inputmode="numeric" min="0" step="500" value="${form.bayar || ""}" placeholder="${total}" data-change="bayar"></label>
             <div class="chips">${quickCash(total).map((v) => `<button type="button" class="chip-btn ${Number(form.bayar) === v ? "on" : ""}" data-action="uang" data-v="${v}">${v === total ? "Uang pas" : rupiah(v)}</button>`).join("")}</div>
             <div class="row-between pos-total"><span>Kembalian</span><b class="${kurang ? "neg" : "pos"}">${kurang ? "Uang kurang" : rupiah(kembali)}</b></div>`
@@ -406,7 +410,7 @@ function bayarView(s) {
                 : ""
             }`
       }
-      <button class="btn primary block lg" data-action="selesai" ${kurang || !cart.length || (form.campur && form.metode !== "tunai" && campurError(total)) ? "disabled" : ""}>${billRef ? (billRef.pilih ? "Bayar bagian ini" : "Lunasi bill") : "Selesaikan"} · ${rupiah(total)}</button>
+      <button class="btn primary block lg" data-action="selesai" ${kurang || !cart.length || (form.campur && form.metode !== "tunai" && campurError(total)) || kasbonError(s, total) ? "disabled" : ""}>${billRef ? (billRef.pilih ? "Bayar bagian ini" : "Lunasi bill") : "Selesaikan"} · ${rupiah(total)}</button>
       ${billAktif(s) && bolehFitur("bill") && !billRef && !mejaRef && cart.length ? `<button class="btn soft block" data-action="billSimpanBuka">${icon("receipt", 16)} Simpan ke bill (bayar nanti)</button>` : ""}
     </section>`
     }`;
@@ -483,6 +487,40 @@ function billBanner(s) {
 }
 
 /** Validasi pembayaran campuran: bagian tunai harus di antara 0 dan total. */
+/** Metode bayar di Kasir (Kasbon kalau diaktifkan). */
+const metodeKasir = (s) => (kasbonAktif(s) ? [...METODE, { id: "kasbon", nama: "Kasbon" }] : METODE);
+/** Bagian yang jadi kasbon (setelah DP tunai). */
+const jumlahKasbon = (total) => (form.metode === "kasbon" ? total - (form.campur ? Number(form.tunaiSebagian) || 0 : 0) : 0);
+function kasbonError(s, total) {
+  if (form.metode !== "kasbon") return "";
+  return cekKasbon(s, form.pelangganId, jumlahKasbon(total));
+}
+/** Pilih pelanggan yang kasbon + info sisa & batas. */
+function kasbonBox(s, total) {
+  const list = [...(s.pelanggan || [])].sort((a, b) => a.nama.localeCompare(b.nama, "id"));
+  const p = form.pelangganId ? list.find((x) => x.id === form.pelangganId) : null;
+  const err = kasbonError(s, total);
+  return `<div class="kasbon-box stack">
+    <label class="field"><span>Pelanggan yang kasbon</span>
+      <select data-change="pelanggan"><option value="">Pilih pelanggan</option>${list
+        .map((x) => {
+          const sisa = saldoKasbon(s, x.id);
+          return `<option value="${x.id}" ${form.pelangganId === x.id ? "selected" : ""}>${esc(x.nama)}${sisa > 0 ? ` · kasbon ${rupiah(sisa)}` : ""}</option>`;
+        })
+        .join("")}</select></label>
+    ${
+      kasbonBaru
+        ? `<form class="row2 kasbon-baru" data-form="kasbonPelanggan"><input name="nama" maxlength="40" placeholder="Nama pelanggan" required aria-label="Nama pelanggan"><input name="wa" inputmode="tel" maxlength="20" placeholder="No. WA (opsional)" aria-label="Nomor WA"><button class="btn soft sm">Tambah</button></form>`
+        : `<button type="button" class="link small" data-action="kasbonBaru">${icon("plus", 14)} Pelanggan baru</button>`
+    }
+    ${p ? `<div class="row-between pos-sum"><span>Kasbon ${esc(p.nama)} sekarang</span><b>${rupiah(Math.max(0, saldoKasbon(s, p.id)))} / batas ${rupiah(batasKasbon(s, p))}</b></div>` : ""}
+    <label class="impor-cek"><input type="checkbox" data-change="campur" ${form.campur ? "checked" : ""}><span>Ada DP / bayar sebagian tunai</span></label>
+    ${form.campur ? `<label class="field"><span>Bayar tunai sekarang (Rp)</span><input type="number" inputmode="numeric" min="0" step="500" value="${form.tunaiSebagian || ""}" placeholder="0" data-change="tunaiSebagian"></label>${campurError(total) ? `<p class="small neg">${esc(campurError(total))}</p>` : ""}` : ""}
+    ${err && form.pelangganId ? `<p class="small neg">${esc(err)}</p>` : p ? `<div class="row-between pos-total"><span>Jadi kasbon</span><b class="neg">${rupiah(jumlahKasbon(total))}</b></div>` : ""}
+    <p class="small muted">Stok & penjualan langsung tercatat, uangnya masuk Kas saat kasbon dilunasi (menu Kasbon).</p>
+  </div>`;
+}
+
 function campurError(total) {
   const t = Number(form.tunaiSebagian) || 0;
   if (t <= 0) return "Isi berapa yang dibayar tunai";
@@ -654,6 +692,7 @@ function strukView(s) {
             : `<div class="row-between"><span>${metodeNama(o.metode)}</span><span>${rupiah(o.bayar)}</span></div>`
       }
       ${o.metode === "tunai" ? `<div class="row-between struk-kembali"><span>Kembalian</span><b>${rupiah(o.kembali)}</b></div>` : ""}
+      ${o.pelangganId && (o.metode === "kasbon" || o.pembayaran?.some((x) => x.metode === "kasbon")) ? `<p class="struk-note">Kasbon ${esc(p?.nama || "")}: total sekarang ${rupiah(Math.max(0, saldoKasbon(s, o.pelangganId)))}</p>` : ""}
       ${si?.nama ? `<p class="struk-note">${si.siap ? `${esc(si.nama)} dapat hadiah! (${si.stempel}/${si.target})` : `+1 stempel ${esc(si.nama)} (${si.stempel}/${si.target})`}</p>` : ""}
       ${last.dapur ? `<p class="struk-note">${last.dapur === "terkirim" ? "Terkirim ke dapur" : last.dapur === "antre" ? "Menunggu internet untuk dikirim ke dapur" : "Mengirim ke dapur…"}</p>` : ""}
       <p class="struk-note small">${isKasir() ? `Tercatat atas nama ${esc(o.kasir?.nama || "kamu")}` : "Tercatat di Kas"}${o.items.some((i) => i.resepId) ? " · stok bahan diperbarui" : ""}</p>
@@ -672,7 +711,7 @@ function rekapView(s) {
   const tim = teamActive() || new Set(r.semua.map((o) => o.kasir?.id || "-")).size > 1;
   const tgl = new Date(todayISO() + "T00:00:00").toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" });
   return `
-    <div class="row-between"><p class="muted small" style="margin:0">${esc(tgl)}</p><a href="#/shift" class="link small">Shift & tutup kasir</a></div>
+    <div class="row-between"><p class="muted small" style="margin:0">${esc(tgl)}</p><span>${kasbonAktif(s) ? `<a href="#/kasbon" class="link small">Kasbon</a> · ` : ""}<a href="#/shift" class="link small">Shift & tutup kasir</a></span></div>
     <div class="stats3">
       <div><small>Omzet</small><b class="pos">${rupiah(r.omzet)}</b></div>
       <div><small>Order</small><b>${r.n}</b></div>
@@ -936,6 +975,11 @@ export const kasir = {
       step = "menu";
       render();
     },
+    kasbonBaru() {
+      kasbonBaru = true;
+      render();
+      document.querySelector("form[data-form=kasbonPelanggan] input")?.focus();
+    },
     uang(el) {
       form.bayar = Number(el.dataset.v);
       render();
@@ -950,6 +994,9 @@ export const kasir = {
         step = "menu";
         return toast("Bill ini sudah dibayar / dibatalkan di HP lain", "err");
       }
+      if (form.metode === "kasbon" && !kasbonAktif(s)) form.metode = "tunai";
+      const errKasbon = kasbonError(s, totalNow());
+      if (errKasbon) return toast(errKasbon, "err");
       const { patch, order, stempelInfo } = buatOrder(s, {
         cart,
         ...form,
@@ -991,6 +1038,7 @@ export const kasir = {
         ubahPesanan(ref.id, { status: "diproses", bayar_status: "lunas", pos_order_id: order.id }).catch((e) => toast("Status pesanan meja gagal diperbarui: " + e.message, "err"));
       }
       cart = [];
+      kasbonBaru = false;
       form = FORM_AWAL(); // tiap order baru mulai dari Tunai
       step = "struk";
       toast(`Order #${order.no} · ${rupiah(order.total)} tercatat`);
@@ -1278,6 +1326,7 @@ export const kasir = {
     },
     metode(el) {
       form.metode = el.value;
+      if (el.value === "kasbon") form.bayar = 0;
       render();
     },
     bayar(el) {
@@ -1307,6 +1356,21 @@ export const kasir = {
   },
 
   forms: {
+    kasbonPelanggan(f) {
+      const fd = new FormData(f);
+      const nama = String(fd.get("nama") || "").trim().slice(0, 40);
+      if (!nama) return;
+      const s = store.get();
+      const wa = normWa(fd.get("wa"));
+      if ((s.pelanggan || []).some((x) => x.nama.toLowerCase() === nama.toLowerCase())) return toast("Nama itu sudah ada, pilih dari daftar", "err");
+      if (wa && (s.pelanggan || []).some((x) => normWa(x.wa) === wa)) return toast("No. WA ini sudah terdaftar", "err");
+      const p = { id: uid(), nama, wa, stempel: 0, kunjungan: 0, hadiahDiambil: 0, terakhir: null, dibuat: todayISO(), token: newToken() };
+      store.set({ pelanggan: [...(s.pelanggan || []), p] });
+      form.pelangganId = p.id;
+      markCards({ ids: [p.id] });
+      kasbonBaru = false;
+      render();
+    },
     billBaru(form_) {
       if (!bolehFitur("bill")) return toast("Open bill khusus paket Pro", "err");
       const nama = String(new FormData(form_).get("nama") || "").trim();

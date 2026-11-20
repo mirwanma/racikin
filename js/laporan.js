@@ -57,10 +57,13 @@ export function labaRugi(s, ym, metode = metodeDefault(s, ym), sampaiHari = 31) 
   const posMasuk = masuk.filter((t) => t.ref === "pos");
   const metodePos = (t) => String(t.id).slice(15); // "pos-YYYY-MM-DD-<metode>"
   const kasirOnline = sum(posMasuk.filter((t) => ONLINE.has(metodePos(t))), (t) => t.nominal);
-  const kasirToko = sum(posMasuk, (t) => t.nominal) - kasirOnline;
+  // Kasbon pelanggan: dihitung penjualan saat order dibuat (sama dengan porsi/HPP dari rekap kasir);
+  // pelunasannya cuma mengubah piutang jadi uang, jadi tidak dihitung lagi (js/kasbon.js).
+  const kasbon = sum((s.kasbon || []).filter((k) => k.jenis === "utang" && k.tanggal.startsWith(ym) && Number(k.tanggal.slice(8)) <= sampaiHari), (k) => Number(k.nominal) || 0);
+  const kasirToko = sum(posMasuk, (t) => t.nominal) - kasirOnline + kasbon;
   const manual = sum(masuk.filter((t) => t.ref !== "pos" && t.kategori === "Penjualan"), (t) => t.nominal);
   const pesanan = sum(masuk.filter((t) => t.ref !== "pos" && (t.kategori === "Pre-order" || t.kategori === "Katering/pesanan")), (t) => t.nominal);
-  const lain = sum(masuk.filter((t) => t.ref !== "pos" && !["Penjualan", "Pre-order", "Katering/pesanan"].includes(t.kategori)), (t) => t.nominal);
+  const lain = sum(masuk.filter((t) => t.ref !== "pos" && t.ref !== "kasbon" && !["Penjualan", "Pre-order", "Katering/pesanan"].includes(t.kategori)), (t) => t.nominal);
   const pendapatan = kasirToko + kasirOnline + manual + pesanan;
 
   // --- HPP ---
@@ -111,7 +114,7 @@ export function labaRugi(s, ym, metode = metodeDefault(s, ym), sampaiHari = 31) 
     ym,
     metode,
     pendapatan,
-    rincianPendapatan: { kasirToko, kasirOnline, manual, pesanan },
+    rincianPendapatan: { kasirToko, kasirOnline, manual, pesanan, kasbon },
     potonganPromo: Math.round(potonganPromo), // sudah mengurangi pendapatan kasir (info)
     lain,
     hpp,

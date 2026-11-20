@@ -12,6 +12,7 @@ import { rekapPromo } from "./promo.js";
 import { program, patchStempel } from "./loyalty.js";
 import { CHANNELS, isOnline, channelNama, komisiRp } from "./online.js";
 import { laciTransactions } from "./shift.js";
+import { porsiKasbon, utangDariOrder, hapusUtangOrder, kasbonKasSemua } from "./kasbon.js";
 
 // Metode bayar untuk order di toko. Order online memakai id saluran (gofood, grabfood, shopeefood) sebagai metode.
 export const METODE = [
@@ -20,7 +21,7 @@ export const METODE = [
   { id: "transfer", nama: "Transfer" },
 ];
 // Semua "metode" yang mungkin muncul di order (termasuk data lama "ojol").
-const SEMUA_METODE = [...METODE, ...CHANNELS.map((c) => ({ id: c.id, nama: c.nama })), { id: "ojol", nama: "Ojol" }, { id: "campur", nama: "Campuran" }];
+const SEMUA_METODE = [...METODE, ...CHANNELS.map((c) => ({ id: c.id, nama: c.nama })), { id: "ojol", nama: "Ojol" }, { id: "campur", nama: "Campuran" }, { id: "kasbon", nama: "Kasbon" }];
 /**
  * Porsi pembayaran order per metode: [{ metode, jumlah }]. Order biasa = 1 metode senilai total;
  * order dengan pembayaran campuran (mis. sebagian tunai, sisanya QRIS) punya o.pembayaran.
@@ -51,6 +52,8 @@ function kasPatch(transactions, orders, tanggal) {
   const aktif = orders.filter((o) => o.tanggal === tanggal && o.status !== "batal");
   let tx = transactions.filter((t) => !(t.ref === "pos" && t.tanggal === tanggal));
   for (const m of SEMUA_METODE) {
+    // Kasbon belum jadi uang: masuk Kas saat dilunasi (js/kasbon.js).
+    if (m.id === "kasbon") continue;
     const list = aktif.filter((o) => pakaiMetode(o, m.id));
     if (!list.length) continue;
     tx.push({
@@ -177,6 +180,7 @@ export function buatOrder(s, { cart, diskon = 0, promo = null, metode = "tunai",
     ];
     order.metode = "campur";
   }
+  if (porsiKasbon(order) && !order.pelangganId) throw new Error("Kasbon wajib pilih pelanggan");
   if (bill) order.bill = bill; // { id, nama, ronde } dari open bill (stok sudah dipotong per ronde)
   if (kasir) order.kasir = kasir; // { id, nama } yang mencatat (mode tim)
   if (shiftId) order.shiftId = shiftId; // shift kasir yang sedang terbuka
@@ -193,6 +197,9 @@ export function buatOrder(s, { cart, diskon = 0, promo = null, metode = "tunai",
       stempelInfo = { nama: p.nama, stempel: p.stempel, target: prog.target, siap: p.stempel >= prog.target };
     } else stempelInfo = { kurang: prog.minBelanja };
   }
+  // kasbon pelanggan (piutang)
+  const utang = utangDariOrder(order);
+  if (utang) st = { ...st, kasbon: [...(st.kasbon || []), utang] };
   // stok (open bill: sudah dipotong waktu tiap ronde dikirim)
   if (stok) st = { ...st, ...stokPatch(st, items, tanggal, -1) };
   // order + kas + rekap
@@ -215,11 +222,12 @@ export function batalOrder(s, orderId, oleh = null) {
   if (o.stempel && o.pelangganId && st.pelanggan.some((p) => p.id === o.pelangganId)) {
     st = { ...st, ...patchStempel(st, o.pelangganId, -o.stempel, "koreksi", `Batal kasir #${o.no}`) };
   }
+  if (porsiKasbon(o)) st = { ...st, kasbon: hapusUtangOrder(st.kasbon, orderId) };
   const orders = st.orders.map((x) => (x.id === orderId ? { ...x, status: "batal", ...(oleh ? { batalOleh: oleh } : {}) } : x));
   return pick({ ...st, orders, transactions: kasPatch(st.transactions, orders, o.tanggal), posHarian: rekapPatch(st, o.tanggal, orders) });
 }
 
-const KEYS = ["orders", "transactions", "posHarian", "bahan", "stokLog", "pelanggan", "stempelLog"];
+const KEYS = ["orders", "transactions", "posHarian", "bahan", "stokLog", "pelanggan", "stempelLog", "kasbon"];
 const pick = (obj) => Object.fromEntries(KEYS.filter((k) => k in obj).map((k) => [k, obj[k]]));
 
 /**
@@ -232,6 +240,8 @@ export function reconcile(s, { kas = true } = {}) {
   let posHarian = { ...(s.posHarian || {}) };
   // Pengeluaran dari laci kasir (shift) juga dihitung ulang di Kas.
   let transactions = kas && s.shifts?.length ? laciTransactions(s) : s.transactions || [];
+  // Pelunasan kasbon (bisa dicatat akun kasir yang nggak boleh menulis Kas) juga dihitung ulang.
+  if (kas && (s.kasbon?.length || transactions.some((t) => t.ref === "kasbon"))) transactions = kasbonKasSemua(transactions, s.kasbon || []);
   if (!tanggal.length) return kas ? { ...s, transactions } : s;
   for (const t of tanggal) {
     posHarian = rekapPatch({ posHarian }, t, orders);

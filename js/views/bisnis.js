@@ -4,7 +4,8 @@ import { journey } from "./home.js";
 import { isJalan } from "../tahap.js";
 import { ringkasIzin } from "../izin.js";
 import { hitungPajak, tagihanPajak, namaBulan } from "../pajak.js";
-import { todayISO, short } from "../ui.js";
+import { kasbonAktif, ringkasKasbon } from "../kasbon.js";
+import { todayISO, short, rupiah } from "../ui.js";
 
 // Usaha yang sudah jalan: modul perencanaan jadi alat tambahan dengan sudut pandang berbeda.
 const RENCANA_JALAN = [
@@ -51,6 +52,12 @@ export const bisnis = {
     const pajakMod = `<a href="#/pajak" class="card module">
           <span class="module-num">${icon("receipt", 18)}</span>
           <div><h3>Pajak UMKM</h3><p class="muted small">${pjT ? `PPh ${namaBulan(pjT.ym)} belum dibayar` : pj.omzet ? `PPh Final 0,5%: omzet tahun ini Rp${short(pj.omzet)}, PPh Rp${short(pj.pph)}` : "PPh Final 0,5%: hitung per bulan dari Kas, jatuh tempo & cara bayarnya"}</p></div>
+          <span class="chev">${icon("chevron", 18)}</span>
+        </a>`;
+    const kb = ringkasKasbon(s, todayISO());
+    const kasbonMod = `<a href="#/kasbon" class="card module">
+          <span class="module-num">${icon("wallet", 18)}</span>
+          <div><h3>Kasbon Pelanggan</h3><p class="muted small">${kasbonAktif(s) ? (kb.n ? `${kb.n} pelanggan · total ${rupiah(kb.total)}${kb.lama ? ` · ${kb.lama} lewat 14 hari` : ""}` : "Aktif · belum ada kasbon") : "Pelanggan makan dulu bayar nanti: batas, cicilan, tagih lewat WA"}</p></div>
           <span class="chev">${icon("chevron", 18)}</span>
         </a>`;
     const rencana = jalan
@@ -130,6 +137,7 @@ export const bisnis = {
           <span class="chev">${icon("chevron", 18)}</span>
         </a>
         ${jalan ? "" : sehatMod + imporMod}
+        ${kasbonMod}
         ${izinMod}
         ${pajakMod}
         ${rencana}
