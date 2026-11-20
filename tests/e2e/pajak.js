@@ -21,7 +21,7 @@ const ok = (cond, label) => { console.log((cond ? 'OK   ' : 'GAGAL') + ' ' + lab
     const lalu = m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`;
     await p.evaluate((lalu) => { const x = JSON.parse(localStorage.getItem('racikin:v1')); x.transactions.push({ id: 'besar', tanggal: lalu + '-02', jenis: 'masuk', kategori: 'Katering/pesanan', nominal: 600000000, catatan: 'Katering besar' }); localStorage.setItem('racikin:v1', JSON.stringify(x)); }, lalu);
     await p.reload(); await p.waitForSelector('.journey');
-    ok(await p.$('.pajak-mini'), 'Beranda: pengingat PPh bulan lalu');
+    ok(await p.$('a[href="#/pajak"].pajak-mini'), 'Beranda: pengingat PPh bulan lalu');
 
     await p.goto(B + '#/bisnis'); await p.waitForSelector('a[href="#/pajak"].module');
     ok((await txt(p, 'a[href="#/pajak"].module')).includes('belum dibayar'), 'modul Bisnis: ada tagihan');
@@ -54,7 +54,7 @@ const ok = (cond, label) => { console.log((cond ? 'OK   ' : 'GAGAL') + ' ' + lab
     ok(s.pajak.bayar[lalu]?.ntpn === 'NTPN123456789ABC' && kas?.nominal === h.bulan && kas.kategori === 'Pajak' && kas.jenis === 'keluar', 'tercatat lunas + Kas keluar kategori Pajak');
     ok((await txt(p, '.pajak-tabel')).includes('Lunas') && !(await p.$('.pajak-tagih')), 'tabel: Lunas, tagihan hilang');
     await p.goto(B + '#/'); await p.waitForSelector('.journey');
-    ok(!(await p.$('.pajak-mini')), 'Beranda: pengingat hilang');
+    ok(!(await p.$('a[href="#/pajak"].pajak-mini')), 'Beranda: pengingat hilang');
     await p.goto(B + '#/kas'); await p.waitForTimeout(300);
     ok((await txt(p, 'main')).includes('Pajak'), 'Kas: muncul pengeluaran Pajak');
 

@@ -26,6 +26,24 @@ const txt = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').tr
   console.log('bahan stok cocok riwayat:', stokCek.filter(Boolean).length, '/', s.bahan.length, '| bahan stok 0:', s.bahan.filter(x => x.stok === 0).map(x => x.nama));
   const stCek = s.pelanggan.every(pl => s.stempelLog.filter(l => l.pelangganId === pl.id).reduce((a, l) => a + l.delta, 0) === pl.stempel);
   console.log('stempel cocok log:', stCek);
+  // Cek keras (exit code 1 kalau gagal)
+  const ok = (cond, label) => { console.log((cond ? 'OK   ' : 'GAGAL') + ' ' + label); if (!cond) process.exitCode = 1; };
+  ok(bad === 0, 'Kas kasir = omzet rekap tiap hari');
+  ok(stokCek.every(Boolean) && s.bahan.every((x) => x.stok >= 0), 'stok = riwayat stok, nggak ada yang minus');
+  ok(stCek, 'stempel = riwayat stempel');
+  const hari = Object.keys(s.posHarian).sort();
+  const rata = (a, z) => hari.slice(a, z).reduce((x, d) => x + s.posHarian[d].omzet, 0) / (z - a);
+  const tumbuh = rata(-8, -1) / rata(0, 7);
+  console.log('omzet/hari minggu pertama', Math.round(rata(0, 7)), '-> minggu terakhir', Math.round(rata(-8, -1)), `(${tumbuh.toFixed(2)}x)`);
+  ok(tumbuh > 2.6 && tumbuh < 3.6, 'usaha tumbuh ±3x');
+  ok(s.karyawan.length === 5 && s.absenSetting?.aktif && Object.keys(s.jadwal?.hari || {}).length > 60, 'karyawan, absen & jadwal shift ada');
+  const kasGaji = s.transactions.filter((x) => x.ref === 'gaji' && x.kategori === 'Gaji').reduce((a, x) => a + x.nominal, 0);
+  ok(s.gajian.length > 20 && kasGaji === s.gajian.reduce((a, g) => a + g.kotor, 0), 'Kas Gaji = total gaji yang dibayar');
+  const saldoKb = (id) => s.kasbonKaryawan.filter((x) => x.karyawanId === id).reduce((a, x) => a + (x.jenis === 'pinjam' ? 1 : -1) * x.nominal, 0);
+  ok(s.karyawan.every((k) => saldoKb(k.id) >= 0), 'kasbon karyawan nggak minus');
+  const kasUtang = s.transactions.filter((x) => x.ref === 'utang').reduce((a, x) => a + x.nominal, 0);
+  ok(kasUtang === s.utangSupplier.reduce((a, n) => a + n.bayar.reduce((x, y) => x + y.nominal, 0), 0) && s.utangSupplier.some((n) => !n.bayar.length), 'utang supplier: Kas = yang sudah dibayar, ada yang belum lunas');
+  ok(!('_ada' in s.pelanggan[0]) && s.pelanggan.every((x) => x.token), 'pelanggan bersih & punya token kartu');
   const bulan = {};
   for (const t of s.transactions) { const m = t.tanggal.slice(0, 7); bulan[m] ??= { masuk: 0, keluar: 0 }; bulan[m][t.jenis] += t.nominal; }
   console.log('per bulan:', JSON.stringify(bulan));
@@ -37,6 +55,11 @@ const txt = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').tr
     await p.goto(B + '#/' + route); await p.waitForSelector(sel, { timeout: 10000 });
     await p.screenshot({ path: `${OUT}/${name}.png`, fullPage: true });
   }
+  for (const [tab, sel] of [['absen', '.absen-row'], ['jadwal', '.jadwal-grid'], ['gaji', '.gaji-card']]) {
+    await p.goto(B + '#/bisnis'); await p.goto(B + '#/karyawan'); await p.click(`label:has(input[data-change=tab][value=${tab}])`); await p.waitForSelector(sel, { timeout: 10000 });
+    await p.screenshot({ path: `${OUT}/10-karyawan-${tab}.png`, fullPage: true });
+  }
+  await p.goto(B + '#/belanja?tab=utang'); await p.waitForSelector('.utang-nota'); await p.screenshot({ path: OUT + '/11-utang.png', fullPage: true });
   await p.goto(B + '#/kasir'); await p.click('label:has(input[value=jual])'); await p.waitForSelector('.pos-grid'); await p.screenshot({ path: OUT + '/9-kasir.png', fullPage: true });
   await p.goto(B + '#/stok'); await p.click('label:has(input[value=menu])'); await p.waitForSelector('.resep-card'); await p.screenshot({ path: OUT + '/4b-menu.png', fullPage: true });
   await p.goto(B + '#/kas'); await p.waitForSelector('.stats3');

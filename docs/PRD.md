@@ -152,6 +152,11 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Pilihan varian bisa mengalikan porsi resep (Jumbo 1,5×, bahan kemasan tidak ikut dikali) dan mengganti / menghilangkan bahan resep (susu oat, tanpa gula). Stok, HPP per menu, rekap `opsiMenu`, laporan & cek kesehatan ikut. Data contoh: Es Teh Jumbo 1,5× porsi, pilihan "Tanpa gula".
 - Tanpa perubahan server (harga tetap dari harga tambahan; pesan meja ikut otomatis).
 
+### Data contoh tumbuh 3x + karyawan (selesai)
+- Generator `js/dummy.js`: tren 60 hari tumbuh ±3× (omzet, order & belanja), belanja mengikuti pemakaian sekitar hari itu, frozen food tempo (utang supplier), 5 karyawan dengan jadwal shift, absen, gaji & kasbon karyawan; gaji tidak lagi dicatat manual di Kas.
+- Merchant demo TAHGUY (akun tes pemilik.tahguy) diisi ulang dengan generator ini sampai 20 Nov 2026 (skala 0,7 supaya muat batas dokumen 2 MB): omzet ±Rp443rb → Rp1,31jt per hari, order 15 → 47 per hari, belanja 2 minggu Rp2,5jt → Rp7,4jt. Brand, meja, ide, RAB, BEP, aktivasi, izin & setelan dipertahankan; pelanggan & token kartu stempel lama tetap. Dokumen lama dicadangkan di `private.cadangan_user_data`.
+- Catatan: dokumen usaha dibatasi 2 MB; usaha dengan ±70 order/hari mulai mendekati batas karena detail order 30 hari disimpan di dokumen. Kalau merchant nyata sampai sebesar itu, pindahkan detail order ke tabel sendiri atau perpendek masa simpan.
+
 ### Fase 39: Pengingat push untuk tagihan & jadwal (selesai)
 - Pengingat di Beranda dari fitur Fase 32–38 sekarang juga dikirim ke HP lewat `racikin-push` (`notif.ts`): pajak UMKM, utang supplier, kasbon pelanggan, gajian & THR (pagi), jadwal kerja besok (malam). Bisa dimatikan per jenis di `#/notif`; kasir/dapur dapat jadwalnya sendiri. Logika dihitung ulang di Edge Function (porting ringkas dari js/pajak.js, utang.js, kasbon.js, gaji.js, jadwal.js), tanpa migrasi.
 

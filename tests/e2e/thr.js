@@ -18,7 +18,7 @@ const geser = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return 
     const p = await ctx.newPage();
     const errs = []; p.on('pageerror', (e) => errs.push(e.message)); p.on('console', (m) => m.type() === 'error' && errs.push(m.text()));
     p.on('dialog', (d) => d.accept());
-    await p.goto(B); await p.click('[data-action=dummy]'); await p.waitForSelector('.journey', { timeout: 20000 });
+    await p.goto(B); await p.click('[data-action=dummy]'); await p.waitForSelector('.journey', { timeout: 20000 }); await p.evaluate(() => { const x = JSON.parse(localStorage.getItem('racikin:v1')); Object.assign(x, { karyawan: [], absen: {}, absenSetting: null, jadwal: null, gajian: [], kasbonKaryawan: [], thr: [], utangSupplier: [] }); x.transactions = x.transactions.filter((t) => t.ref !== 'gaji' && t.ref !== 'utang'); localStorage.setItem('racikin:v1', JSON.stringify(x)); }); await p.reload(); await p.waitForSelector('.journey'); // mulai fitur dari nol (data contoh sudah punya karyawan & utang)
     await p.goto(B + '#/karyawan'); await p.click('[data-action=nyala]'); await p.waitForSelector('form[data-form=karyawan]');
 
     // Karyawan harian 80rb + lembur tarif tetap 10rb/jam, mulai kerja 5 bulan lalu
