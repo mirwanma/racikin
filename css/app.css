@@ -1523,3 +1523,28 @@ body[data-admin="1"] .adm-chart i { background: var(--a-y); }
 .utang-head .num { text-align: right; font-family: var(--mono); font-size: 14px; }
 .utang-nota.on .utang-head b:first-child { text-decoration: underline; text-decoration-color: var(--yellow); text-decoration-thickness: 3px; }
 .utang-tempo[hidden], .kas-cek[hidden] { display: none !important; }
+
+/* Karyawan & absen */
+.absen-row { display: grid; gap: 8px; padding: 12px 0; border-top: 1px dashed var(--line); }
+.absen-nama small { display: block; font-size: 12px; }
+.absen-status { display: flex; flex-wrap: wrap; gap: 6px; }
+.absen-status .chip-btn { padding: 6px 10px; font-size: 13px; }
+.absen-status .chip-btn.on.pos { background: var(--leaf); border-color: var(--leaf); color: #fff; }
+.absen-status .chip-btn.on.warn { background: var(--yellow); border-color: var(--yellow-deep); color: var(--on-yellow); }
+.absen-status .chip-btn.on.neg { background: var(--chili); border-color: var(--chili); color: #fff; }
+.absen-status .chip-btn.on.muted { background: var(--ink-soft); border-color: var(--ink-soft); color: var(--paper); }
+.absen-jam { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 360px; }
+.absen-jam label { display: grid; gap: 2px; min-width: 0; }
+.absen-jam small { color: var(--muted); font-size: 12px; }
+.absen-jam input { width: 100%; min-width: 0; padding: 6px 8px; }
+.rekap-absen { display: grid; font-size: 13px; }
+.rk-row { display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(5, minmax(0, .8fr)) minmax(0, 1.1fr); gap: 4px; padding: 8px 0; border-bottom: 1px dashed var(--line); align-items: center; text-align: center; }
+.rk-row > span:first-child { text-align: left; overflow: hidden; text-overflow: ellipsis; }
+.rk-row .mono { text-transform: none; font-size: 12px; }
+.rk-th { font-size: 10.5px; text-transform: uppercase; color: var(--muted); font-family: var(--mono); padding-top: 0; }
+.kolom-map { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.tabel-contoh { overflow-x: auto; max-width: 100%; }
+.tabel-contoh td, .tabel-contoh th { white-space: nowrap; font-size: 12px; }
+.posisi-list .chip-btn { display: inline-flex; align-items: center; gap: 6px; }
+.posisi-list .chip-btn small { font-family: var(--mono); opacity: .8; }
+.file-btn { cursor: pointer; }
