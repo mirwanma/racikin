@@ -11,8 +11,9 @@ import { bisnisOf } from "../wa.js";
 import { karyawanAktif } from "../absen.js";
 import {
   LIBUR, HARI, templateShift, jadwalOf, shiftDi, setSel, rentang, geserAnchor, terapkanPola, salinSebelumnya, kosongkan,
-  tambahShift, ubahShift, hapusShift, pakaiShift, kodeShift, hitungPerHari, teksJadwal, masukHari, jadwalAkun, hariKe, adaJadwal, durasi, sinkronAkun,
+  tambahShift, ubahShift, hapusShift, pakaiShift, kodeShift, hitungPerHari, teksJadwal, masukHari, jadwalAkun, hariKe, adaJadwal, durasi, sinkronAkun, tabelJadwal, aoaJadwal,
 } from "../jadwal.js";
+import { muatXlsx } from "../xlsx.js";
 
 /** Simpan perubahan jadwal + perbarui peta akun kasir (biar "Jadwal saya" selalu cocok dengan data karyawan). */
 const simpan = (patch) => store.set({ jadwal: sinkronAkun({ ...store.get(), ...patch }).jadwal });
@@ -64,6 +65,22 @@ function grid(s, r) {
         .join("")}</tbody>
       <tfoot><tr><th class="jg-nama"><small>Masuk</small></th>${hitung.map((h) => `<td><small>${h.total || ""}</small></td>`).join("")}</tr></tfoot>
     </table>
+  </div>`;
+}
+
+/** Lembar cetak (disembunyikan di layar; muncul waktu "Cetak / simpan PDF"). */
+function lembarCetak(s, r) {
+  const tb = tabelJadwal(s, r.dari, r.sampai);
+  const list = templateShift(s);
+  return `<div class="jadwal-cetak" aria-hidden="true">
+    <h2>Jadwal kerja ${esc(bisnisOf(s))}</h2>
+    <p>${esc(pendek(r.dari))} – ${esc(pendek(r.sampai))} ${r.dari.slice(0, 4)}</p>
+    <table class="${mode}">
+      <thead><tr><th>Nama</th>${tb.hari.map((h) => `<th class="${hariKe(h.tanggal) === 6 ? "minggu" : ""}">${mode === "bulan" ? `<small>${HARI[hariKe(h.tanggal)]}</small>${Number(h.tanggal.slice(8))}` : esc(h.label)}</th>`).join("")}<th>Masuk</th></tr></thead>
+      <tbody>${tb.baris.map((b) => `<tr><th>${esc(b.nama)}${b.posisi ? `<small>${esc(b.posisi)}</small>` : ""}</th>${b.sel.map((x) => `<td class="${x.id === LIBUR ? "libur" : ""}" style="${x.id && x.id !== LIBUR ? `background:${warnaOf(list, x.id)}` : ""}">${esc(mode === "bulan" ? (x.id ? kodeShift(list, x.id) : "") : x.teks)}</td>`).join("")}<td>${b.masuk}</td></tr>`).join("")}</tbody>
+      <tfoot><tr><th>Jumlah masuk</th>${tb.perHari.map((n) => `<td>${n || ""}</td>`).join("")}<td></td></tr></tfoot>
+    </table>
+    <p class="jc-ket">${list.map((x) => `<span><i style="background:${warnaOf(list, x.id)}"></i>${mode === "bulan" ? `${esc(kodeShift(list, x.id))} = ` : ""}${esc(x.nama)} ${jamTeks(x)}</span>`).join("")}<span><i class="libur"></i>${mode === "bulan" ? "L = " : ""}Libur</span></p>
   </div>`;
 }
 
@@ -133,7 +150,9 @@ export function jadwalTab(s) {
       </div>
       ${grid(s, r)}
       ${!kuas ? `<p class="small muted" style="margin:0">Pilih shift di atas dulu, baru ketuk kotak jadwal.</p>` : ""}
+      <div class="row2"><button class="btn soft sm" data-action="excelJadwal">${icon("download", 14)} Unduh Excel</button><button class="btn soft sm" data-action="cetakJadwal">${icon("doc", 14)} Cetak / simpan PDF</button></div>
     </section>
+    ${lembarCetak(s, r)}
     ${polaForm(s, r)}
     ${templateView(s)}
     ${kirimView(s, r)}`;
@@ -186,6 +205,40 @@ export const jadwalActions = {
     if (!confirm(`Kosongkan jadwal ${pendek(r.dari)} – ${pendek(r.sampai)}?`)) return;
     simpan(kosongkan(store.get(), r.dari, r.sampai));
     render();
+  },
+  async excelJadwal() {
+    const s = store.get();
+    const r = rentang(mode, anchor);
+    try {
+      const X = await muatXlsx();
+      const aoa = aoaJadwal(tabelJadwal(s, r.dari, r.sampai), { bisnis: bisnisOf(s), dari: r.dari, sampai: r.sampai });
+      const ws = X.utils.aoa_to_sheet(aoa);
+      ws["!cols"] = [{ wch: 18 }, { wch: 12 }, ...r.hari.map(() => ({ wch: mode === "bulan" ? 8 : 11 })), { wch: 10 }, { wch: 7 }];
+      ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }, { s: { r: 1, c: 0 }, e: { r: 1, c: 5 } }];
+      const wb = X.utils.book_new();
+      X.utils.book_append_sheet(wb, ws, "Jadwal");
+      X.writeFile(wb, `jadwal-${r.dari}-sd-${r.sampai}.xlsx`);
+      toast("File Excel jadwal diunduh");
+    } catch (e) {
+      toast(`Gagal bikin Excel: ${e.message}`, "err");
+    }
+  },
+  cetakJadwal() {
+    // Cuma lembar jadwal yang dicetak, A4 landscape (gaya @page dipasang sementara supaya cetak laporan lain tetap
+    // portrait). "Simpan sebagai PDF" ada di dialog cetak browser.
+    document.getElementById("cetak-jadwal-page")?.remove();
+    const gaya = document.createElement("style");
+    gaya.id = "cetak-jadwal-page";
+    gaya.textContent = "@page { size: A4 landscape; margin: 10mm; }";
+    document.head.appendChild(gaya);
+    document.body.dataset.cetak = "jadwal";
+    const selesai = () => {
+      delete document.body.dataset.cetak;
+      gaya.remove();
+      window.removeEventListener("afterprint", selesai);
+    };
+    window.addEventListener("afterprint", selesai);
+    window.print();
   },
   hapusShift(el) {
     const s = store.get();

@@ -48,6 +48,7 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - Tab **Jadwal** di `#/karyawan` (pemilik & manajer). **Template shift** default Pagi 07–15, Siang 11–19, Malam 15–23 yang bisa diubah, ditambah, dihapus (shift lewat tengah malam boleh) + Libur.
 - Tabel karyawan × hari, tampilan **mingguan** (Senin–Minggu) atau **bulanan** (geser di dalam tabel di HP). Isi pakai "kuas": pilih shift lalu ketuk kotaknya. **Isi cepat**: pola mingguan (satu shift atau beberapa shift bergilir tiap N minggu + hari libur tetap), salin minggu lalu / 4 minggu lalu, kosongkan. Jumlah orang masuk per hari.
 - Nyambung ke absen & gaji: **telat** dari jam mulai shift orang itu (tanpa jadwal: jam masuk umum), **lembur** dari jam pulang yang lewat jam selesai shift, "Sisanya hadir" menandai yang dijadwalkan libur sebagai libur, label jadwal di baris absen.
+- **Ekspor jadwal seluruh karyawan** untuk periode yang dilihat (minggu / bulan): **Excel (.xlsx)** (karyawan × tanggal, hari masuk & libur, jumlah masuk per hari, keterangan jam shift; SheetJS dimuat saat perlu lewat `js/xlsx.js`) dan **Cetak / simpan PDF** (lembar khusus A4 landscape berwarna per shift).
 - **Kirim jadwal** per karyawan lewat WA, Beranda "Hari ini masuk", dan halaman **Jadwal saya** (`#/jadwal`, link di Kasir → Hari ini) untuk akun kasir yang dihubungkan ke data karyawan: jadwal minggu ini & depan.
 - Data `jadwal` = `{ shift, hari, akun }` (terpisah dari `karyawan` supaya kasir bisa menerima jadwalnya tanpa data karyawan/gaji). Logika di `js/jadwal.js`.
 

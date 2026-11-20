@@ -2,6 +2,7 @@
 // (pola bergilir + libur), mingguan/bulanan, salin minggu lalu, label jadwal di absen + telat dari jam shift,
 // Beranda "hari ini masuk", kirim WA, "Jadwal saya" untuk kasir (disimulasikan).
 const { chromium } = require('playwright');
+const fs = require('fs'); const path = require('path'); const vm = require('vm');
 const B = (process.env.RACIKIN_URL || 'http://localhost:8766/'), OUT = process.argv[2];
 const st = (p) => p.evaluate(() => JSON.parse(localStorage.getItem('racikin:v1')));
 const txt = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').trim();
@@ -13,7 +14,7 @@ const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate(
   const b = await chromium.launch();
   for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 860 }]) {
     const hp = vp.width < 900;
-    const p = await (await b.newContext({ viewport: vp })).newPage();
+    const p = await (await b.newContext({ viewport: vp, acceptDownloads: true })).newPage();
     const errs = []; p.on('pageerror', (e) => errs.push(e.message)); p.on('console', (m) => m.type() === 'error' && errs.push(m.text()));
     p.on('dialog', (d) => d.accept());
     await p.goto(B); await p.click('[data-action=dummy]'); await p.waitForSelector('.journey', { timeout: 20000 });
@@ -72,6 +73,26 @@ const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate(
     ok(kolom >= 28, `tampilan bulanan ${kolom} hari`);
     await p.screenshot({ path: `${OUT}/jadwal-bulan-${hp ? 'hp' : 'lebar'}.png`, fullPage: true });
     if (hp) ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'bulanan di HP: geser di dalam tabel, halaman nggak melebar');
+
+    // Ekspor Excel (bulanan) -> baca balik pakai SheetJS
+    const [dl] = await Promise.all([p.waitForEvent('download'), p.click('[data-action=excelJadwal]')]);
+    const ctxX = {}; ctxX.window = ctxX; vm.createContext(ctxX);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '../../js/vendor/xlsx-0.20.3.full.min.js'), 'utf8'), ctxX);
+    const wbX = ctxX.XLSX.read(fs.readFileSync(await dl.path()), { type: 'buffer' });
+    const aoaX = ctxX.XLSX.utils.sheet_to_json(wbX.Sheets.Jadwal, { header: 1, defval: '' });
+    const barisSiti = aoaX.find((r) => r[0] === 'Siti');
+    ok(dl.suggestedFilename().endsWith('.xlsx') && aoaX[3][0] === 'Nama' && aoaX[3].length >= 32 && barisSiti.includes('Siang') && barisSiti.includes('Libur'), `Excel: ${aoaX[3].length - 4} hari, isi shift Siti`);
+    ok(aoaX.some((r) => r[0] === 'Middle' && r[1] === '09:00'), 'Excel: keterangan jam shift');
+
+    // Cetak / PDF: cuma lembar jadwal yang tampil waktu print
+    await p.evaluate(() => { window.print = () => {}; });
+    await p.click('[data-action=cetakJadwal]');
+    await p.emulateMedia({ media: 'print' });
+    ok(await p.isVisible('.jadwal-cetak') && !(await p.isVisible('.jg-kuas')) && !(await p.isVisible('.tabbar')), 'print: cuma lembar jadwal');
+    if (!hp) await p.pdf({ path: `${OUT}/jadwal-bulan.pdf`, preferCSSPageSize: true, printBackground: true });
+    await p.emulateMedia({ media: 'screen' });
+    await p.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+    ok(!(await p.isVisible('.jadwal-cetak')) && !(await p.$('#cetak-jadwal-page')), 'selesai cetak: lembar & gaya cetak dibersihkan');
 
     // Kirim WA
     ok(decodeURIComponent(await p.getAttribute('a.chip-btn[href*="wa.me"]', 'href')).includes('Jadwal kerja'), 'kirim jadwal lewat WA');

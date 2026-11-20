@@ -8,6 +8,7 @@ import { head } from "./_shared.js";
 import { normWa, waLink } from "../loyalty.js";
 import { role } from "../cloud.js";
 import { parseTabel } from "../imporjual.js";
+import { muatXlsx } from "../xlsx.js";
 import {
   STATUS, KOLOM, setelan, tambahPosisi, hapusPosisi, hitungPosisi, absenAktif, karyawanAktif, absenHari, catatAbsen, semuaHadir, rekapAbsen, ringkasHari,
   simpanKaryawan, kenaliTabel, olahAbsen, simpanImpor,
@@ -24,7 +25,6 @@ let tgl = todayISO();
 let ym = todayISO().slice(0, 7);
 let edit = null; // id karyawan yang diedit ("baru" = tambah)
 let impor = null; // { step: input|kolom|ringkas, nama, tabel, map, hasil, tambah:Set, petakan:{}, timpa }
-const XLSX_SRC = "js/vendor/xlsx-0.20.3.full.min.js";
 const hariTeks = (iso) => fmtDate(iso, { weekday: "long", day: "numeric", month: "long" });
 const pendek = (iso) => fmtDate(iso, { day: "numeric", month: "short" });
 const jamKerja = (m) => (m ? `${Math.floor(m / 60)}j ${m % 60 ? `${m % 60}m` : ""}`.trim() : "-");
@@ -344,18 +344,6 @@ function orangTab(s) {
 }
 
 // ---------- Impor mesin absen ----------
-async function muatXlsx() {
-  if (window.XLSX) return window.XLSX;
-  await new Promise((ok, gagal) => {
-    const el = document.createElement("script");
-    el.src = XLSX_SRC;
-    el.onload = ok;
-    el.onerror = () => gagal(new Error("Pembaca Excel gagal dimuat (cek internet)"));
-    document.head.appendChild(el);
-  });
-  return window.XLSX;
-}
-
 /** File -> array baris (array of array). Excel lewat SheetJS, sisanya teks (CSV / TSV / log .dat). */
 async function bacaFile(f) {
   if (/\.(xlsx?|xlsm|ods)$/i.test(f.name)) {

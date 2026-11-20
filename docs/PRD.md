@@ -154,7 +154,7 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 
 ### Fase 38: Jadwal kerja / shift (selesai)
 - Keputusan: template shift default yang bisa diubah; telat & lembur ikut jadwal; pemilik + manajer boleh atur; kasir bisa lihat jadwalnya sendiri.
-- Tab Jadwal (mingguan / bulanan, kuas, pola & gilir, salin), terhubung ke absen (telat, libur) & gaji (lembur), kirim WA, Beranda, `#/jadwal` untuk kasir. Data `jadwal` terlihat oleh kasir (bukan bagian keuangan), tidak bisa ditulis kasir.
+- Tab Jadwal (mingguan / bulanan, kuas, pola & gilir, salin), terhubung ke absen (telat, libur) & gaji (lembur), kirim WA, Beranda, `#/jadwal` untuk kasir. Ekspor jadwal seluruh karyawan ke Excel & PDF (permintaan pemilik, PR yang sama). Data `jadwal` terlihat oleh kasir (bukan bagian keuangan), tidak bisa ditulis kasir.
 
 ### Fase 37: Lembur, THR, rekap gaji, setelan gaji dikunci pemilik (selesai)
 - Lembur dari jam absen (tarif tetap / rumus Depnaker PP 35/2021, maks 4 jam/hari), THR sesuai Permenaker 6/2016 + SE Menaker (H-7, proporsional, harian rata-rata), CSV rekap.

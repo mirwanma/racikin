@@ -248,3 +248,42 @@ export function jamShift(s, tanggal, karyawanId) {
   if (!sh || sh.libur) return null;
   return { mulai: menit(sh.mulai), selesai: menit(sh.selesai), durasi: durasi(sh) };
 }
+
+/**
+ * Tabel jadwal lengkap untuk ekspor (Excel / cetak PDF).
+ * Return { hari: [{ tanggal, label }], baris: [{ nama, posisi, sel: [{ teks, id }], masuk, libur }], perHari: [n], shift }
+ */
+export function tabelJadwal(s, dari, sampai) {
+  const hari = daftarHari(dari, sampai);
+  const list = jadwalOf(s).shift;
+  const ks = (s.karyawan || []).filter((k) => k.aktif !== false || hari.some((t) => jadwalOf(s).hari[t]?.[k.id])).sort((a, b) => a.nama.localeCompare(b.nama, "id"));
+  const baris = ks.map((k) => {
+    const sel = hari.map((t) => {
+      const sh = shiftDi(s, t, k.id);
+      return { id: sh?.id || "", teks: !sh ? "" : sh.libur ? "Libur" : sh.nama };
+    });
+    return { nama: k.nama, posisi: k.posisi || "", sel, masuk: sel.filter((x) => x.id && x.id !== LIBUR).length, libur: sel.filter((x) => x.id === LIBUR).length };
+  });
+  return {
+    hari: hari.map((t) => ({ tanggal: t, label: `${HARI[hariKe(t)]} ${Number(t.slice(8))}/${Number(t.slice(5, 7))}` })),
+    baris,
+    perHari: hari.map((_, i) => baris.filter((b) => b.sel[i].id && b.sel[i].id !== LIBUR).length),
+    shift: list,
+  };
+}
+
+/** Isi sheet Excel (array of array) dari tabelJadwal. */
+export function aoaJadwal(tb, { bisnis = "", dari, sampai }) {
+  return [
+    [`Jadwal kerja ${bisnis}`.trim()],
+    [`Periode ${dari} s/d ${sampai}`],
+    [],
+    ["Nama", "Posisi", ...tb.hari.map((h) => h.label), "Hari masuk", "Libur"],
+    ...tb.baris.map((b) => [b.nama, b.posisi, ...b.sel.map((x) => x.teks), b.masuk, b.libur]),
+    ["Jumlah masuk", "", ...tb.perHari, "", ""],
+    [],
+    ["Keterangan shift", "Mulai", "Selesai"],
+    ...tb.shift.map((x) => [x.nama, x.mulai, x.selesai]),
+    ["Libur", "", ""],
+  ];
+}

@@ -1585,3 +1585,28 @@ body[data-admin="1"] .adm-chart i { background: var(--a-y); }
 .shift-tpl input { min-width: 0; padding: 6px 8px; }
 .jadwal-hari-ini b, .jadwal-hari-ini span { color: var(--ink); font-weight: 800; }
 .jg-sel.isi { color: #1b1916; }
+
+/* Jadwal: lembar cetak / PDF */
+.jadwal-cetak { display: none; }
+@media print {
+  body[data-cetak="jadwal"] #view > *:not(.jadwal-cetak), body[data-cetak="jadwal"] .rail, body[data-cetak="jadwal"] .tabbar { display: none !important; }
+  body[data-cetak="jadwal"] .jadwal-cetak { display: block !important; color: #000; font-family: var(--font); }
+  body[data-cetak="jadwal"] #view { padding: 0 !important; margin: 0 !important; max-width: none !important; width: 100% !important; }
+  .jadwal-cetak h2 { margin: 0; font-size: 16pt; }
+  .jadwal-cetak > p { margin: 2px 0 8px; font-size: 10pt; }
+  .jadwal-cetak table { width: 100%; border-collapse: collapse; font-size: 9pt; table-layout: fixed; }
+  .jadwal-cetak th, .jadwal-cetak td { border: 0.5pt solid #555; padding: 3pt 2pt; text-align: center; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .jadwal-cetak tbody th, .jadwal-cetak tfoot th { text-align: left; }
+  .jadwal-cetak thead th:first-child { width: 18%; }
+  .jadwal-cetak thead th:last-child { width: 6%; }
+  .jadwal-cetak table.bulan { font-size: 7.5pt; }
+  .jadwal-cetak table.bulan thead th:first-child { width: 12%; }
+  .jadwal-cetak table.bulan th, .jadwal-cetak table.bulan td { padding: 2pt 0; }
+  .jadwal-cetak thead small { display: block; font-weight: 400; font-size: 6pt; letter-spacing: -0.2pt; }
+  .jadwal-cetak th small { display: block; font-weight: 400; font-size: 7.5pt; color: #444; }
+  .jadwal-cetak thead th.minggu { color: #b00; }
+  .jadwal-cetak td.libur { background: repeating-linear-gradient(135deg, #fff, #fff 3px, #ddd 3px, #ddd 6px); color: #555; }
+  .jadwal-cetak .jc-ket { display: flex; flex-wrap: wrap; gap: 4mm 8mm; margin-top: 6mm; font-size: 9pt; }
+  .jadwal-cetak .jc-ket i { display: inline-block; width: 10pt; height: 10pt; border: 0.5pt solid #000; margin-right: 4pt; vertical-align: -1pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .jadwal-cetak .jc-ket i.libur { background: repeating-linear-gradient(135deg, #fff, #fff 2px, #bbb 2px, #bbb 4px); }
+}

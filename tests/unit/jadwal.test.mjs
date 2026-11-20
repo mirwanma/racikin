@@ -110,4 +110,24 @@ const wa = J.teksJadwal(s, siti, "2026-11-16", "2026-11-22", "Warung X");
 assert.match(wa, /Senin 16\/11: Pagi 06:00–14:00/);
 assert.match(wa, /Minggu 22\/11: Libur/);
 
+// Ekspor (Excel / PDF)
+const tb = J.tabelJadwal(s, "2026-11-16", "2026-11-22");
+assert.deepEqual(tb.hari.map((h) => h.label).slice(0, 2), ["Sen 16/11", "Sel 17/11"]);
+assert.deepEqual(tb.baris.map((b) => b.nama), ["Siti", "Ujang"], "urut nama");
+const bs = tb.baris[0];
+assert.deepEqual(bs.sel.map((x) => x.teks), ["Pagi", "Pagi", "Pagi", "Pagi", "Pagi", "Pagi", "Libur"]);
+assert.deepEqual([bs.masuk, bs.libur], [6, 1]);
+assert.equal(tb.perHari[6], 1, "Minggu: cuma Ujang");
+const aoa = J.aoaJadwal(tb, { bisnis: "Warung X", dari: "2026-11-16", sampai: "2026-11-22" });
+assert.deepEqual(aoa[0], ["Jadwal kerja Warung X"]);
+assert.deepEqual(aoa[3].slice(0, 3), ["Nama", "Posisi", "Sen 16/11"]);
+assert.deepEqual(aoa[3].slice(-2), ["Hari masuk", "Libur"]);
+assert.deepEqual(aoa[4].slice(-2), [6, 1]);
+assert.equal(aoa[6][0], "Jumlah masuk");
+assert.ok(aoa.some((r) => r[0] === "Dini" && r[1] === "18:00" && r[2] === "02:00"), "keterangan jam shift");
+// Karyawan yang sudah keluar tapi punya jadwal di periode itu tetap muncul
+const keluar = { ...s, karyawan: s.karyawan.map((k) => (k.id === siti.id ? { ...k, aktif: false } : k)) };
+assert.ok(J.tabelJadwal(keluar, "2026-11-16", "2026-11-22").baris.some((b) => b.nama === "Siti"));
+assert.ok(!J.tabelJadwal(keluar, "2027-01-04", "2027-01-10").baris.some((b) => b.nama === "Siti"));
+
 console.log("jadwal OK");
