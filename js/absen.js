@@ -76,6 +76,9 @@ export function simpanKaryawan(s, data) {
     aktif: data.aktif !== false,
     mulai: data.mulai || null,
   };
+  // Setelan gaji (js/gaji.js) ikut disimpan; kalau form tidak mengirimnya, pakai yang lama.
+  const gaji = data.gaji !== undefined ? data.gaji : list.find((x) => x.id === data.id)?.gaji;
+  if (gaji) k.gaji = gaji;
   return { karyawan: data.id && list.some((x) => x.id === data.id) ? list.map((x) => (x.id === data.id ? k : x)) : [...list, k], karyawanBaru: k };
 }
 

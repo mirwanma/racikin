@@ -1,18 +1,22 @@
 // Karyawan & absen (#/karyawan, pemilik/manajer): absen harian sekali ketuk, otomatis dari shift kasir,
 // impor file mesin absen fingerprint (Excel .xls/.xlsx, CSV, log teks), rekap per bulan, data karyawan.
 import { icon } from "../icons.js";
-import { esc, toast, todayISO, addDays, fmtDate, download } from "../ui.js";
+import { esc, rupiah, toast, todayISO, addDays, fmtDate, download } from "../ui.js";
 import { store } from "../store.js";
 import { render } from "../app.js";
 import { head } from "./_shared.js";
-import { normWa } from "../loyalty.js";
+import { normWa, waLink } from "../loyalty.js";
 import { parseTabel } from "../imporjual.js";
 import {
   STATUS, KOLOM, setelan, tambahPosisi, hapusPosisi, hitungPosisi, absenAktif, karyawanAktif, absenHari, catatAbsen, semuaHadir, rekapAbsen, ringkasHari,
   simpanKaryawan, kenaliTabel, olahAbsen, simpanImpor,
 } from "../absen.js";
+import { gajiOf, punyaGaji, periodeDi, hitungGaji, gajianDi, saldoKasbonKaryawan, pinjamKasbon, hapusPinjam, bayarGaji, batalGajian, belumGajian, teksSlip, METODE as METODE_GAJI } from "../gaji.js";
+import { bisnisOf } from "../wa.js";
 
-let tab = "absen"; // absen | rekap | orang
+let tab = "absen"; // absen | rekap | gaji | orang
+let geser = -1; // periode gaji: -1 = periode lalu, 0 = periode ini, -2 dst.
+let bayarId = null; // karyawan yang lagi dibayar gajinya
 let tgl = todayISO();
 let ym = todayISO().slice(0, 7);
 let edit = null; // id karyawan yang diedit ("baru" = tambah)
@@ -96,6 +100,110 @@ function rekapTab(s) {
     </section>`;
 }
 
+// ---------- Gaji ----------
+/** Pengingat Beranda: gaji periode lalu belum dibayar. */
+export function gajiCard(s) {
+  if (!absenAktif(s)) return "";
+  const b = belumGajian(s, todayISO());
+  if (!b.length) return "";
+  return `<a href="#/karyawan?tab=gaji" class="card pajak-mini">
+    ${icon("wallet", 22)}
+    <span><b>Gajian belum dibayar: ${rupiah(b.reduce((a, x) => a + x.kotor, 0))}</b><small class="muted">${b.slice(0, 3).map((x) => esc(x.k.nama)).join(", ")}${b.length > 3 ? ` +${b.length - 3}` : ""} · periode ${pendek(b[0].dari)} – ${pendek(b[0].sampai)}</small></span>
+    ${icon("chevron", 18)}
+  </a>`;
+}
+
+/** Periode gaji karyawan sesuai geser (relatif ke periode yang memuat hari ini). */
+function periodeK(k) {
+  let p = periodeDi(gajiOf(k).periode, todayISO());
+  for (let i = 0; i > geser; i--) p = periodeDi(gajiOf(k).periode, addDays(p.dari, -1));
+  return p;
+}
+
+function slipBaris(label, val, cls = "") {
+  return `<div class="row-between pos-sum ${cls}"><span>${label}</span><b>${val}</b></div>`;
+}
+
+function kartuGaji(s, k) {
+  const p = periodeK(k);
+  const sudah = gajianDi(s, k.id, p.dari, p.sampai);
+  const h = hitungGaji(s, k, p.dari, p.sampai);
+  const g = gajiOf(k);
+  const berjalan = p.sampai >= todayISO();
+  if (sudah) {
+    const slip = teksSlip(k, sudah, bisnisOf(s), rupiah);
+    return `<section class="card stack gaji-card lunas" data-id="${k.id}">
+      <div class="row-between"><div><h2 class="card-title" style="margin:0">${esc(k.nama)}</h2><p class="small muted">${pendek(sudah.dari)} – ${pendek(sudah.sampai)} · dibayar ${pendek(sudah.tanggal)}</p></div><span class="sehat-pill pos">Dibayar</span></div>
+      ${slipBaris("Total gaji", rupiah(sudah.kotor))}
+      ${sudah.potongKasbon ? slipBaris("Potong kasbon", `−${rupiah(sudah.potongKasbon)}`) : ""}
+      ${slipBaris("Diterima", rupiah(sudah.bersih), "pos-total")}
+      <div class="row2"><a class="btn soft sm" target="_blank" rel="noopener" href="${esc(k.wa ? waLink(k.wa, slip) : `https://wa.me/?text=${encodeURIComponent(slip)}`)}">${icon("chat", 14)} Kirim slip WA</a><button class="btn ghost sm" data-action="batalGaji" data-id="${sudah.id}">Batalkan</button></div>
+    </section>`;
+  }
+  const buka = bayarId === k.id;
+  const pot = Math.min(h.sisaKasbon, h.kotor);
+  return `<section class="card stack gaji-card" data-id="${k.id}">
+    <div class="row-between"><div><h2 class="card-title" style="margin:0">${esc(k.nama)}</h2><p class="small muted">${pendek(p.dari)} – ${pendek(p.sampai)}${berjalan ? " · masih berjalan" : ""}</p></div><b>${rupiah(h.kotor)}</b></div>
+    <p class="small">Hadir <b>${h.hadir}</b>${h.izin ? ` · izin ${h.izin}` : ""}${h.sakit ? ` · sakit ${h.sakit}` : ""}${h.libur ? ` · libur ${h.libur}` : ""}${h.alpa ? ` · <span class="neg">alpa ${h.alpa}</span>` : ""}${h.telat ? ` · telat ${h.telat}` : ""}</p>
+    ${
+      buka
+        ? `<form class="stack inline-form" data-form="bayarGaji" data-id="${k.id}" data-dari="${p.dari}" data-sampai="${p.sampai}">
+        ${g.skema === "harian" ? slipBaris(`Gaji harian ${h.hadir} × ${rupiah(h.perHari)}`, rupiah(h.pokok)) : slipBaris("Gaji pokok", rupiah(h.pokok))}
+        ${h.potongAbsen ? slipBaris(`Potongan nggak masuk (${h.alpa + h.izin} hari)`, `−${rupiah(h.potongAbsen)}`) : ""}
+        ${h.makan ? slipBaris(`Uang makan ${h.hadir} hari`, rupiah(h.makan)) : ""}
+        <div class="row2">
+          <label class="field"><span>Bonus / lembur (Rp)</span><input type="number" inputmode="numeric" name="bonus" min="0" step="1" placeholder="0"></label>
+          <label class="field"><span>Potong kasbon (sisa ${rupiah(h.sisaKasbon)})</span><input type="number" inputmode="numeric" name="potong" min="0" max="${h.sisaKasbon}" step="1" value="${pot || ""}" placeholder="0" ${h.sisaKasbon ? "" : "disabled"}></label>
+        </div>
+        <div class="row2">
+          <label class="field"><span>Tanggal bayar</span><input type="date" name="tanggal" value="${todayISO()}" required></label>
+          <label class="field"><span>Dibayar</span><select name="metode">${METODE_GAJI.map((m) => `<option value="${m.id}">${m.nama}</option>`).join("")}</select></label>
+        </div>
+        <p class="small muted">Tercatat di Kas: Gaji (total gaji)${h.sisaKasbon ? " + potongan kasbon kembali masuk" : ""}.${berjalan ? " Periode ini belum selesai, absen sisa harinya belum terhitung." : ""}</p>
+        <div class="row2"><button type="button" class="btn ghost" data-action="tutupBayar">Batal</button><button class="btn primary">Bayar gaji</button></div>
+      </form>`
+        : `<button class="btn primary sm" data-action="bukaBayar" data-id="${k.id}" ${h.kotor ? "" : "disabled"}>${h.kotor ? "Hitung & bayar" : "Belum ada yang dibayar"}</button>`
+    }
+  </section>`;
+}
+
+function kasbonKaryawanView(s) {
+  const ks = karyawanAktif(s);
+  const ada = ks.map((k) => ({ k, sisa: saldoKasbonKaryawan(s, k.id) })).filter((x) => x.sisa > 0);
+  const riwayat = [...(s.kasbonKaryawan || [])].sort((a, b) => b.tanggal.localeCompare(a.tanggal)).slice(0, 8);
+  const nama = new Map((s.karyawan || []).map((k) => [k.id, k.nama]));
+  return `<section class="card stack">
+    <h2 class="card-title" style="margin:0">Kasbon karyawan</h2>
+    ${ada.length ? ada.map((x) => slipBaris(esc(x.k.nama), rupiah(x.sisa))).join("") : `<p class="small muted" style="margin:0">Nggak ada kasbon karyawan.</p>`}
+    <form class="stack" data-form="pinjam">
+      <div class="row2">
+        <label class="field"><span>Karyawan</span><select name="karyawan" required><option value="">Pilih</option>${ks.map((k) => `<option value="${k.id}">${esc(k.nama)}</option>`).join("")}</select></label>
+        <label class="field"><span>Jumlah (Rp)</span><input type="number" inputmode="numeric" name="nominal" min="1" step="1" required></label>
+      </div>
+      <input name="catatan" maxlength="80" placeholder="Catatan (opsional), cth: buat bayar sekolah" aria-label="Catatan">
+      <button class="btn soft">Catat kasbon (uang keluar dari Kas)</button>
+    </form>
+    ${
+      riwayat.length
+        ? `<div>${riwayat.map((x) => `<div class="row-between pos-sum"><span>${esc(nama.get(x.karyawanId) || "-")} · ${x.jenis === "pinjam" ? "kasbon" : "potong gaji"} <small class="muted">${pendek(x.tanggal)}</small></span><span><b class="${x.jenis === "pinjam" ? "neg" : "pos"}">${x.jenis === "pinjam" ? "+" : "−"}${rupiah(x.nominal)}</b>${x.jenis === "pinjam" ? ` <button class="link small" data-action="hapusPinjam" data-id="${x.id}">hapus</button>` : ""}</span></div>`).join("")}</div>`
+        : ""
+    }
+    <p class="small muted">Kasbon karyawan dipotong waktu bayar gaji. Di laporan laba rugi kasbon nggak dihitung biaya (uangnya kembali lewat potongan).</p>
+  </section>`;
+}
+
+function gajiTab(s) {
+  const ks = karyawanAktif(s);
+  const adaGaji = ks.filter(punyaGaji);
+  const belum = ks.filter((k) => !punyaGaji(k));
+  const label = geser === -1 ? "Periode lalu" : geser === 0 ? "Periode ini (berjalan)" : `${-geser} periode lalu`;
+  return `
+    <div class="month-nav"><button class="icon-btn" data-action="geserGaji" data-d="-1" aria-label="Periode sebelumnya">${icon("back", 16)}</button><b>${label}</b><button class="icon-btn" data-action="geserGaji" data-d="1" aria-label="Periode berikutnya" ${geser >= 0 ? "disabled" : ""}>${icon("chevron", 16)}</button></div>
+    ${adaGaji.length ? adaGaji.map((k) => kartuGaji(s, k)).join("") : `<section class="card"><p class="small" style="margin:0">Atur gaji tiap karyawan dulu di tab <b>Karyawan</b> (Edit → Gaji): harian atau bulanan, uang makan, dibayar mingguan / bulanan.</p></section>`}
+    ${belum.length && adaGaji.length ? `<p class="small muted">Gaji belum diatur: ${belum.map((k) => esc(k.nama)).join(", ")}.</p>` : ""}
+    ${kasbonKaryawanView(s)}`;
+}
+
 // ---------- Karyawan ----------
 function akunKasir(s) {
   const m = new Map();
@@ -114,7 +222,19 @@ function formKaryawan(s, k) {
       <label class="field"><span>No. WA (opsional)</span><input name="wa" inputmode="tel" maxlength="20" value="${esc(k?.wa || "")}"></label>
       <label class="field"><span>PIN / ID di mesin absen</span><input name="pin" maxlength="20" value="${esc(k?.pin || "")}" placeholder="cth: 3"></label>
     </div>
+    <label class="field"><span>Mulai kerja (opsional)</span><input type="date" name="mulai" value="${esc(k?.mulai || "")}" max="${todayISO()}"></label>
     ${akun.length ? `<label class="field"><span>Akun kasir (absen otomatis dari shift)</span><select name="akunId"><option value="">Tidak dihubungkan</option>${akun.map(([id, nm]) => `<option value="${esc(id)}" ${k?.akunId === id ? "selected" : ""}>${esc(nm)}</option>`).join("")}</select></label>` : ""}
+    <fieldset class="gaji-set stack"><legend>Gaji</legend>
+      <div class="row2">
+        <label class="field"><span>Skema</span><select name="skema"><option value="harian" ${gajiOf(k).skema === "harian" ? "selected" : ""}>Harian (per hari hadir)</option><option value="bulanan" ${gajiOf(k).skema === "bulanan" ? "selected" : ""}>Bulanan (tetap)</option></select></label>
+        <label class="field"><span>Nominal (Rp per hari / bulan)</span><input type="number" inputmode="numeric" name="nominal" min="0" step="1" value="${gajiOf(k).nominal || ""}" placeholder="cth: 75000"></label>
+      </div>
+      <div class="row2">
+        <label class="field"><span>Uang makan per hari hadir (Rp)</span><input type="number" inputmode="numeric" name="makan" min="0" step="1" value="${gajiOf(k).makan || ""}" placeholder="0"></label>
+        <label class="field"><span>Dibayar tiap</span><select name="periode"><option value="mingguan" ${gajiOf(k).periode === "mingguan" ? "selected" : ""}>Minggu (Senin–Minggu)</option><option value="bulanan" ${gajiOf(k).periode === "bulanan" ? "selected" : ""}>Bulan</option></select></label>
+      </div>
+      <label class="impor-cek"><input type="checkbox" name="potong" ${gajiOf(k).potong ? "checked" : ""}><span>Gaji bulanan dipotong per hari alpa / izin (gaji ÷ 26 hari kerja)</span></label>
+    </fieldset>
     ${k ? `<label class="impor-cek"><input type="checkbox" name="aktif" ${k.aktif !== false ? "checked" : ""}><span>Masih bekerja (hilangkan centang kalau sudah keluar, riwayat absen tetap ada)</span></label>` : ""}
     <div class="row2"><button type="button" class="btn ghost" data-action="batalEdit">Batal</button><button class="btn primary">Simpan</button></div>
   </form>`;
@@ -129,7 +249,7 @@ function orangTab(s) {
       .map(
         (k) => `<section class="card ${k.aktif === false ? "muted" : ""}">
         <div class="row-between"><div><h2 class="card-title" style="margin:0">${esc(k.nama)}${k.aktif === false ? ` <small class="muted">(sudah keluar)</small>` : ""}</h2>
-          <p class="small muted">${[k.posisi, k.pin ? `PIN ${esc(k.pin)}` : "", k.akunId ? "akun kasir" : "", k.wa ? esc(k.wa) : ""].filter(Boolean).join(" · ") || "-"}</p></div>
+          <p class="small muted">${[k.posisi, k.pin ? `PIN ${esc(k.pin)}` : "", k.akunId ? "akun kasir" : "", k.wa ? esc(k.wa) : "", punyaGaji(k) ? `${rupiah(gajiOf(k).nominal)}/${gajiOf(k).skema === "harian" ? "hari" : "bulan"}` : "gaji belum diatur"].filter(Boolean).join(" · ") || "-"}</p></div>
           <button class="btn ghost sm" data-action="edit" data-id="${k.id}">Edit</button></div>
         ${edit === k.id ? formKaryawan(s, k) : ""}
       </section>`,
@@ -259,8 +379,12 @@ export const karyawan = {
         <button class="btn primary" data-action="nyala">Aktifkan</button>
       </section>`;
     if (impor) return `${head("Karyawan & Absen", "#/bisnis")}${imporView(s)}`;
-    const tabs = `<div class="seg seg3">${[["absen", "Absen"], ["rekap", "Rekap"], ["orang", "Karyawan"]].map(([k, v]) => `<label><input type="radio" name="tab" value="${k}" data-change="tab" ${tab === k ? "checked" : ""}><span>${v}</span></label>`).join("")}</div>`;
-    return `${head("Karyawan & Absen", "#/bisnis")}${tabs}${tab === "rekap" ? rekapTab(s) : tab === "orang" ? orangTab(s) : absenTab(s)}`;
+    if (location.hash.includes("tab=gaji")) {
+      tab = "gaji";
+      history.replaceState(null, "", "#/karyawan");
+    }
+    const tabs = `<div class="seg seg4">${[["absen", "Absen"], ["rekap", "Rekap"], ["gaji", "Gaji"], ["orang", "Karyawan"]].map(([k, v]) => `<label><input type="radio" name="tab" value="${k}" data-change="tab" ${tab === k ? "checked" : ""}><span>${v}</span></label>`).join("")}</div>`;
+    return `${head("Karyawan & Absen", "#/bisnis")}${tabs}${tab === "rekap" ? rekapTab(s) : tab === "gaji" ? gajiTab(s) : tab === "orang" ? orangTab(s) : absenTab(s)}`;
   },
   changes: {
     tab(el) {
@@ -362,6 +486,30 @@ export const karyawan = {
       store.set((s) => ({ absenSetting: { ...setelan(s), posisi: hapusPosisi(setelan(s).posisi, p) } }));
       render();
     },
+    geserGaji(el) {
+      geser = Math.min(0, geser + Number(el.dataset.d));
+      bayarId = null;
+      render();
+    },
+    bukaBayar(el) {
+      bayarId = el.dataset.id;
+      render();
+    },
+    tutupBayar() {
+      bayarId = null;
+      render();
+    },
+    batalGaji(el) {
+      if (!confirm("Batalkan catatan gaji ini? Pengeluaran Kas & potongan kasbonnya ikut dihapus.")) return;
+      store.set(batalGajian(store.get(), el.dataset.id));
+      render();
+    },
+    hapusPinjam(el) {
+      if (!confirm("Hapus catatan kasbon ini? Pengeluaran Kas-nya ikut dihapus.")) return;
+      const r = hapusPinjam(store.get(), el.dataset.id);
+      if (r) store.set(r);
+      render();
+    },
     batalEdit() {
       edit = null;
       render();
@@ -421,6 +569,29 @@ export const karyawan = {
     },
   },
   forms: {
+    bayarGaji(f) {
+      const fd = new FormData(f);
+      const s = store.get();
+      try {
+        const r = bayarGaji(s, f.dataset.id, { dari: f.dataset.dari, sampai: f.dataset.sampai, bonus: fd.get("bonus"), potongKasbon: fd.get("potong") || 0, tanggal: String(fd.get("tanggal")), metode: String(fd.get("metode")) });
+        store.set({ gajian: r.gajian, kasbonKaryawan: r.kasbonKaryawan, transactions: r.transactions });
+        toast(`Gaji ${s.karyawan.find((k) => k.id === f.dataset.id).nama} dibayar ${rupiah(r.entri.bersih)}`);
+      } catch (e) {
+        return toast(e.message, "err");
+      }
+      bayarId = null;
+      render();
+    },
+    pinjam(f) {
+      const fd = new FormData(f);
+      try {
+        store.set(pinjamKasbon(store.get(), String(fd.get("karyawan")), { nominal: fd.get("nominal"), tanggal: todayISO(), catatan: fd.get("catatan") || "" }));
+        toast("Kasbon karyawan tercatat");
+      } catch (e) {
+        return toast(e.message, "err");
+      }
+      render();
+    },
     posisi(f) {
       const s = store.get();
       try {
@@ -436,7 +607,7 @@ export const karyawan = {
       const fd = new FormData(f);
       const s = store.get();
       try {
-        const r = simpanKaryawan(s, { id: f.dataset.id || null, nama: fd.get("nama"), posisi: fd.get("posisi"), wa: normWa(fd.get("wa")), pin: fd.get("pin"), akunId: fd.get("akunId") || null, aktif: f.dataset.id ? fd.get("aktif") === "on" : true, mulai: (s.karyawan || []).find((x) => x.id === f.dataset.id)?.mulai || todayISO() });
+        const r = simpanKaryawan(s, { id: f.dataset.id || null, nama: fd.get("nama"), posisi: fd.get("posisi"), wa: normWa(fd.get("wa")), pin: fd.get("pin"), akunId: fd.get("akunId") || null, gaji: { skema: fd.get("skema") === "bulanan" ? "bulanan" : "harian", nominal: Math.max(0, Math.round(Number(fd.get("nominal")) || 0)), makan: Math.max(0, Math.round(Number(fd.get("makan")) || 0)), periode: fd.get("periode") === "bulanan" ? "bulanan" : "mingguan", potong: fd.get("potong") === "on", hariKerja: 26 }, aktif: f.dataset.id ? fd.get("aktif") === "on" : true, mulai: String(fd.get("mulai") || "") || null });
         store.set({ karyawan: r.karyawan });
         toast(f.dataset.id ? "Tersimpan" : `${r.karyawanBaru.nama} ditambahkan`);
       } catch (e) {
