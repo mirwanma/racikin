@@ -1,7 +1,8 @@
-// Data dummy lengkap TAHGUY: 15 menu + resep, 25 bahan, penjualan kasir 60 hari terakhir
-// (toko & order online), belanja bahan, biaya operasional, pelanggan & stempel, plus RAB, brand,
-// aktivasi & kalender konten. Dipakai untuk demo / uji coba. Hasilnya acak tapi konsisten
-// (seed tetap), dan semua angka saling cocok: Kas = rekap kasir, stok = belanja - pemakaian.
+// Data dummy lengkap TAHGUY: 15 menu + resep, 25 bahan, penjualan kasir 60 hari terakhir yang tumbuh ±3x
+// (toko & order online), belanja bahan (ikut naik, sebagian tempo ke supplier), biaya operasional, pelanggan
+// & stempel, karyawan (jadwal shift, absen, gaji, kasbon karyawan), plus RAB, brand, aktivasi & kalender konten.
+// Dipakai untuk demo / uji coba. Hasilnya acak tapi konsisten (seed tetap), dan semua angka saling cocok:
+// Kas = rekap kasir, stok = belanja - pemakaian, stempel = riwayat stempel, gaji dari absen.
 import { uid } from "./store.js";
 import { todayISO, addDays } from "./ui.js";
 import { hargaItem, kunciItem, pakaiItem } from "./varian.js";
@@ -11,6 +12,10 @@ import { newToken } from "./loyalty.js";
 import { demo } from "./demo.js";
 import { ringkasan } from "./shift.js";
 import { pilihPromo } from "./promo.js";
+import { simpanKaryawan, POSISI } from "./absen.js";
+import { bayarGaji, pinjamKasbon, saldoKasbonKaryawan } from "./gaji.js";
+import { sinkronAkun } from "./jadwal.js";
+import { notaUtang, bayarUtang, sisaNota } from "./utang.js";
 
 export const HARI = 60;
 
@@ -128,6 +133,7 @@ export const TIM_CONTOH = [
   { id: "contoh-pemilik", nama: "Pemilik" },
   { id: "contoh-rina", nama: "Rina" },
   { id: "contoh-dodi", nama: "Dodi" },
+  { id: "contoh-sari", nama: "Sari" }, // dapur
 ];
 function kasirHari(tim, tanggal) {
   const dow = new Date(tanggal + "T00:00:00").getDay();
@@ -137,10 +143,14 @@ function kasirHari(tim, tanggal) {
 }
 
 /**
- * tim (opsional) = [{id,nama}] untuk [pemilik, kasir, manajer]; kalau tidak diisi pakai nama contoh.
+ * tim (opsional) = [{id,nama}] untuk [pemilik, kasir, manajer, dapur]; kalau tidak diisi pakai nama contoh.
  * Order & shift dicatat atas nama orang yang jaga hari itu, supaya rekap per kasir terlihat.
+ * tumbuh = kelipatan ramainya usaha dari awal ke akhir 60 hari (default 3x).
+ * pelangganAda = [{id,nama,wa,token}] pelanggan lama yang dipakai lagi (kartu stempel yang sudah dibagikan tetap nyambung).
+ * jam = "HH:MM" jam sekarang (default jam perangkat); order hari ini hanya sampai jam ini.
+ * skala = pengali jumlah order per hari (rasio tumbuh tetap); dipakai kalau data harus lebih kecil (batas dokumen 2 MB).
  */
-export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH } = {}) {
+export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH, tumbuh = 3, pelangganAda = null, jam = null, skala = 1 } = {}) {
   const r = rng(20261111);
   const chance = (p) => r() < p;
   const between = (a, b) => a + Math.floor(r() * (b - a + 1));
@@ -151,7 +161,7 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH }
     return list[list.length - 1];
   };
   const start = addDays(today, -(HARI - 1));
-  const jamSekarang = (() => {
+  const jamSekarang = jam || (() => {
     const d = new Date();
     return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   })();
@@ -208,6 +218,11 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH }
     _w: i < 8 ? 6 : i < 24 ? 3 : 1,
     _sampai: i >= 32 ? 28 : HARI,
   }));
+  // Pakai identitas pelanggan lama (id, WA, token kartu stempel) kalau namanya sama, supaya kartu yang sudah dibagikan tetap nyambung.
+  for (const x of pelangganAda || []) {
+    const p = pelanggan.find((y) => y.nama === x.nama && !y._ada);
+    if (p) Object.assign(p, { id: x.id, wa: x.wa ?? p.wa, token: x.token || p.token, _ada: true });
+  }
   const stempelLog = [];
 
   // ---------- Harga online ----------
@@ -238,8 +253,8 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH }
     const tanggal = addDays(start, d);
     const dow = new Date(tanggal + "T00:00:00").getDay();
     const base = dow === 0 || dow === 6 ? 44 : dow === 5 ? 38 : 32;
-    const tren = 0.8 + (0.35 * d) / (HARI - 1); // usaha makin rame
-    let n = Math.round(base * tren * (0.85 + r() * 0.3) * (hujan.has(tanggal) ? 0.5 : 1));
+    const tren = 0.52 * (1 + (tumbuh - 1) * 1.25 * (d / (HARI - 1))); // usaha makin rame: minggu terakhir ±tumbuh x minggu pertama
+    let n = Math.round(base * skala * tren * (0.85 + r() * 0.3) * (hujan.has(tanggal) ? 0.5 : 1));
     const jamList = Array.from({ length: n }, () => {
       const jam = weighted([15, 16, 17, 18, 19, 20, 21], (h) => ({ 15: 2, 16: 4, 17: 7, 18: 8, 19: 7, 20: 4, 21: 2 })[h]);
       return `${String(jam).padStart(2, "0")}:${String(between(0, 59)).padStart(2, "0")}`;
@@ -341,10 +356,19 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH }
   }
 
   // ---------- Stok: stok awal, belanja, pemakaian ----------
+  // Pemakaian rata-rata di sekitar hari ke-d (usaha tumbuh, jadi belanja ikut naik & stok nggak pernah minus).
+  const pakaiPada = (id, d) => pakaiHarian[addDays(start, d)]?.[id] || 0;
+  const rataSekitar = (id, d, w = 3) => {
+    let s = 0;
+    let n = 0;
+    for (let i = Math.max(0, d - w); i <= Math.min(HARI - 1, d + w); i++) (s += pakaiPada(id, i)), n++;
+    return n ? s / n : 0;
+  };
   const rata = {};
-  for (const b of bahan) rata[b.id] = Object.values(pakaiHarian).reduce((a, h) => a + (h[b.id] || 0), 0) / HARI;
+  for (const b of bahan) rata[b.id] = rataSekitar(b.id, HARI - 1, 6);
   const stokLog = [];
   const transactions = [];
+  const utangSupplier = [];
   const kurangDiBelanja = new Set([idB.keju, idB.aren]); // dibiarkan menipis di akhir (biar ada pengingat stok)
   const stok = {};
   const round2 = (n) => Math.round(n * 100) / 100;
@@ -381,29 +405,43 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH }
   for (const b of bahan) {
     const pack = BAHAN.find(([k]) => idB[k] === b.id)[5];
     b.min = Math.max(1, Math.ceil(rata[b.id] * 1.5));
-    stok[b.id] = Math.max(pack, Math.ceil(rata[b.id] * 3));
+    stok[b.id] = Math.max(pack, Math.ceil(rataSekitar(b.id, 0) * 3));
     stokLog.push({ id: uid(), tanggal: start, bahanId: b.id, delta: stok[b.id], alasan: "opname", catatan: "Stok awal (hitung fisik)" });
   }
   for (let d = 0; d < HARI; d++) {
     const tanggal = addDays(start, d);
-    const belanja = { food: [], kemasan: [] };
+    const belanja = { food: [], kemasan: [], tempo: [] };
     for (const b of bahan) {
       const [, , , , kemasan, pack] = BAHAN.find(([k]) => idB[k] === b.id);
       const akhir = d >= HARI - 3 && kurangDiBelanja.has(b.id);
-      if (!akhir && stok[b.id] < rata[b.id] * 2.2) {
-        const butuh = rata[b.id] * 4 - stok[b.id];
+      const rd = rataSekitar(b.id, d);
+      if (!akhir && stok[b.id] < rd * 2.2) {
+        const butuh = rd * 4 - stok[b.id];
         const qty = Math.max(pack, Math.ceil(butuh / pack) * pack);
         stok[b.id] += qty;
         const harga = hargaPada(b, d);
         hargaAkhir[b.id] = harga;
         stokLog.push({ id: uid(), tanggal, bahanId: b.id, delta: qty, alasan: "beli", catatan: supNama[supOf[b.id]], harga, supplierId: supOf[b.id] });
-        (kemasan ? belanja.kemasan : belanja.food).push({ nama: b.nama, total: qty * harga });
+        // 10 hari terakhir frozen food dibayar tempo 7 hari (utang supplier), sisanya bayar langsung.
+        const tempo = supOf[b.id] === supId.frozen && d >= HARI - 10;
+        (tempo ? belanja.tempo : kemasan ? belanja.kemasan : belanja.food).push({ nama: b.nama, total: qty * harga });
       }
       const pakai = pakaiHarian[tanggal][b.id] || 0;
       if (pakai) {
         stok[b.id] -= pakai;
         stokLog.push({ id: `pos-${tanggal}-${b.id}`, tanggal, bahanId: b.id, delta: -round2(pakai), alasan: "jual", catatan: "Kasir (gabungan harian)" });
       }
+    }
+    if (belanja.tempo.length) {
+      utangSupplier.push(
+        notaUtang({
+          supplierId: supId.frozen,
+          tanggal,
+          tempo: addDays(tanggal, 7),
+          rincian: [{ kategori: "Bahan Baku", nominal: Math.round(belanja.tempo.reduce((a, x) => a + x.total, 0) / 500) * 500 }],
+          catatan: belanja.tempo.map((x) => x.nama.toLowerCase()).join(", "),
+        }),
+      );
     }
     for (const [jenis, kategori] of [["food", "Bahan Baku"], ["kemasan", "Kemasan"]]) {
       const list = belanja[jenis];
@@ -441,8 +479,8 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH }
     const tgl = Number(tanggal.slice(8));
     if (tgl === 1) tx(tanggal, "keluar", "Operasional", 750000, "Sewa lapak depan kampus (bulanan)");
     if (tgl === 5) tx(tanggal, "keluar", "Operasional", 185000, "Listrik & air lapak");
-    if (d % 2 === 0) tx(tanggal, "keluar", "Operasional", 22000, "Isi ulang gas LPG 3 kg");
-    if (dow === 6) tx(tanggal, "keluar", "Gaji", 450000, "Gaji mingguan helper (Ujang)");
+    if (d % 2 === 0 || d >= 35) tx(tanggal, "keluar", "Operasional", 22000, "Isi ulang gas LPG 3 kg"); // makin rame, gas tiap hari
+    // Gaji karyawan dicatat lewat menu Gaji (lihat tambahTim), bukan transaksi manual.
     if (dow === 1) tx(tanggal, "keluar", "Marketing", 75000, "Iklan Instagram & TikTok lokal");
     if (dow === 3) tx(tanggal, "keluar", "Lainnya", 15000, "Retribusi kebersihan");
   }
@@ -502,12 +540,13 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH }
     studio: null,
     loyalty,
     pelanggan: pelanggan
-      .filter((x) => x.kunjungan > 0)
-      .map(({ _w, _sampai, ...x }) => x),
+      .filter((x) => x.kunjungan > 0 || x._ada)
+      .map(({ _w, _sampai, _ada, ...x }) => ({ ...x, dibuat: x.dibuat || start })),
     stempelLog,
     shifts: [],
     posSetting: { wajibShift: false },
     supplier,
+    utangSupplier,
     meja: Array.from({ length: 8 }, (_, i) => ({ id: uid() + "m" + i, nama: i < 6 ? `Meja ${i + 1}` : `Teras ${i - 5}`, token: (uid() + uid() + "racikin").slice(0, 24) })),
     settings: settings || { aiMode: "demo", endpoint: "", anonKey: "" },
   };
@@ -537,6 +576,111 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH }
   // Detail order disimpan 30 hari (sama seperti kasir); rekap harian & Kas tetap 60 hari.
   const batas = addDays(today, -SIMPAN_HARI);
   state.orders = state.orders.filter((o) => o.tanggal >= batas);
+  state = tambahTim(state, { today, start, tim, jamSekarang });
+  // Utang frozen food yang sudah jatuh tempo dibayar (transfer) di tanggal tempo; yang belum, masih utang.
+  for (const n of state.utangSupplier) if (n.tempo < today) state = { ...state, ...bayarUtang(state, n.id, { nominal: sisaNota(n), tanggal: n.tempo, metode: "transfer" }) };
+  state.utangSupplier = state.utangSupplier.map((n) => ({ ...n, bayar: n.bayar || [] }));
   state.transactions = [...state.transactions].sort((a, b) => a.tanggal.localeCompare(b.tanggal));
   return state;
+}
+
+/**
+ * Karyawan contoh: tim bertambah seiring usaha makin ramai. Jadwal shift (sampai 2 minggu ke depan), absen dari jadwal
+ * (kadang telat, izin, sakit, lembur di akhir pekan yang ramai), gaji mingguan / bulanan dibayar lewat menu Gaji
+ * (Kas kategori Gaji), kasbon karyawan dipotong gaji. Rina / Dodi / Sari dihubungkan ke akun tim (Jadwal saya).
+ */
+function tambahTim(state, { today, start, tim, jamSekarang }) {
+  const r = rng(4242);
+  const L = "libur";
+  const shift = [
+    { id: "prep", nama: "Persiapan", mulai: "09:00", selesai: "17:00" },
+    { id: "sore", nama: "Sore", mulai: "14:00", selesai: "22:00" },
+    { id: "tutup", nama: "Tutup", mulai: "15:00", selesai: "23:00" },
+  ];
+  // [nama, posisi, akun tim (index), gaji, mulai kerja (hari ke-, negatif = sebelum data), pola Minggu..Sabtu]
+  const DATA = [
+    ["Rina", "Kasir", 1, { skema: "harian", nominal: 90000, makan: 10000, periode: "mingguan", lembur: "tetap", tarifLembur: 12000 }, -40, [L, "sore", "sore", "sore", "sore", "sore", L]],
+    ["Dodi", "Manajer", 2, { skema: "bulanan", nominal: 3200000, makan: 0, periode: "bulanan", potong: true, lembur: "tidak" }, -70, ["tutup", L, "prep", "prep", "prep", L, "tutup"]],
+    ["Ujang", "Dapur / masak", null, { skema: "harian", nominal: 75000, makan: 10000, periode: "mingguan", lembur: "tetap", tarifLembur: 10000 }, -50, [L, "prep", "prep", "prep", "prep", "prep", "prep"]],
+    ["Sari", "Dapur / masak", 3, { skema: "harian", nominal: 85000, makan: 10000, periode: "mingguan", lembur: "tetap", tarifLembur: 10000 }, 18, ["sore", L, L, "sore", "sore", "sore", "sore"]],
+    ["Bagas", "Kurir", null, { skema: "harian", nominal: 70000, makan: 10000, periode: "mingguan", lembur: "tidak" }, 40, ["sore", L, "sore", L, L, "tutup", "tutup"]],
+  ];
+  let st = { ...state, karyawan: [], absen: {}, gajian: [], kasbonKaryawan: [], thr: [], absenSetting: { aktif: true, jamMasuk: "14:00", toleransi: 10, jamKerja: 8, posisi: POSISI } };
+  const ks = [];
+  for (const [nama, posisi, akun, gaji, mulai] of DATA) {
+    const x = simpanKaryawan(st, { id: uid() + "k", nama, posisi, akunId: akun != null && tim[akun] ? tim[akun].id : null, gaji: { hariKerja: 26, potong: true, ...gaji }, mulai: addDays(start, mulai) });
+    st = { ...st, karyawan: x.karyawan };
+    ks.push(x.karyawanBaru);
+  }
+  const pola = Object.fromEntries(DATA.map((d, i) => [ks[i].id, d[5]]));
+  const hm = (m) => `${String(Math.floor((((m % 1440) + 1440) % 1440) / 60)).padStart(2, "0")}:${String((((m % 1440) + 1440) % 1440) % 60).padStart(2, "0")}`;
+  const menit = (s) => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));
+  const sekarang = menit(jamSekarang);
+  const hari = {};
+  const absen = {};
+  for (let t = start; t <= addDays(today, 13); t = addDays(t, 1)) {
+    const dow = new Date(t + "T00:00:00").getDay();
+    const d = Math.round((new Date(t + "T00:00:00") - new Date(start + "T00:00:00")) / 864e5);
+    for (const k of ks) {
+      if (k.mulai > t) continue;
+      const v = pola[k.id][dow];
+      (hari[t] ||= {})[k.id] = v;
+      if (t > today) continue;
+      const sh = shift.find((x) => x.id === v);
+      if (!sh) {
+        (absen[t] ||= {})[k.id] = { status: "libur", sumber: "manual" };
+        continue;
+      }
+      if (t === today && sekarang < menit(sh.mulai)) continue; // hari ini: belum jamnya masuk
+      const x = r();
+      if (x < 0.005) (absen[t] ||= {})[k.id] = { status: "alpa", sumber: "manual" };
+      else if (x < 0.025) (absen[t] ||= {})[k.id] = { status: "sakit", sumber: "manual" };
+      else if (x < 0.045) (absen[t] ||= {})[k.id] = { status: "izin", sumber: "manual" };
+      else {
+        const telat = r() < 0.1;
+        const masuk = menit(sh.mulai) + (telat ? 11 + Math.floor(r() * 25) : -15 + Math.floor(r() * 23));
+        const ramai = (dow === 5 || dow === 6 || dow === 0) && d > 30 && r() < 0.4;
+        const pulangM = menit(sh.selesai) + (ramai ? 60 + Math.floor(r() * 90) : -10 + Math.floor(r() * 25));
+        const a = { status: "hadir", masuk: hm(masuk), sumber: "manual" };
+        if (t < today || sekarang >= pulangM) a.pulang = hm(pulangM);
+        (absen[t] ||= {})[k.id] = a;
+      }
+    }
+  }
+  st = { ...st, absen, jadwal: { shift, hari, akun: {} } };
+  st = { ...st, ...sinkronAkun(st) };
+
+  // Kasbon karyawan & gajian, urut tanggal.
+  const [rina, dodi, ujang, sari, bagas] = ks;
+  const acara = [
+    { t: addDays(start, 25), f: () => pinjamKasbon(st, ujang.id, { nominal: 150000, tanggal: addDays(start, 25), catatan: "Bayar kos" }) },
+    { t: addDays(start, 47), f: () => pinjamKasbon(st, sari.id, { nominal: 200000, tanggal: addDays(start, 47), catatan: "Keperluan keluarga" }) },
+  ];
+  for (let t = addDays(start, 1); t <= today; t = addDays(t, 1)) {
+    const dow = new Date(t + "T00:00:00").getDay();
+    if (dow === 1) {
+      // Senin: gaji mingguan minggu lalu (Senin–Minggu)
+      const dari = addDays(t, -7);
+      const sampai = addDays(t, -1);
+      for (const k of [rina, ujang, sari, bagas]) {
+        if (k.mulai > sampai) continue;
+        acara.push({ t, f: () => bayarGaji(st, k.id, { dari, sampai, bonus: sampai > addDays(start, 35) && r() < 0.3 ? 25000 : 0, potongKasbon: Math.min(50000, saldoKasbonKaryawan(st, k.id)), tanggal: t, metode: r() < 0.6 ? "tunai" : "transfer" }) });
+      }
+    }
+    if (t.slice(8) === "01") {
+      // Tanggal 1: gaji bulanan bulan lalu
+      const sampai = addDays(t, -1);
+      acara.push({ t, f: () => bayarGaji(st, dodi.id, { dari: `${sampai.slice(0, 7)}-01`, sampai, tanggal: t, metode: "transfer" }) });
+    }
+  }
+  acara.sort((a, b) => a.t.localeCompare(b.t));
+  for (const a of acara) {
+    try {
+      const x = a.f();
+      st = { ...st, ...(x.gajian ? { gajian: x.gajian } : {}), kasbonKaryawan: x.kasbonKaryawan, transactions: x.transactions };
+    } catch {
+      // gaji Rp0 (mis. sakit seminggu penuh): dilewati
+    }
+  }
+  return st;
 }
