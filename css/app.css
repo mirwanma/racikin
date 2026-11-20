@@ -1553,3 +1553,9 @@ body[data-admin="1"] .adm-chart i { background: var(--a-y); }
 .gaji-set { border: 1.5px dashed var(--line-2); border-radius: 8px; padding: 10px 12px; margin: 0; }
 .gaji-set legend { font-weight: 700; font-size: 13px; padding: 0 6px; }
 .gaji-card.lunas { border-left: 4px solid var(--leaf); }
+
+/* THR */
+.thr-row { display: grid; gap: 8px; padding: 10px 0; border-top: 1px dashed var(--line); }
+.thr-row small { display: block; font-size: 12px; }
+.thr-bayar { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; align-items: center; }
+.thr-bayar input, .thr-bayar select { min-width: 0; padding: 6px 8px; }

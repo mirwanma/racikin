@@ -21,7 +21,7 @@ export const STATUS = [
 // Posisi / kategori karyawan bebas diatur pemilik (absenSetting.posisi); ini cuma isian awal.
 // Beda dengan peran akun tim (owner/manajer/kasir/dapur) yang mengatur hak akses aplikasi.
 export const POSISI = ["Kasir", "Dapur / masak", "Helper", "Pelayan", "Barista", "Kurir", "Manajer"];
-export const SETTING_AWAL = { aktif: false, jamMasuk: "08:00", toleransi: 10, posisi: POSISI };
+export const SETTING_AWAL = { aktif: false, jamMasuk: "08:00", toleransi: 10, posisi: POSISI, jamKerja: 8 };
 
 export const setelan = (s) => ({ ...SETTING_AWAL, ...(s.absenSetting || {}) });
 
