@@ -5,6 +5,7 @@ import { isJalan } from "../tahap.js";
 import { ringkasIzin } from "../izin.js";
 import { hitungPajak, tagihanPajak, namaBulan } from "../pajak.js";
 import { kasbonAktif, ringkasKasbon } from "../kasbon.js";
+import { ringkasUtang } from "../utang.js";
 import { todayISO, short, rupiah } from "../ui.js";
 
 // Usaha yang sudah jalan: modul perencanaan jadi alat tambahan dengan sudut pandang berbeda.
@@ -55,6 +56,7 @@ export const bisnis = {
           <span class="chev">${icon("chevron", 18)}</span>
         </a>`;
     const kb = ringkasKasbon(s, todayISO());
+    const ut = ringkasUtang(s, todayISO());
     const kasbonMod = `<a href="#/kasbon" class="card module">
           <span class="module-num">${icon("wallet", 18)}</span>
           <div><h3>Kasbon Pelanggan</h3><p class="muted small">${kasbonAktif(s) ? (kb.n ? `${kb.n} pelanggan · total ${rupiah(kb.total)}${kb.lama ? ` · ${kb.lama} lewat 14 hari` : ""}` : "Aktif · belum ada kasbon") : "Pelanggan makan dulu bayar nanti: batas, cicilan, tagih lewat WA"}</p></div>
@@ -123,7 +125,7 @@ export const bisnis = {
         </a>
         <a href="#/belanja" class="card module">
           <span class="module-num">${icon("box", 18)}</span>
-          <div><h3>Belanja & Supplier</h3><p class="muted small">Daftar belanja otomatis dari stok, pesan ke supplier via WA, riwayat harga bahan</p></div>
+          <div><h3>Belanja & Supplier</h3><p class="muted small">${ut.total ? `Utang supplier ${rupiah(ut.total)}${ut.telat.length ? ` · ${ut.telat.length} lewat tempo` : ""}` : "Daftar belanja otomatis dari stok, pesan ke supplier via WA, riwayat harga bahan, utang/tempo"}</p></div>
           <span class="chev">${icon("chevron", 18)}</span>
         </a>
         <a href="#/pelanggan" class="card module">

@@ -52,13 +52,18 @@ function saldoCard(s) {
 }
 const namaBulan = () => new Date(ym + "-01T00:00:00").toLocaleDateString("id-ID", { month: "long", year: "numeric" });
 
+// Transaksi otomatis dari fitur lain: diubah / dihapus dari halamannya supaya catatannya tetap cocok.
+const TERKAIT = { utang: ["Utang", "#/belanja?tab=utang"], kasbon: ["Kasbon", "#/kasbon"], pajak: ["Pajak", "#/pajak"] };
+
 function txRow(t) {
   return `<div class="tx ${t.jenis}"><div><b>${esc(t.kategori)}</b>${t.catatan ? `<p class="muted small">${esc(t.catatan)}</p>` : ""}</div><b>${t.jenis === "masuk" ? "+" : "−"}${rupiah(t.nominal)}</b>${
     sumberOf(t) === "kasir"
       ? `<a href="#/kasir?tab=rekap" class="tag" title="Otomatis dari Kasir">Kasir</a>`
       : sumberOf(t) === "laci"
         ? `<a href="#/shift" class="tag" title="Pengeluaran dari laci kasir">Laci</a>`
-        : `<button class="icon-btn sm" data-action="del" data-id="${t.id}" aria-label="Hapus">${icon("x", 14)}</button>`
+        : TERKAIT[t.ref]
+          ? `<a href="${TERKAIT[t.ref][1]}" class="tag" title="Ubah / hapus dari halamannya">${TERKAIT[t.ref][0]}</a>`
+          : `<button class="icon-btn sm" data-action="del" data-id="${t.id}" aria-label="Hapus">${icon("x", 14)}</button>`
   }</div>`;
 }
 

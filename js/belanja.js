@@ -5,6 +5,7 @@
 // bahan.kemasan     -> true kalau bahan termasuk kemasan (dicatat ke Kas kategori "Kemasan")
 // stokLog beli      -> { ..., alasan: "beli", harga (per satuan), supplierId }  => riwayat harga
 import { uid } from "./store.js";
+import { notaUtang } from "./utang.js";
 import { todayISO, addDays } from "./ui.js";
 
 const sum = (arr, f) => arr.reduce((a, x) => a + f(x), 0);
@@ -135,11 +136,13 @@ export function belanjaSupplier(s, hari = 30, today = todayISO()) {
  * Patch: catat hasil belanja. rows = [{ bahanId, qty, total }] (total = bayar untuk bahan itu, boleh 0).
  * Stok bertambah, harga per satuan diperbarui (HPP menu ikut berubah), riwayat harga tersimpan,
  * dan (opsional) pengeluaran Kas per kategori (Bahan Baku / Kemasan).
+ * utang = { tempo } -> belum dibayar: Kas belum dicatat, jadi nota utang ke supplier (js/utang.js).
  */
-export function catatBelanja(s, rows, { supplierId = null, kas = true, tanggal = todayISO() } = {}) {
+export function catatBelanja(s, rows, { supplierId = null, kas = true, tanggal = todayISO(), utang = null } = {}) {
   const valid = rows.filter((r) => Number(r.qty) > 0);
   if (!valid.length) throw new Error("Isi jumlah yang dibeli dulu");
   const sup = (s.supplier || []).find((x) => x.id === supplierId);
+  if (utang && !sup) throw new Error("Belanja utang harus pilih supplier");
   const byId = new Map(valid.map((r) => [r.bahanId, r]));
   const bahan = s.bahan.map((b) => {
     const r = byId.get(b.id);
@@ -162,13 +165,23 @@ export function catatBelanja(s, rows, { supplierId = null, kas = true, tanggal =
     })),
   ];
   const patch = { bahan, stokLog };
-  if (kas) {
-    const kat = { "Bahan Baku": [], Kemasan: [] };
-    for (const r of valid) {
-      if (!(Number(r.total) > 0)) continue;
-      const b = s.bahan.find((x) => x.id === r.bahanId);
-      kat[b?.kemasan ? "Kemasan" : "Bahan Baku"].push({ nama: b?.nama || "", total: Number(r.total) });
-    }
+  const kat = { "Bahan Baku": [], Kemasan: [] };
+  for (const r of valid) {
+    if (!(Number(r.total) > 0)) continue;
+    const b = s.bahan.find((x) => x.id === r.bahanId);
+    kat[b?.kemasan ? "Kemasan" : "Bahan Baku"].push({ nama: b?.nama || "", total: Number(r.total) });
+  }
+  const daftar = valid.map((r) => s.bahan.find((x) => x.id === r.bahanId)?.nama.toLowerCase() || "").filter(Boolean);
+  if (utang) {
+    const nota = notaUtang({
+      supplierId: sup.id,
+      tanggal,
+      tempo: utang.tempo,
+      rincian: Object.entries(kat).map(([kategori, list]) => ({ kategori, nominal: sum(list, (x) => x.total) })),
+      catatan: `${daftar.slice(0, 4).join(", ")}${daftar.length > 4 ? ` +${daftar.length - 4} lainnya` : ""}`,
+    });
+    patch.utangSupplier = [...(s.utangSupplier || []), nota];
+  } else if (kas) {
     const tx = [...s.transactions];
     for (const [kategori, list] of Object.entries(kat)) {
       if (!list.length) continue;
