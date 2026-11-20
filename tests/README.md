@@ -38,7 +38,7 @@ cd tests && npm run unit
 | `unit/merge.test.mjs` | 3-way merge sinkron (order/stok/stempel dari beberapa HP) |
 | `unit/merge-shift.test.mjs` | merge data shift & catatan laci |
 | `unit/kas-filter.test.mjs` | filter & pencarian transaksi Kas |
-| `unit/notif.test.mts` | jadwal pengingat push (zona waktu, peran, anti-dobel) |
+| `unit/notif.test.mts` | jadwal pengingat push (zona waktu, peran, anti-dobel) + tagihan (PPh bulanan, utang supplier, kasbon FIFO, gajian & THR) & jadwal besok per akun |
 | `unit/webpush.test.mts` | enkripsi Web Push (dicek silang dengan `http_ece`) & tanda tangan VAPID |
 
 ## E2E (Playwright)
@@ -52,7 +52,7 @@ mkdir -p /tmp/shots && node tests/e2e/kasir.js /tmp/shots
 
 `RACIKIN_URL` mengganti alamat app (default `http://localhost:8766/`).
 
-**Tanpa akun** (cukup app lokal): `mvp.js`, `kasir.js`, `online.js`, `tracked.js`, `studio.js`, `dummy.js`, `shift.js`, `laporan.js`, `belanja.js`, `kasfilter.js`, `tablet.js` (argumen opsional: lebar tinggi daftar-rute), `rotate.js`, `varian.js` (halaman pelanggan QR diuji dengan RPC mock), `tahap.js`, `impor.js` (Mode Demo; baca foto lewat AI Online dicoba manual), `sehat.js`, `imporjual.js`, `promo.js`, `wa.js` (link wa.me di-intercept, WhatsApp tidak benar-benar dibuka), `admin.js` (sesi & RPC Supabase di-mock, tidak menyentuh data asli), `izin.js`, `pajak.js`, `kasbon.js`, `utang.js`, `absen.js` (bikin file .xlsx & attlog contoh sendiri), `gaji.js`, `thr.js` (lembur, THR, CSV, izin manajer disimulasikan), `jadwal.js` (akun kasir disimulasikan; ekspor Excel dibaca balik, PDF dibuat ke folder screenshot), `varian-resep.js`, `promo-meja.js` (halaman pelanggan QR dengan RPC mock; perhitungan aslinya dites langsung di SQL), `bill.js`, `split-bill.js`, `paket.js` (sesi & RPC di-mock; penguncian aslinya dites di SQL).
+**Tanpa akun** (cukup app lokal): `mvp.js`, `kasir.js`, `online.js`, `tracked.js`, `studio.js`, `dummy.js`, `shift.js`, `laporan.js`, `belanja.js`, `kasfilter.js`, `tablet.js` (argumen opsional: lebar tinggi daftar-rute), `rotate.js`, `varian.js` (halaman pelanggan QR diuji dengan RPC mock), `tahap.js`, `impor.js` (Mode Demo; baca foto lewat AI Online dicoba manual), `sehat.js`, `imporjual.js`, `promo.js`, `wa.js` (link wa.me di-intercept, WhatsApp tidak benar-benar dibuka), `admin.js` (sesi & RPC Supabase di-mock, tidak menyentuh data asli), `izin.js`, `pajak.js`, `kasbon.js`, `utang.js`, `absen.js` (bikin file .xlsx & attlog contoh sendiri), `gaji.js`, `thr.js` (lembur, THR, CSV, izin manajer disimulasikan), `pengingat.js` (daftar jenis pengingat per peran, push disimulasikan nggak didukung), `jadwal.js` (akun kasir disimulasikan; ekspor Excel dibaca balik, PDF dibuat ke folder screenshot), `varian-resep.js`, `promo-meja.js` (halaman pelanggan QR dengan RPC mock; perhitungan aslinya dites langsung di SQL), `bill.js`, `split-bill.js`, `paket.js` (sesi & RPC di-mock; penguncian aslinya dites di SQL).
 
 **Butuh Supabase & akun tes** (password lewat variabel lingkungan, tidak disimpan di repo):
 

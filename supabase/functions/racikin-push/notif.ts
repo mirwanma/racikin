@@ -1,15 +1,16 @@
 // Pengingat yang jatuh tempo untuk satu perangkat, dihitung dari dokumen usaha. Murni (tanpa I/O).
 
-export type Prefs = { konten?: boolean; stok?: boolean; ajak?: boolean; rekap?: boolean; pagi?: number; malam?: number };
+export type Prefs = { konten?: boolean; stok?: boolean; ajak?: boolean; rekap?: boolean; pajak?: boolean; utang?: boolean; kasbon?: boolean; gaji?: boolean; jadwal?: boolean; pagi?: number; malam?: number };
 export type Notif = { kind: string; title: string; body: string; url: string };
 // deno-lint-ignore no-explicit-any
 type Doc = Record<string, any>;
 
-export const DEFAULT_PREFS = { konten: true, stok: true, ajak: true, rekap: true, pagi: 8, malam: 21 };
+export const DEFAULT_PREFS = { konten: true, stok: true, ajak: true, rekap: true, pajak: true, utang: true, kasbon: true, gaji: true, jadwal: true, pagi: 8, malam: 21 };
 export const KINDS_PER_ROLE: Record<string, string[]> = {
-  owner: ["konten", "stok", "ajak", "rekap"],
-  manajer: ["konten", "stok", "ajak", "rekap"],
-  kasir: ["stok", "rekap"],
+  owner: ["konten", "stok", "ajak", "rekap", "pajak", "utang", "kasbon", "gaji", "jadwal"],
+  manajer: ["konten", "stok", "ajak", "rekap", "pajak", "utang", "kasbon", "gaji", "jadwal"],
+  kasir: ["stok", "rekap", "jadwal"],
+  dapur: ["jadwal"],
 };
 const AJAK_HARI = 21;
 const JENDELA_JAM = 3; // kalau jadwal sempat terlewat, masih dikirim sampai 3 jam setelah jam pilihan
@@ -86,11 +87,180 @@ export function rekapHarian(doc: Doc, tanggal: string): Notif | null {
   };
 }
 
+// ---------- Tagihan & gajian (logika ringkas dari js/pajak.js, js/utang.js, js/kasbon.js, js/gaji.js) ----------
+const TARIF_PPH = 0.005;
+const BEBAS_OP = 500_000_000;
+const KAT_OMZET = ["Penjualan", "Pre-order", "Katering/pesanan", "Pelunasan kasbon"];
+const BULAN = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+const namaBulan = (ym: string) => `${BULAN[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}`;
+const tglPendek = (iso: string) => `${Number(iso.slice(8))} ${BULAN[Number(iso.slice(5, 7)) - 1].slice(0, 3)}`;
+const ymLalu = (tanggal: string) => {
+  const [y, m] = tanggal.split("-").map(Number);
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
+};
+
+/** PPh Final UMKM satu bulan (orang pribadi: Rp500 juta pertama setahun bebas; PT perorangan / koperasi: semua omzet). */
+export function pphBulan(doc: Doc, ym: string): number {
+  const bentuk = doc.pajak?.bentuk || "op";
+  if (bentuk === "lain") return 0;
+  const tahun = ym.slice(0, 4);
+  const per: Record<string, number> = {};
+  for (const t of doc.transactions || []) {
+    if (t.jenis !== "masuk" || !KAT_OMZET.includes(t.kategori) || String(t.tanggal).slice(0, 4) !== tahun) continue;
+    const k = String(t.tanggal).slice(0, 7);
+    per[k] = (per[k] || 0) + (Number(t.nominal) || 0);
+  }
+  let sebelum = 0;
+  for (const [k, v] of Object.entries(per)) if (k < ym) sebelum += v;
+  const kum = sebelum + (per[ym] || 0);
+  const dpp = bentuk === "op" ? Math.max(0, kum - Math.max(sebelum, BEBAS_OP)) : per[ym] || 0;
+  return Math.floor(dpp * TARIF_PPH);
+}
+
+/** PPh bulan lalu belum dibayar: tgl 10–15 tiap hari, lewat tempo tiap Senin. */
+export function pajakTagihan(doc: Doc, tanggal: string, hari: number): Notif | null {
+  const ym = ymLalu(tanggal);
+  if (doc.pajak?.bayar?.[ym]) return null;
+  const pph = pphBulan(doc, ym);
+  if (!pph) return null;
+  const tgl = Number(tanggal.slice(8));
+  const telat = tgl > 15;
+  if (!(tgl >= 10 && tgl <= 15) && !(telat && hari === 1)) return null;
+  return {
+    kind: "pajak",
+    title: telat ? `PPh ${namaBulan(ym)} lewat jatuh tempo` : `Setor PPh ${namaBulan(ym)}: ${rupiah(pph)}`,
+    body: telat ? `${rupiah(pph)} belum dicatat lunas. Bayar secepatnya biar bunganya kecil.` : `Paling lambat tanggal 15. Kode billing KAP 411128 KJS 420, caranya ada di halaman Pajak.`,
+    url: "#/pajak",
+  };
+}
+
+/** Nota utang supplier yang jatuh tempo ≤ 3 hari lagi atau sudah lewat. */
+export function utangTagihan(doc: Doc, tanggal: string): Notif | null {
+  const nama = new Map((doc.supplier || []).map((x: Doc) => [x.id, String(x.nama)]));
+  const list = (doc.utangSupplier || [])
+    .map((n: Doc) => ({ n, sisa: (Number(n.total) || 0) - (n.bayar || []).reduce((a: number, b: Doc) => a + (Number(b.nominal) || 0), 0) }))
+    .filter((x: Doc) => x.sisa > 0 && daysBetween(tanggal, x.n.tempo) <= 3)
+    .sort((a: Doc, b: Doc) => String(a.n.tempo).localeCompare(String(b.n.tempo)));
+  if (!list.length) return null;
+  const telat = list.filter((x: Doc) => x.n.tempo < tanggal).length;
+  const total = list.reduce((a: number, x: Doc) => a + x.sisa, 0);
+  const sup = [...new Set(list.map((x: Doc) => nama.get(x.n.supplierId) || "supplier"))] as string[];
+  return {
+    kind: "utang",
+    title: telat ? `Utang supplier lewat tempo: ${rupiah(total)}` : `Utang supplier jatuh tempo: ${rupiah(total)}`,
+    body: `${daftar(sup)} · ${telat ? `${telat} nota lewat tempo` : `paling lambat ${tglPendek(list[0].n.tempo)}`}.`,
+    url: "#/belanja?tab=utang",
+  };
+}
+
+/** Tiap Senin: kasbon pelanggan yang belum lunas > 14 hari (pelunasan menutup kasbon terlama dulu). */
+export function kasbonTagihan(doc: Doc, tanggal: string, hari: number): Notif | null {
+  if (!doc.posSetting?.kasbon || hari !== 1) return null;
+  const per = new Map<string, Doc[]>();
+  for (const k of doc.kasbon || []) per.set(k.pelangganId, [...(per.get(k.pelangganId) || []), k]);
+  const nama = new Map((doc.pelanggan || []).map((p: Doc) => [p.id, String(p.nama)]));
+  const lama: { nama: string; sisa: number }[] = [];
+  for (const [id, list] of per) {
+    let bayar = list.filter((k) => k.jenis === "bayar").reduce((a, k) => a + (Number(k.nominal) || 0), 0);
+    const utang = list.filter((k) => k.jenis === "utang").sort((a, b) => String(a.tanggal).localeCompare(String(b.tanggal)));
+    const sisa = utang.reduce((a, k) => a + (Number(k.nominal) || 0), 0) - bayar;
+    let sejak: string | null = null;
+    for (const u of utang) {
+      const n = Number(u.nominal) || 0;
+      if (bayar >= n) bayar -= n;
+      else {
+        sejak = u.tanggal;
+        break;
+      }
+    }
+    if (sisa > 0 && sejak && daysBetween(sejak, tanggal) >= 14) lama.push({ nama: (nama.get(id) as string) || "pelanggan", sisa });
+  }
+  if (!lama.length) return null;
+  return {
+    kind: "kasbon",
+    title: `Kasbon ${rupiah(lama.reduce((a, x) => a + x.sisa, 0))} lewat 2 minggu`,
+    body: `${daftar(lama.map((x) => x.nama.split(/\s+/)[0]))}. Tagih pelan-pelan lewat WA, template-nya ada di halaman Kasbon.`,
+    url: "#/kasbon",
+  };
+}
+
+/** Periode gaji yang memuat tanggal: mingguan Senin–Minggu, bulanan tgl 1–akhir bulan. */
+function periodeGaji(periode: string, iso: string) {
+  if (periode === "bulanan") {
+    const [y, m] = iso.split("-").map(Number);
+    const akhir = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    return { dari: `${iso.slice(0, 7)}-01`, sampai: `${iso.slice(0, 7)}-${String(akhir).padStart(2, "0")}` };
+  }
+  const dow = (new Date(iso + "T00:00:00Z").getUTCDay() + 6) % 7;
+  const dari = addDays(iso, -dow);
+  return { dari, sampai: addDays(dari, 6) };
+}
+
+/** Gaji periode lalu belum dibayar (3 hari pertama setelah periode selesai) + THR menjelang batas H-7. */
+export function gajiTagihan(doc: Doc, tanggal: string): Notif | null {
+  if (!doc.absenSetting?.aktif) return null;
+  const ks = (doc.karyawan || []).filter((k: Doc) => k.aktif !== false && Number(k.gaji?.nominal) > 0);
+  if (!ks.length) return null;
+  const belum: string[] = [];
+  for (const k of ks) {
+    const p = periodeGaji(k.gaji?.periode === "bulanan" ? "bulanan" : "mingguan", addDays(periodeGaji(k.gaji?.periode === "bulanan" ? "bulanan" : "mingguan", tanggal).dari, -1));
+    if (daysBetween(p.sampai, tanggal) > 3) continue;
+    if (k.mulai && k.mulai > p.sampai) continue;
+    if ((doc.gajian || []).some((g: Doc) => g.karyawanId === k.id && g.dari <= p.sampai && g.sampai >= p.dari)) continue;
+    belum.push(String(k.nama));
+  }
+  const hr = doc.absenSetting?.hariRaya;
+  const batas = hr ? addDays(hr, -7) : null;
+  const thr =
+    hr && batas && tanggal <= hr && daysBetween(tanggal, batas) <= 7
+      ? ks.filter((k: Doc) => !(doc.thr || []).some((x: Doc) => x.karyawanId === k.id && x.hariRaya === hr)).map((k: Doc) => String(k.nama))
+      : [];
+  if (!belum.length && !thr.length) return null;
+  const bagian = [belum.length ? `Gaji periode lalu belum dibayar: ${daftar(belum)}` : "", thr.length ? `THR ${daftar(thr)} paling lambat ${tglPendek(batas!)}` : ""].filter(Boolean);
+  return {
+    kind: "gaji",
+    title: thr.length && !belum.length ? (tanggal > batas! ? "THR lewat batas H-7" : "THR wajib dibayar H-7") : `Gajian: ${belum.length} karyawan belum dibayar`,
+    body: `${bagian.join(". ")}.`,
+    url: "#/karyawan?tab=gaji",
+  };
+}
+
+/** Malam: jadwal besok. Akun yang dihubungkan ke karyawan dapat jadwalnya sendiri; pemilik/manajer dapat ringkasan. */
+export function jadwalBesok(doc: Doc, tanggal: string, opt: { role: string; userId?: string }): Notif | null {
+  const j = doc.jadwal;
+  if (!j?.hari) return null;
+  const besok = addDays(tanggal, 1);
+  const h = j.hari[besok] || {};
+  const shift = (id: string) => (Array.isArray(j.shift) && j.shift.length ? j.shift : [{ id: "pagi", nama: "Pagi", mulai: "07:00", selesai: "15:00" }, { id: "siang", nama: "Siang", mulai: "11:00", selesai: "19:00" }, { id: "malam", nama: "Malam", mulai: "15:00", selesai: "23:00" }]).find((x: Doc) => x.id === id);
+  const kid = opt.userId ? j.akun?.[opt.userId] : null;
+  if (kid) {
+    const v = h[kid];
+    if (!v) return null;
+    if (v === "libur") return { kind: "jadwal", title: "Besok kamu libur", body: "Selamat istirahat! Cek jadwal minggu ini di app.", url: "#/jadwal" };
+    const sh = shift(v);
+    if (!sh) return null;
+    return { kind: "jadwal", title: `Besok masuk ${sh.nama} ${sh.mulai}–${sh.selesai}`, body: "Jangan telat ya. Jadwal lengkapnya ada di Jadwal saya.", url: "#/jadwal" };
+  }
+  if (opt.role !== "owner" && opt.role !== "manajer") return null;
+  const nama = new Map((doc.karyawan || []).filter((k: Doc) => k.aktif !== false).map((k: Doc) => [k.id, String(k.nama)]));
+  const masuk = Object.entries(h)
+    .filter(([id, v]) => v !== "libur" && nama.has(id) && shift(v as string))
+    .map(([id, v]) => ({ nama: nama.get(id) as string, sh: shift(v as string) }))
+    .sort((a, b) => String(a.sh.mulai).localeCompare(String(b.sh.mulai)));
+  if (!masuk.length) return null;
+  return {
+    kind: "jadwal",
+    title: `Besok masuk ${masuk.length} orang`,
+    body: daftar(masuk.map((x) => `${x.nama.split(/\s+/)[0]} (${x.sh.nama})`), 4) + ".",
+    url: "#/karyawan?tab=jadwal",
+  };
+}
+
 /**
  * Pengingat yang perlu dikirim sekarang ke satu perangkat.
  * sent = { [kind]: tanggal terakhir dikirim } supaya tiap jenis maksimal sekali sehari.
  */
-export function dueNotifs(doc: Doc, opt: { role: string; prefs: Prefs; tz: string; now: Date; sent: Record<string, string> }): Notif[] {
+export function dueNotifs(doc: Doc, opt: { role: string; prefs: Prefs; tz: string; now: Date; sent: Record<string, string>; userId?: string }): Notif[] {
   const p = { ...DEFAULT_PREFS, ...(opt.prefs || {}) };
   const { tanggal, jam, hari } = localNow(opt.now, opt.tz);
   const boleh = new Set((KINDS_PER_ROLE[opt.role] || []).filter((k) => (p as Record<string, unknown>)[k] !== false));
@@ -100,7 +270,14 @@ export function dueNotifs(doc: Doc, opt: { role: string; prefs: Prefs; tz: strin
     if (belum("konten")) out.push(kontenHariIni(doc, tanggal) as Notif);
     if (belum("stok")) out.push(stokMenipis(doc) as Notif);
     if (belum("ajak") && hari === 1) out.push(ajakBalik(doc, tanggal) as Notif); // tiap Senin
+    if (belum("pajak")) out.push(pajakTagihan(doc, tanggal, hari) as Notif);
+    if (belum("utang")) out.push(utangTagihan(doc, tanggal) as Notif);
+    if (belum("kasbon")) out.push(kasbonTagihan(doc, tanggal, hari) as Notif);
+    if (belum("gaji")) out.push(gajiTagihan(doc, tanggal) as Notif);
   }
-  if (inWindow(jam, Number(p.malam)) && belum("rekap")) out.push(rekapHarian(doc, tanggal) as Notif);
+  if (inWindow(jam, Number(p.malam))) {
+    if (belum("rekap")) out.push(rekapHarian(doc, tanggal) as Notif);
+    if (belum("jadwal")) out.push(jadwalBesok(doc, tanggal, { role: opt.role, userId: opt.userId }) as Notif);
+  }
   return out.filter(Boolean);
 }

@@ -51,7 +51,7 @@ const tabOf = { "": "", bisnis: "bisnis", ide: "bisnis", rab: "bisnis", brand: "
 const KASIR_ROUTES = new Set(["kasir", "kasbon", "jadwal", "pelanggan", "stok", "akun", "setelan", "kartu", "tim", "gabung", "notif", "shift", "dapur", "m"]);
 const tabOfKasir = { kasir: "kasir", pelanggan: "pelanggan", stok: "stok", akun: "akun", setelan: "akun", tim: "akun", notif: "akun", shift: "kasir", dapur: "dapur" };
 // Akun dapur hanya membuka layar dapur & akun.
-const DAPUR_ROUTES = new Set(["dapur", "akun", "setelan", "tim", "gabung", "notif", "m"]);
+const DAPUR_ROUTES = new Set(["dapur", "jadwal", "akun", "setelan", "tim", "gabung", "notif", "m"]);
 // Mode admin platform: hanya dashboard admin & akun (menu usaha disembunyikan).
 const ADMIN_ROUTES = new Set(["admin", "akun"]);
 const FREE_ROUTES = ["profil", "setelan", "akun", "kartu", "gabung", "tim", "notif", "m", "admin", "paket"];
