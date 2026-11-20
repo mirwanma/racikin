@@ -1559,3 +1559,54 @@ body[data-admin="1"] .adm-chart i { background: var(--a-y); }
 .thr-row small { display: block; font-size: 12px; }
 .thr-bayar { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; align-items: center; }
 .thr-bayar input, .thr-bayar select { min-width: 0; padding: 6px 8px; }
+
+/* Jadwal shift */
+.seg.seg5 { grid-template-columns: repeat(5, 1fr); }
+.seg.seg5 span { font-size: 12px; padding: 8px 1px; }
+.jg-mode { width: 100%; }
+.jg-kuas .chips { margin-top: 6px; }
+.jg-kuas .chip-btn { display: inline-flex; align-items: center; gap: 6px; }
+.jg-kuas .chip-btn small { opacity: .7; font-family: var(--mono); font-size: 11px; }
+.jg-dot { display: inline-block; width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--ink); background: var(--paper); flex: none; }
+.jadwal-grid { overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+.jadwal-grid table { border-collapse: separate; border-spacing: 3px; width: 100%; }
+.jadwal-grid.bulan table { width: max-content; }
+.jadwal-grid th, .jadwal-grid td { text-align: center; padding: 0; font-weight: 600; }
+.jadwal-grid thead th { font-size: 12px; line-height: 1.1; }
+.jadwal-grid thead th small { display: block; font-size: 10px; color: var(--muted); font-family: var(--mono); }
+.jadwal-grid thead th.minggu small, .jadwal-grid thead th.minggu b { color: var(--chili); }
+.jadwal-grid thead th.hari-ini b { background: var(--ink); color: var(--paper); border-radius: 4px; padding: 0 4px; }
+.jadwal-grid .jg-nama { position: sticky; left: 0; z-index: 1; background: var(--card); text-align: left; font-size: 13px; padding-right: 6px; max-width: 90px; min-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jg-sel { width: 100%; min-width: 30px; height: 34px; border: 1.5px dashed var(--line-2); border-radius: 6px; background: var(--paper); font-family: var(--mono); font-weight: 700; font-size: 12px; color: var(--ink); cursor: pointer; padding: 0; }
+.jg-sel.isi { border: 1.5px solid var(--ink); }
+.jg-sel.libur { background: repeating-linear-gradient(135deg, var(--paper), var(--paper) 4px, var(--line) 4px, var(--line) 8px); border-style: solid; color: var(--muted); }
+.jadwal-grid tfoot small { font-family: var(--mono); color: var(--muted); }
+.shift-tpl { display: grid; grid-template-columns: auto minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 6px; align-items: center; }
+.shift-tpl input { min-width: 0; padding: 6px 8px; }
+.jadwal-hari-ini b, .jadwal-hari-ini span { color: var(--ink); font-weight: 800; }
+.jg-sel.isi { color: #1b1916; }
+
+/* Jadwal: lembar cetak / PDF */
+.jadwal-cetak { display: none; }
+@media print {
+  body[data-cetak="jadwal"] #view > *:not(.jadwal-cetak), body[data-cetak="jadwal"] .rail, body[data-cetak="jadwal"] .tabbar { display: none !important; }
+  body[data-cetak="jadwal"] .jadwal-cetak { display: block !important; color: #000; font-family: var(--font); }
+  body[data-cetak="jadwal"] #view { padding: 0 !important; margin: 0 !important; max-width: none !important; width: 100% !important; }
+  .jadwal-cetak h2 { margin: 0; font-size: 16pt; }
+  .jadwal-cetak > p { margin: 2px 0 8px; font-size: 10pt; }
+  .jadwal-cetak table { width: 100%; border-collapse: collapse; font-size: 9pt; table-layout: fixed; }
+  .jadwal-cetak th, .jadwal-cetak td { border: 0.5pt solid #555; padding: 3pt 2pt; text-align: center; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .jadwal-cetak tbody th, .jadwal-cetak tfoot th { text-align: left; }
+  .jadwal-cetak thead th:first-child { width: 18%; }
+  .jadwal-cetak thead th:last-child { width: 6%; }
+  .jadwal-cetak table.bulan { font-size: 7.5pt; }
+  .jadwal-cetak table.bulan thead th:first-child { width: 12%; }
+  .jadwal-cetak table.bulan th, .jadwal-cetak table.bulan td { padding: 2pt 0; }
+  .jadwal-cetak thead small { display: block; font-weight: 400; font-size: 6pt; letter-spacing: -0.2pt; }
+  .jadwal-cetak th small { display: block; font-weight: 400; font-size: 7.5pt; color: #444; }
+  .jadwal-cetak thead th.minggu { color: #b00; }
+  .jadwal-cetak td.libur { background: repeating-linear-gradient(135deg, #fff, #fff 3px, #ddd 3px, #ddd 6px); color: #555; }
+  .jadwal-cetak .jc-ket { display: flex; flex-wrap: wrap; gap: 4mm 8mm; margin-top: 6mm; font-size: 9pt; }
+  .jadwal-cetak .jc-ket i { display: inline-block; width: 10pt; height: 10pt; border: 0.5pt solid #000; margin-right: 4pt; vertical-align: -1pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .jadwal-cetak .jc-ket i.libur { background: repeating-linear-gradient(135deg, #fff, #fff 2px, #bbb 2px, #bbb 4px); }
+}

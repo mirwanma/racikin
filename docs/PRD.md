@@ -152,6 +152,10 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Pilihan varian bisa mengalikan porsi resep (Jumbo 1,5×, bahan kemasan tidak ikut dikali) dan mengganti / menghilangkan bahan resep (susu oat, tanpa gula). Stok, HPP per menu, rekap `opsiMenu`, laporan & cek kesehatan ikut. Data contoh: Es Teh Jumbo 1,5× porsi, pilihan "Tanpa gula".
 - Tanpa perubahan server (harga tetap dari harga tambahan; pesan meja ikut otomatis).
 
+### Fase 38: Jadwal kerja / shift (selesai)
+- Keputusan: template shift default yang bisa diubah; telat & lembur ikut jadwal; pemilik + manajer boleh atur; kasir bisa lihat jadwalnya sendiri.
+- Tab Jadwal (mingguan / bulanan, kuas, pola & gilir, salin), terhubung ke absen (telat, libur) & gaji (lembur), kirim WA, Beranda, `#/jadwal` untuk kasir. Ekspor jadwal seluruh karyawan ke Excel & PDF (permintaan pemilik, PR yang sama). Data `jadwal` terlihat oleh kasir (bukan bagian keuangan), tidak bisa ditulis kasir.
+
 ### Fase 37: Lembur, THR, rekap gaji, setelan gaji dikunci pemilik (selesai)
 - Lembur dari jam absen (tarif tetap / rumus Depnaker PP 35/2021, maks 4 jam/hari), THR sesuai Permenaker 6/2016 + SE Menaker (H-7, proporsional, harian rata-rata), CSV rekap.
 - Permintaan pemilik: konfigurasi gaji & lembur di tangan pemilik, dengan pilihan apakah manajer boleh ikut mengatur. Dikunci di app dan di server (`kunci_gaji` dipanggil `doc_save` untuk peran manajer). Migrasi `thr_kasir_hidden`, `kunci_gaji_manajer`.

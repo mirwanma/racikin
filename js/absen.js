@@ -10,6 +10,7 @@
 // state.absenSetting = { aktif, jamMasuk: "08:00", toleransi: 10 }
 import { uid } from "./store.js";
 import { tanggalISO, urutanTanggal } from "./imporjual.js";
+import { jamShift, shiftDi } from "./jadwal.js";
 
 export const STATUS = [
   { id: "hadir", nama: "Hadir", cls: "pos" },
@@ -51,10 +52,12 @@ const normNama = (x) => String(x || "").trim().toLowerCase().replace(/\s+/g, " "
 const normPin = (x) => String(x ?? "").trim().replace(/^0+(?=\d)/, "");
 
 /** Telat? (jam masuk lewat jamMasuk + toleransi). */
-export function telat(s, masuk) {
+export function telat(s, masuk, tanggal = null, karyawanId = null) {
   const set = setelan(s);
   const m = menit(masuk);
-  const batas = menit(set.jamMasuk);
+  // Kalau dijadwalkan shift, batasnya jam mulai shift itu (js/jadwal.js); kalau nggak, jam masuk umum.
+  const js = tanggal && karyawanId ? jamShift(s, tanggal, karyawanId) : null;
+  const batas = js ? js.mulai : menit(set.jamMasuk);
   return m != null && batas != null && m > batas + (Number(set.toleransi) || 0);
 }
 
@@ -102,7 +105,7 @@ export function absenHari(s, tanggal) {
   const out = {};
   for (const k of s.karyawan || []) {
     const a = simpan[k.id] || (shift[k.id] ? { status: "hadir", ...shift[k.id], sumber: "shift" } : null);
-    if (a) out[k.id] = { ...a, telat: a.status === "hadir" && telat(s, a.masuk) };
+    if (a) out[k.id] = { ...a, telat: a.status === "hadir" && telat(s, a.masuk, tanggal, k.id) };
   }
   return out;
 }
@@ -131,7 +134,8 @@ export function catatAbsen(s, tanggal, karyawanId, data) {
 export function semuaHadir(s, tanggal) {
   const ada = absenHari(s, tanggal);
   let st = s;
-  for (const k of karyawanAktif(s)) if (!ada[k.id]) st = { ...st, ...catatAbsen(st, tanggal, k.id, { status: "hadir" }) };
+  // Yang dijadwalkan libur ditandai libur, sisanya hadir.
+  for (const k of karyawanAktif(s)) if (!ada[k.id]) st = { ...st, ...catatAbsen(st, tanggal, k.id, { status: shiftDi(s, tanggal, k.id)?.libur ? "libur" : "hadir" }) };
   return { absen: st.absen || {} };
 }
 

@@ -41,6 +41,7 @@ const DEFAULT = {
   absenSetting: null,
   gajian: [],             // gaji yang sudah dibayar per karyawan per periode (lihat js/gaji.js)
   kasbonKaryawan: [],
+  jadwal: null,           // jadwal kerja { shift: [template], hari: { tgl: { karyawanId: shiftId|"libur" } }, akun: { akunId: karyawanId } } (lihat js/jadwal.js)
   thr: [],                // THR yang sudah dibayar { id, karyawanId, hariRaya, masa, upah, nominal, tanggal, metode }     // kasbon karyawan: pinjam & potong gaji     // { aktif, jamMasuk, toleransi, posisi: [..] }             // kasbon pelanggan: utang dari Kasir & pelunasan (lihat js/kasbon.js)
   settings: { aiMode: "demo", endpoint: "", anonKey: "" },
 };
