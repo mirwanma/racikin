@@ -40,7 +40,8 @@ const DEFAULT = {
   absen: {},              // absen harian { "YYYY-MM-DD": { karyawanId: { status, masuk, pulang, sumber } } }
   absenSetting: null,
   gajian: [],             // gaji yang sudah dibayar per karyawan per periode (lihat js/gaji.js)
-  kasbonKaryawan: [],     // kasbon karyawan: pinjam & potong gaji     // { aktif, jamMasuk, toleransi, posisi: [..] }             // kasbon pelanggan: utang dari Kasir & pelunasan (lihat js/kasbon.js)
+  kasbonKaryawan: [],
+  thr: [],                // THR yang sudah dibayar { id, karyawanId, hariRaya, masa, upah, nominal, tanggal, metode }     // kasbon karyawan: pinjam & potong gaji     // { aktif, jamMasuk, toleransi, posisi: [..] }             // kasbon pelanggan: utang dari Kasir & pelunasan (lihat js/kasbon.js)
   settings: { aiMode: "demo", endpoint: "", anonKey: "" },
 };
 

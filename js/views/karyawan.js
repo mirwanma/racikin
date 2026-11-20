@@ -6,12 +6,13 @@ import { store } from "../store.js";
 import { render } from "../app.js";
 import { head } from "./_shared.js";
 import { normWa, waLink } from "../loyalty.js";
+import { role } from "../cloud.js";
 import { parseTabel } from "../imporjual.js";
 import {
   STATUS, KOLOM, setelan, tambahPosisi, hapusPosisi, hitungPosisi, absenAktif, karyawanAktif, absenHari, catatAbsen, semuaHadir, rekapAbsen, ringkasHari,
   simpanKaryawan, kenaliTabel, olahAbsen, simpanImpor,
 } from "../absen.js";
-import { gajiOf, punyaGaji, periodeDi, hitungGaji, gajianDi, saldoKasbonKaryawan, pinjamKasbon, hapusPinjam, bayarGaji, batalGajian, belumGajian, teksSlip, METODE as METODE_GAJI } from "../gaji.js";
+import { gajiOf, punyaGaji, periodeDi, hitungGaji, gajianDi, saldoKasbonKaryawan, pinjamKasbon, hapusPinjam, bayarGaji, batalGajian, belumGajian, teksSlip, METODE as METODE_GAJI, bolehAturGaji, hitungThr, thrDi, bayarThr, batalThr, batasThr, pengingatThr, rekapGajiCsv, THR_DICEK } from "../gaji.js";
 import { bisnisOf } from "../wa.js";
 
 let tab = "absen"; // absen | rekap | gaji | orang
@@ -151,6 +152,7 @@ function kartuGaji(s, k) {
         ${g.skema === "harian" ? slipBaris(`Gaji harian ${h.hadir} × ${rupiah(h.perHari)}`, rupiah(h.pokok)) : slipBaris("Gaji pokok", rupiah(h.pokok))}
         ${h.potongAbsen ? slipBaris(`Potongan nggak masuk (${h.alpa + h.izin} hari)`, `−${rupiah(h.potongAbsen)}`) : ""}
         ${h.makan ? slipBaris(`Uang makan ${h.hadir} hari`, rupiah(h.makan)) : ""}
+        ${h.lembur ? slipBaris(`Lembur ${h.lemburJam} jam <small class="muted">(${h.lemburHari.map((x) => `${pendek(x.tanggal)} ${x.jam}j`).join(", ")})</small>`, rupiah(h.lembur)) : ""}
         <div class="row2">
           <label class="field"><span>Bonus / lembur (Rp)</span><input type="number" inputmode="numeric" name="bonus" min="0" step="1" placeholder="0"></label>
           <label class="field"><span>Potong kasbon (sisa ${rupiah(h.sisaKasbon)})</span><input type="number" inputmode="numeric" name="potong" min="0" max="${h.sisaKasbon}" step="1" value="${pot || ""}" placeholder="0" ${h.sisaKasbon ? "" : "disabled"}></label>
@@ -201,7 +203,55 @@ function gajiTab(s) {
     <div class="month-nav"><button class="icon-btn" data-action="geserGaji" data-d="-1" aria-label="Periode sebelumnya">${icon("back", 16)}</button><b>${label}</b><button class="icon-btn" data-action="geserGaji" data-d="1" aria-label="Periode berikutnya" ${geser >= 0 ? "disabled" : ""}>${icon("chevron", 16)}</button></div>
     ${adaGaji.length ? adaGaji.map((k) => kartuGaji(s, k)).join("") : `<section class="card"><p class="small" style="margin:0">Atur gaji tiap karyawan dulu di tab <b>Karyawan</b> (Edit → Gaji): harian atau bulanan, uang makan, dibayar mingguan / bulanan.</p></section>`}
     ${belum.length && adaGaji.length ? `<p class="small muted">Gaji belum diatur: ${belum.map((k) => esc(k.nama)).join(", ")}.</p>` : ""}
-    ${kasbonKaryawanView(s)}`;
+    ${kasbonKaryawanView(s)}
+    ${thrView(s)}
+    ${(s.gajian || []).length || (s.thr || []).length ? `<button class="btn soft block" data-action="csvGaji">${icon("download", 16)} Unduh rekap gaji & THR (CSV)</button>` : ""}`;
+}
+
+function thrView(s) {
+  const st = setelan(s);
+  const hr = st.hariRaya || "";
+  const ks = karyawanAktif(s).filter(punyaGaji);
+  return `<section class="card stack thr">
+    <h2 class="card-title" style="margin:0">THR</h2>
+    <div class="row2">
+      <label class="field"><span>Tanggal hari raya</span><input type="date" value="${esc(hr)}" data-change="hariRaya"></label>
+      ${hr ? `<div class="field"><span>Batas bayar (H-7)</span><b class="${todayISO() > batasThr(hr) ? "neg" : ""}">${esc(hariTeks(batasThr(hr)))}</b></div>` : ""}
+    </div>
+    ${
+      hr
+        ? ks
+            .map((k) => {
+              const sudah = thrDi(s, k.id, hr);
+              const h = hitungThr(s, k, hr);
+              return `<div class="thr-row" data-id="${k.id}">
+            <div><b>${esc(k.nama)}</b><small class="muted">${h.masa === null ? `<span class="neg">${h.catatan}</span>` : `masa kerja ${h.masa} bulan · upah ${rupiah(h.upah)}${h.estimasi ? " (perkiraan)" : ""} · ${h.catatan}`}</small>${h.kurang ? `<small class="neg">Riwayat gaji di app baru ${h.upah && h.bulan} bulan, rata-ratanya bisa kekecilan. Cek lagi nominalnya.</small>` : ""}</div>
+            ${
+              sudah
+                ? `<span><span class="sehat-pill pos">Dibayar ${rupiah(sudah.nominal)}</span> <button class="link small" data-action="batalThr" data-id="${sudah.id}">batal</button></span>`
+                : h.masa === null
+                  ? `<button class="btn ghost sm" data-action="tab" data-t="orang">Isi mulai kerja</button>`
+                  : `<form class="thr-bayar" data-form="thr" data-id="${k.id}"><input type="number" inputmode="numeric" name="nominal" min="1" step="1" value="${h.nominal || ""}" aria-label="THR ${esc(k.nama)}" required><select name="metode" aria-label="Metode">${METODE_GAJI.map((m) => `<option value="${m.id}">${m.nama}</option>`).join("")}</select><button class="btn primary sm">Bayar</button></form>`
+            }
+          </div>`;
+            })
+            .join("") || `<p class="small muted">Atur gaji karyawan dulu.</p>`
+        : `<p class="small muted" style="margin:0">Isi tanggal hari raya (cth Idul Fitri) buat hitung THR & pengingat H-7.</p>`
+    }
+    <p class="small muted">Masa kerja ≥ 12 bulan: 1 bulan upah. 1–12 bulan: masa kerja ÷ 12 × upah. Pekerja harian: rata-rata gaji pokok per bulan yang sudah dibayar. Wajib dibayar penuh paling lambat H-7. Karyawan non-muslim boleh dibayar di hari raya agamanya. Aturan dicek ${THR_DICEK} (Permenaker 6/2016).</p>
+  </section>`;
+}
+
+/** Pengingat Beranda: THR belum dibayar menjelang hari raya. */
+export function thrCard(s) {
+  if (!absenAktif(s)) return "";
+  const p = pengingatThr(s, todayISO());
+  if (!p) return "";
+  return `<a href="#/karyawan?tab=gaji" class="card pajak-mini ${p.telat ? "neg" : ""}">
+    ${icon("calendar", 22)}
+    <span><b>THR ${p.list.length} karyawan${p.total ? `: ${rupiah(p.total)}` : ""}</b><small class="muted">${p.telat ? "Sudah lewat batas H-7, bayar secepatnya" : `Bayar paling lambat ${esc(hariTeks(p.batas))}`}</small></span>
+    ${icon("chevron", 18)}
+  </a>`;
 }
 
 // ---------- Karyawan ----------
@@ -224,7 +274,7 @@ function formKaryawan(s, k) {
     </div>
     <label class="field"><span>Mulai kerja (opsional)</span><input type="date" name="mulai" value="${esc(k?.mulai || "")}" max="${todayISO()}"></label>
     ${akun.length ? `<label class="field"><span>Akun kasir (absen otomatis dari shift)</span><select name="akunId"><option value="">Tidak dihubungkan</option>${akun.map(([id, nm]) => `<option value="${esc(id)}" ${k?.akunId === id ? "selected" : ""}>${esc(nm)}</option>`).join("")}</select></label>` : ""}
-    <fieldset class="gaji-set stack"><legend>Gaji</legend>
+    <fieldset class="gaji-set stack" ${bolehAturGaji(s, role()) ? "" : "disabled"}><legend>Gaji & lembur${bolehAturGaji(s, role()) ? "" : " (diatur pemilik)"}</legend>
       <div class="row2">
         <label class="field"><span>Skema</span><select name="skema"><option value="harian" ${gajiOf(k).skema === "harian" ? "selected" : ""}>Harian (per hari hadir)</option><option value="bulanan" ${gajiOf(k).skema === "bulanan" ? "selected" : ""}>Bulanan (tetap)</option></select></label>
         <label class="field"><span>Nominal (Rp per hari / bulan)</span><input type="number" inputmode="numeric" name="nominal" min="0" step="1" value="${gajiOf(k).nominal || ""}" placeholder="cth: 75000"></label>
@@ -234,6 +284,14 @@ function formKaryawan(s, k) {
         <label class="field"><span>Dibayar tiap</span><select name="periode"><option value="mingguan" ${gajiOf(k).periode === "mingguan" ? "selected" : ""}>Minggu (Senin–Minggu)</option><option value="bulanan" ${gajiOf(k).periode === "bulanan" ? "selected" : ""}>Bulan</option></select></label>
       </div>
       <label class="impor-cek"><input type="checkbox" name="potong" ${gajiOf(k).potong ? "checked" : ""}><span>Gaji bulanan dipotong per hari alpa / izin (gaji ÷ 26 hari kerja)</span></label>
+      <div class="row2">
+        <label class="field"><span>Lembur (dari jam masuk–pulang)</span><select name="lembur">
+          <option value="tidak" ${gajiOf(k).lembur === "tidak" ? "selected" : ""}>Nggak dihitung</option>
+          <option value="tetap" ${gajiOf(k).lembur === "tetap" ? "selected" : ""}>Tarif tetap per jam</option>
+          <option value="depnaker" ${gajiOf(k).lembur === "depnaker" ? "selected" : ""}>Rumus Depnaker (1/173 upah, 1,5× lalu 2×)</option>
+        </select></label>
+        <label class="field"><span>Tarif lembur per jam (Rp, kalau tarif tetap)</span><input type="number" inputmode="numeric" name="tarifLembur" min="0" step="1" value="${gajiOf(k).tarifLembur || ""}" placeholder="cth: 10000"></label>
+      </div>
     </fieldset>
     ${k ? `<label class="impor-cek"><input type="checkbox" name="aktif" ${k.aktif !== false ? "checked" : ""}><span>Masih bekerja (hilangkan centang kalau sudah keluar, riwayat absen tetap ada)</span></label>` : ""}
     <div class="row2"><button type="button" class="btn ghost" data-action="batalEdit">Batal</button><button class="btn primary">Simpan</button></div>
@@ -244,6 +302,7 @@ function orangTab(s) {
   const list = [...(s.karyawan || [])].sort((a, b) => (a.aktif === false) - (b.aktif === false) || a.nama.localeCompare(b.nama, "id"));
   const st = setelan(s);
   const hitung = hitungPosisi(s);
+  const atur = bolehAturGaji(s, role());
   return `
     ${list
       .map(
@@ -269,6 +328,16 @@ function orangTab(s) {
         <label class="field"><span>Toleransi telat (menit)</span><input type="number" min="0" max="120" value="${st.toleransi}" data-change="toleransi"></label>
       </div>
       <button class="btn ghost sm" data-action="mati">Matikan fitur absen</button>
+    </section>
+    <section class="card stack">
+      <h2 class="card-title" style="margin:0">Setelan gaji & lembur</h2>
+      <label class="field"><span>Jam kerja normal per hari (lebihnya dihitung lembur)</span><input type="number" min="1" max="16" step="0.5" value="${st.jamKerja}" data-change="jamKerja" ${atur ? "" : "disabled"}></label>
+      ${
+        role() === "owner"
+          ? `<label class="impor-cek"><input type="checkbox" data-change="manajerAtur" ${st.manajerAturGaji ? "checked" : ""}><span>Manajer boleh ikut atur gaji & lembur (nominal, uang makan, potongan, tarif lembur, jam kerja)</span></label>
+             <p class="small muted">Kalau nggak dicentang, manajer tetap bisa catat absen & bayar gaji sesuai setelanmu, tapi nggak bisa ubah angkanya.</p>`
+          : `<p class="small muted">${atur ? "Pemilik mengizinkan manajer mengatur gaji & lembur." : "Gaji & lembur diatur pemilik. Kamu tetap bisa catat absen & bayar gaji sesuai setelannya."}</p>`
+      }
     </section>`;
 }
 
@@ -402,6 +471,21 @@ export const karyawan = {
       if (el.value) store.set((s) => ({ absenSetting: { ...setelan(s), jamMasuk: el.value } }));
       render();
     },
+    manajerAtur(el) {
+      if (role() !== "owner") return;
+      store.set((s) => ({ absenSetting: { ...setelan(s), manajerAturGaji: el.checked } }));
+      toast(el.checked ? "Manajer boleh atur gaji & lembur" : "Gaji & lembur cuma bisa diatur pemilik");
+      render();
+    },
+    jamKerja(el) {
+      if (!bolehAturGaji(store.get(), role())) return render();
+      store.set((s) => ({ absenSetting: { ...setelan(s), jamKerja: Math.max(1, Math.min(16, Number(el.value) || 8)) } }));
+      render();
+    },
+    hariRaya(el) {
+      store.set((s) => ({ absenSetting: { ...setelan(s), hariRaya: el.value || null } }));
+      render();
+    },
     toleransi(el) {
       store.set((s) => ({ absenSetting: { ...setelan(s), toleransi: Math.max(0, Math.min(120, Math.round(Number(el.value) || 0))) } }));
       render();
@@ -504,6 +588,15 @@ export const karyawan = {
       store.set(batalGajian(store.get(), el.dataset.id));
       render();
     },
+    batalThr(el) {
+      if (!confirm("Batalkan catatan THR ini? Pengeluaran Kas-nya ikut dihapus.")) return;
+      store.set(batalThr(store.get(), el.dataset.id));
+      render();
+    },
+    csvGaji() {
+      const rows = rekapGajiCsv(store.get());
+      download(`rekap-gaji-${todayISO()}.csv`, rows.map((x) => x.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\n"), "text/csv");
+    },
     hapusPinjam(el) {
       if (!confirm("Hapus catatan kasbon ini? Pengeluaran Kas-nya ikut dihapus.")) return;
       const r = hapusPinjam(store.get(), el.dataset.id);
@@ -582,6 +675,18 @@ export const karyawan = {
       bayarId = null;
       render();
     },
+    thr(f) {
+      const fd = new FormData(f);
+      const s = store.get();
+      try {
+        const r = bayarThr(s, f.dataset.id, { hariRaya: setelan(s).hariRaya, nominal: fd.get("nominal"), tanggal: todayISO(), metode: String(fd.get("metode")) });
+        store.set({ thr: r.thr, transactions: r.transactions });
+        toast(`THR ${rupiah(r.entri.nominal)} tercatat`);
+      } catch (e) {
+        return toast(e.message, "err");
+      }
+      render();
+    },
     pinjam(f) {
       const fd = new FormData(f);
       try {
@@ -607,7 +712,7 @@ export const karyawan = {
       const fd = new FormData(f);
       const s = store.get();
       try {
-        const r = simpanKaryawan(s, { id: f.dataset.id || null, nama: fd.get("nama"), posisi: fd.get("posisi"), wa: normWa(fd.get("wa")), pin: fd.get("pin"), akunId: fd.get("akunId") || null, gaji: { skema: fd.get("skema") === "bulanan" ? "bulanan" : "harian", nominal: Math.max(0, Math.round(Number(fd.get("nominal")) || 0)), makan: Math.max(0, Math.round(Number(fd.get("makan")) || 0)), periode: fd.get("periode") === "bulanan" ? "bulanan" : "mingguan", potong: fd.get("potong") === "on", hariKerja: 26 }, aktif: f.dataset.id ? fd.get("aktif") === "on" : true, mulai: String(fd.get("mulai") || "") || null });
+        const r = simpanKaryawan(s, { id: f.dataset.id || null, nama: fd.get("nama"), posisi: fd.get("posisi"), wa: normWa(fd.get("wa")), pin: fd.get("pin"), akunId: fd.get("akunId") || null, gaji: !bolehAturGaji(s, role()) ? undefined : { skema: fd.get("skema") === "bulanan" ? "bulanan" : "harian", nominal: Math.max(0, Math.round(Number(fd.get("nominal")) || 0)), makan: Math.max(0, Math.round(Number(fd.get("makan")) || 0)), periode: fd.get("periode") === "bulanan" ? "bulanan" : "mingguan", potong: fd.get("potong") === "on", hariKerja: 26, lembur: ["tetap", "depnaker"].includes(fd.get("lembur")) ? fd.get("lembur") : "tidak", tarifLembur: Math.max(0, Math.round(Number(fd.get("tarifLembur")) || 0)) }, aktif: f.dataset.id ? fd.get("aktif") === "on" : true, mulai: String(fd.get("mulai") || "") || null });
         store.set({ karyawan: r.karyawan });
         toast(f.dataset.id ? "Tersimpan" : `${r.karyawanBaru.nama} ditambahkan`);
       } catch (e) {
