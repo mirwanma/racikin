@@ -711,7 +711,7 @@ function rekapView(s) {
   const tim = teamActive() || new Set(r.semua.map((o) => o.kasir?.id || "-")).size > 1;
   const tgl = new Date(todayISO() + "T00:00:00").toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" });
   return `
-    <div class="row-between"><p class="muted small" style="margin:0">${esc(tgl)}</p><span>${kasbonAktif(s) ? `<a href="#/kasbon" class="link small">Kasbon</a> · ` : ""}<a href="#/shift" class="link small">Shift & tutup kasir</a></span></div>
+    <div class="row-between"><p class="muted small" style="margin:0">${esc(tgl)}</p><span>${isKasir() ? `<a href="#/jadwal" class="link small">Jadwal saya</a> · ` : ""}${kasbonAktif(s) ? `<a href="#/kasbon" class="link small">Kasbon</a> · ` : ""}<a href="#/shift" class="link small">Shift & tutup kasir</a></span></div>
     <div class="stats3">
       <div><small>Omzet</small><b class="pos">${rupiah(r.omzet)}</b></div>
       <div><small>Order</small><b>${r.n}</b></div>

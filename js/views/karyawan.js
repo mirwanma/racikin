@@ -14,8 +14,10 @@ import {
 } from "../absen.js";
 import { gajiOf, punyaGaji, periodeDi, hitungGaji, gajianDi, saldoKasbonKaryawan, pinjamKasbon, hapusPinjam, bayarGaji, batalGajian, belumGajian, teksSlip, METODE as METODE_GAJI, bolehAturGaji, hitungThr, thrDi, bayarThr, batalThr, batasThr, pengingatThr, rekapGajiCsv, THR_DICEK } from "../gaji.js";
 import { bisnisOf } from "../wa.js";
+import { jadwalTab, jadwalActions, jadwalChanges, jadwalForms, labelJadwal } from "./jadwal.js";
+import { sinkronAkun } from "../jadwal.js";
 
-let tab = "absen"; // absen | rekap | gaji | orang
+let tab = "absen"; // absen | jadwal | rekap | gaji | orang
 let geser = -1; // periode gaji: -1 = periode lalu, 0 = periode ini, -2 dst.
 let bayarId = null; // karyawan yang lagi dibayar gajinya
 let tgl = todayISO();
@@ -46,7 +48,7 @@ export function absenCard(s) {
 // ---------- Absen harian ----------
 function barisAbsen(s, k, a) {
   return `<div class="absen-row" data-id="${k.id}">
-    <div class="absen-nama"><b>${esc(k.nama)}</b><small class="muted">${esc(k.posisi || "")}${a?.sumber === "shift" ? " · dari shift kasir" : a?.sumber === "mesin" ? " · mesin absen" : ""}${a?.telat ? ` · <span class="neg">telat</span>` : ""}</small></div>
+    <div class="absen-nama"><b>${esc(k.nama)}</b><small class="muted">${esc([k.posisi, labelJadwal(s, tgl, k.id)].filter(Boolean).join(" · "))}${a?.sumber === "shift" ? " · dari shift kasir" : a?.sumber === "mesin" ? " · mesin absen" : ""}${a?.telat ? ` · <span class="neg">telat</span>` : ""}</small></div>
     <div class="absen-status">${STATUS.map((x) => `<button class="chip-btn ${a?.status === x.id ? `on ${x.cls}` : ""}" data-action="status" data-id="${k.id}" data-v="${x.id}" aria-pressed="${a?.status === x.id}">${x.nama}</button>`).join("")}</div>
     ${
       a?.status === "hadir"
@@ -448,14 +450,16 @@ export const karyawan = {
         <button class="btn primary" data-action="nyala">Aktifkan</button>
       </section>`;
     if (impor) return `${head("Karyawan & Absen", "#/bisnis")}${imporView(s)}`;
-    if (location.hash.includes("tab=gaji")) {
-      tab = "gaji";
+    const minta = location.hash.match(/tab=(gaji|jadwal)/);
+    if (minta) {
+      tab = minta[1];
       history.replaceState(null, "", "#/karyawan");
     }
-    const tabs = `<div class="seg seg4">${[["absen", "Absen"], ["rekap", "Rekap"], ["gaji", "Gaji"], ["orang", "Karyawan"]].map(([k, v]) => `<label><input type="radio" name="tab" value="${k}" data-change="tab" ${tab === k ? "checked" : ""}><span>${v}</span></label>`).join("")}</div>`;
-    return `${head("Karyawan & Absen", "#/bisnis")}${tabs}${tab === "rekap" ? rekapTab(s) : tab === "gaji" ? gajiTab(s) : tab === "orang" ? orangTab(s) : absenTab(s)}`;
+    const tabs = `<div class="seg seg5">${[["absen", "Absen"], ["jadwal", "Jadwal"], ["rekap", "Rekap"], ["gaji", "Gaji"], ["orang", "Orang"]].map(([k, v]) => `<label><input type="radio" name="tab" value="${k}" data-change="tab" ${tab === k ? "checked" : ""}><span>${v}</span></label>`).join("")}</div>`;
+    return `${head("Karyawan & Absen", "#/bisnis")}${tabs}${tab === "jadwal" ? jadwalTab(s) : tab === "rekap" ? rekapTab(s) : tab === "gaji" ? gajiTab(s) : tab === "orang" ? orangTab(s) : absenTab(s)}`;
   },
   changes: {
+    ...jadwalChanges,
     tab(el) {
       tab = el.value;
       edit = null;
@@ -519,6 +523,7 @@ export const karyawan = {
     },
   },
   actions: {
+    ...jadwalActions,
     nyala() {
       store.set((s) => ({ absenSetting: { ...setelan(s), aktif: true } }));
       tab = (store.get().karyawan || []).length ? "absen" : "orang";
@@ -662,6 +667,7 @@ export const karyawan = {
     },
   },
   forms: {
+    ...jadwalForms,
     bayarGaji(f) {
       const fd = new FormData(f);
       const s = store.get();
@@ -714,6 +720,7 @@ export const karyawan = {
       try {
         const r = simpanKaryawan(s, { id: f.dataset.id || null, nama: fd.get("nama"), posisi: fd.get("posisi"), wa: normWa(fd.get("wa")), pin: fd.get("pin"), akunId: fd.get("akunId") || null, gaji: !bolehAturGaji(s, role()) ? undefined : { skema: fd.get("skema") === "bulanan" ? "bulanan" : "harian", nominal: Math.max(0, Math.round(Number(fd.get("nominal")) || 0)), makan: Math.max(0, Math.round(Number(fd.get("makan")) || 0)), periode: fd.get("periode") === "bulanan" ? "bulanan" : "mingguan", potong: fd.get("potong") === "on", hariKerja: 26, lembur: ["tetap", "depnaker"].includes(fd.get("lembur")) ? fd.get("lembur") : "tidak", tarifLembur: Math.max(0, Math.round(Number(fd.get("tarifLembur")) || 0)) }, aktif: f.dataset.id ? fd.get("aktif") === "on" : true, mulai: String(fd.get("mulai") || "") || null });
         store.set({ karyawan: r.karyawan });
+        store.set(sinkronAkun(store.get())); // akun kasir -> jadwal saya
         toast(f.dataset.id ? "Tersimpan" : `${r.karyawanBaru.nama} ditambahkan`);
       } catch (e) {
         return toast(e.message, "err");

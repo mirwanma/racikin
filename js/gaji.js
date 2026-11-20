@@ -13,6 +13,7 @@
 // state.kasbonKaryawan = [{ id, karyawanId, tanggal, jenis: "pinjam" | "potong", nominal, catatan, gajianId? }]
 import { uid } from "./store.js";
 import { rekapAbsen, absenHari, setelan } from "./absen.js";
+import { jamShift } from "./jadwal.js";
 
 export const KAT_GAJI = "Gaji";
 export const KAT_PINJAM = "Kasbon karyawan";
@@ -105,7 +106,19 @@ export function lemburPeriode(s, k, dari, sampai) {
     if (a?.status !== "hadir" || !a.masuk || !a.pulang) continue;
     const [h1, m1] = a.masuk.split(":").map(Number);
     const [h2, m2] = a.pulang.split(":").map(Number);
-    const l = lemburHari(k, h2 * 60 + m2 - (h1 * 60 + m1), jamKerja);
+    // Dijadwalkan shift: lembur = pulang lewat jam selesai shift (shift lewat tengah malam didukung).
+    // Tanpa jadwal: lama kerja lewat jam kerja normal.
+    const js = jamShift(s, t, k.id);
+    let kerja = h2 * 60 + m2 - (h1 * 60 + m1);
+    if (js) {
+      const masuk = h1 * 60 + m1;
+      let pulang = h2 * 60 + m2;
+      let selesai = js.selesai;
+      if (selesai <= js.mulai) selesai += 1440;
+      if (pulang < masuk) pulang += 1440;
+      kerja = jamKerja * 60 + Math.max(0, pulang - selesai);
+    }
+    const l = lemburHari(k, kerja, jamKerja);
     if (!l.jam) continue;
     jam += l.jam;
     rp += l.rp;

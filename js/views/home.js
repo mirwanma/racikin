@@ -15,6 +15,7 @@ import { pajakCard } from "./pajak.js";
 import { kasbonCard } from "./kasbon.js";
 import { utangCard } from "./belanja.js";
 import { absenCard, gajiCard, thrCard } from "./karyawan.js";
+import { masukCard } from "./jadwal.js";
 import { paketCard } from "./paket.js";
 
 /** Langkah di Beranda (beda untuk usaha baru vs yang sudah jalan, lihat js/tahap.js). */
@@ -107,6 +108,7 @@ export const home = {
       ${isMember() && cloud.team?.role === "kasir" ? "" : pajakCard(s)}
       ${kasbonCard(s)}
       ${isMember() && cloud.team?.role === "kasir" ? "" : utangCard(s)}
+      ${isMember() && cloud.team?.role === "kasir" ? "" : masukCard(s)}
       ${isMember() && cloud.team?.role === "kasir" ? "" : absenCard(s)}
       ${isMember() && cloud.team?.role === "kasir" ? "" : gajiCard(s)}
       ${isMember() && cloud.team?.role === "kasir" ? "" : thrCard(s)}
