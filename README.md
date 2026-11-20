@@ -38,6 +38,12 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - Usaha tahap ide yang sudah **14 hari jualan** di Kasir ditawari pindah ke tampilan "udah jalan" (bisa "Nanti aja"). Isian "udah jalan" tetap disimpan kalau pindah balik ke tahap ide.
 - Data contoh TAHGUY = usaha udah jalan (fokus: untung & stok). Logika di `js/tahap.js`.
 
+### Kasbon pelanggan (opsional)
+- Aktifkan di `#/kasbon` (modul di Bisnis, link juga di Kasir > Hari ini), default nonaktif, fitur Gratis. Di Kasir muncul metode bayar **Kasbon**: wajib pilih pelanggan (bisa tambah pelanggan baru cepat), ada **batas kasbon** (default Rp200.000, bisa diubah + batas khusus per pelanggan), bisa **DP tunai** (pembayaran campuran).
+- Order kasbon tetap penjualan (stok terpotong, rekap kasir & laporan laba rugi naik saat order), tapi bagian kasbon **belum masuk Kas**. Pelunasan (boleh dicicil, tunai/QRIS/transfer) masuk Kas kategori **Pelunasan kasbon** (digabung per hari per metode, `ref: "kasbon"`), tunai yang diterima saat shift ikut ke laci. Pajak UMKM menghitung omzet kasbon saat uangnya diterima.
+- Halaman kasbon: total, daftar siapa ngutang berapa & sejak kapan (FIFO), detail + riwayat, terima bayar, tagih sopan lewat WhatsApp, hapus catatan bayar (pemilik/manajer). Pengingat di Beranda kalau ada kasbon lewat 14 hari. Order dibatalkan → kasbonnya ikut hilang.
+- Kasir boleh memberi kasbon & menerima pelunasan (data `kasbon`, migrasi `kasbon_kasir`); Kas pelunasan dihitung ulang dari daftar kasbon di HP pemilik/manajer (`reconcile`). Logika di `js/kasbon.js`.
+
 ### Pajak UMKM (PPh Final 0,5%)
 - Halaman `#/pajak` (modul di Bisnis): omzet per bulan dari Kas, PPh Final 0,5% (orang pribadi: Rp500 juta pertama per tahun bebas; PT perorangan/koperasi: semua omzet; CV/PT biasa: info tarif umum), jatuh tempo tgl 15 bulan berikutnya, status & pengingat di Beranda.
 - Catat bayar (tanggal, nominal, NTPN), opsional jadi pengeluaran Kas kategori Pajak. Cara bayar lewat kode billing Coretax (KAP 411128 / KJS 420) dan salin rekap omzet untuk SPT Tahunan. Logika di `js/pajak.js` (`DICEK`, perbarui kalau aturan berubah), data di `pajak` (tidak dikirim ke kasir).
