@@ -38,6 +38,12 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - Usaha tahap ide yang sudah **14 hari jualan** di Kasir ditawari pindah ke tampilan "udah jalan" (bisa "Nanti aja"). Isian "udah jalan" tetap disimpan kalau pindah balik ke tahap ide.
 - Data contoh TAHGUY = usaha udah jalan (fokus: untung & stok). Logika di `js/tahap.js`.
 
+### Karyawan & absen (opsional)
+- Halaman `#/karyawan` (modul di Bisnis, pemilik/manajer), default nonaktif. Karyawan **nggak perlu akun**: nama, posisi, WA, **PIN / ID di mesin absen**, opsional dihubungkan ke akun kasir. **Posisi bebas diatur** (tambah / hapus, cth Barista, Cuci piring), terpisah dari peran akun tim yang mengatur hak akses.
+- **Absen harian** sekali ketuk (hadir / izin / sakit / libur / alpa) + jam masuk & pulang, tombol "Sisanya hadir", tanda **telat** (jam masuk + toleransi, diatur di setelan). Karyawan yang dihubungkan ke akun kasir otomatis hadir dari shift (jam buka-tutup shift).
+- **Impor dari mesin absen fingerprint**: file Excel (.xls/.xlsx, dibaca SheetJS `js/vendor/xlsx-0.20.3.full.min.js` yang baru dimuat saat dibutuhkan), CSV, atau log teks (`attlog.dat` ZKTeco), atau tempel. Judul laporan di atas tabel dilewati, kolom ditebak (PIN, nama, tanggal+jam scan / tanggal & jam / jam masuk & pulang) dan bisa diganti. Scan pertama = masuk, terakhir = pulang. Orang yang belum dikenal bisa dijadikan karyawan baru, dipetakan ke karyawan yang ada (PIN-nya ikut tersimpan), atau diabaikan. Catatan izin/sakit manual dipertahankan kecuali dicentang timpa.
+- **Rekap bulanan** per karyawan (hadir, telat, izin/sakit, libur, alpa, jam kerja) + CSV. Pengingat di Beranda kalau absen hari ini belum dicatat 1 jam setelah jam masuk. Logika di `js/absen.js`, data `karyawan`, `absen`, `absenSetting` (tidak dikirim ke kasir).
+
 ### Kasbon pelanggan (opsional)
 - Aktifkan di `#/kasbon` (modul di Bisnis, link juga di Kasir > Hari ini), default nonaktif, fitur Gratis. Di Kasir muncul metode bayar **Kasbon**: wajib pilih pelanggan (bisa tambah pelanggan baru cepat), ada **batas kasbon** (default Rp200.000, bisa diubah + batas khusus per pelanggan), bisa **DP tunai** (pembayaran campuran).
 - Order kasbon tetap penjualan (stok terpotong, rekap kasir & laporan laba rugi naik saat order), tapi bagian kasbon **belum masuk Kas**. Pelunasan (boleh dicicil, tunai/QRIS/transfer) masuk Kas kategori **Pelunasan kasbon** (digabung per hari per metode, `ref: "kasbon"`), tunai yang diterima saat shift ikut ke laci. Pajak UMKM menghitung omzet kasbon saat uangnya diterima.

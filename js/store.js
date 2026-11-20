@@ -35,7 +35,10 @@ const DEFAULT = {
   supplier: [],           // { id, nama, wa, catatan } (lihat js/belanja.js)
   meja: [],               // { id, nama, token } untuk pesan lewat QR meja (lihat js/meja.js)
   posSetting: null,       // { wajibShift, openBill, kasbon, kasbonBatas }
-  kasbon: [],             // kasbon pelanggan: utang dari Kasir & pelunasan (lihat js/kasbon.js)
+  kasbon: [],
+  karyawan: [],           // karyawan (tanpa akun) { id, nama, wa, posisi, pin (mesin absen), akunId, aktif } (lihat js/absen.js)
+  absen: {},              // absen harian { "YYYY-MM-DD": { karyawanId: { status, masuk, pulang, sumber } } }
+  absenSetting: null,     // { aktif, jamMasuk, toleransi, posisi: [..] }             // kasbon pelanggan: utang dari Kasir & pelunasan (lihat js/kasbon.js)
   settings: { aiMode: "demo", endpoint: "", anonKey: "" },
 };
 

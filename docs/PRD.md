@@ -152,6 +152,11 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Pilihan varian bisa mengalikan porsi resep (Jumbo 1,5×, bahan kemasan tidak ikut dikali) dan mengganti / menghilangkan bahan resep (susu oat, tanpa gula). Stok, HPP per menu, rekap `opsiMenu`, laporan & cek kesehatan ikut. Data contoh: Es Teh Jumbo 1,5× porsi, pilihan "Tanpa gula".
 - Tanpa perubahan server (harga tetap dari harga tambahan; pesan meja ikut otomatis).
 
+### Fase 35: Karyawan & absen, tahap 1 (selesai)
+- Keputusan: absen dicatat pemilik/manajer + otomatis dari shift kasir (bukan karyawan absen sendiri), ditambah impor file mesin absen fingerprint (Excel/CSV/attlog). Posisi karyawan bebas diatur pemilik (bukan cuma kasir/manajer/dapur).
+- `#/karyawan`: data karyawan (PIN mesin, akun kasir), absen harian, telat, rekap bulanan + CSV, pengingat Beranda. Migrasi `absen_kasir_hidden`.
+- Tahap berikutnya: gaji (harian / bulanan), kasbon karyawan potong gaji, slip via WA, bayar gaji → Kas kategori Gaji.
+
 ### Fase 34: Utang ke supplier (selesai)
 - Belanja tempo dari Belanja > Sudah belanja (wajib supplier + jatuh tempo): stok & harga update sekarang, Kas saat dibayar (cicil, kategori sesuai nota, proporsional). Tab Utang, lunasi semua, ubah tempo, pengingat Beranda (lewat / ≤ 3 hari), supplier yang masih punya utang tidak bisa dihapus.
 - Laporan HPP "dari belanja" & arus kas mengikuti tanggal bayar. Data `utangSupplier` disembunyikan dari kasir (migrasi `utang_supplier_hidden`).
