@@ -6,10 +6,15 @@
 //   disinkron (base). Saat sinkron: data lokal + cloud digabung otomatis (3-way merge),
 //   lalu disimpan dengan syarat rev belum berubah. Kalau keduluan perangkat lain -> gabung ulang.
 // - Jadi beberapa HP (pemilik + kasir) bisa jualan bersamaan tanpa saling menimpa.
+// - Detail order kasir (30 hari) disimpan di tabel pos_orders, bukan di dokumen (dokumen dibatasi 2 MB):
+//   ditarik per perubahan (orders_pull, since), ikut digabung 3-way bersama dokumen, yang berubah dikirim (orders_push).
+//   Base lokal tetap memuat orders, jadi logika gabungnya sama seperti sebelumnya (lihat js/ordersync.js).
 import { store } from "./store.js";
 import { cardData } from "./loyalty.js";
 import { mergeDocs, omit, norm, same } from "./merge.js";
-import { reconcile } from "./pos.js";
+import { reconcile, SIMPAN_HARI } from "./pos.js";
+import { todayISO } from "./ui.js";
+import { ordersDariPull, ordersBerubah, sinceBaru } from "./ordersync.js";
 
 export const SUPABASE_URL = "https://ujdxslztjcufidhqpmcd.supabase.co";
 // Anon key memang publik; keamanan data dijaga oleh RLS di database.
@@ -190,8 +195,12 @@ async function syncOnce() {
   }
 
   let remote;
+  let pulled = null;
+  // Tarik order yang berubah sejak sinkron terakhir; tarik semua kalau belum pernah / base hilang.
+  const since = meta.docOwner === owner && meta.ordersSince && readBase() ? meta.ordersSince : null;
   try {
-    remote = await rpc("doc_get", { p_owner: owner });
+    remote = await rpc("doc_get_v2", { p_owner: owner });
+    if (cloud.team.role !== "dapur") pulled = await rpc("orders_pull", { p_owner: owner, p_since: since });
   } catch (err) {
     if (err.code === "42501") {
       // Akses dicabut / peran berubah: muat ulang info tim lalu ulangi.
@@ -204,8 +213,12 @@ async function syncOnce() {
   // jadi perubahan lokal tidak mungkin terselip di antaranya.
   const fullLocal = store.cloudData();
   const local = kasir ? omit(fullLocal, KASIR_HIDDEN) : fullLocal;
-  const remoteData = remote?.data || null;
   const remoteRev = remote?.rev ?? 0;
+  // Order versi cloud = order versi sinkron terakhir + yang barusan ditarik.
+  const remoteOrders = pulled ? ordersDariPull(since ? readBase()?.orders : [], pulled.rows, todayISO(), SIMPAN_HARI) : null;
+  const remoteData = remote?.data ? (remoteOrders ? { ...remote.data, orders: remoteOrders } : remote.data) : null;
+  const ordersSince = pulled ? sinceBaru(pulled.rows, since, pulled.now) : null;
+  const adaOrderBaru = !!pulled?.rows?.length;
 
   // Akun dapur: hanya membaca identitas usaha (nama, brand, setelan kasir); tidak pernah menulis dokumen.
   if (cloud.team.role === "dapur") {
@@ -240,8 +253,8 @@ async function syncOnce() {
       merged = remoteData;
     }
     merged = merged || mergeDocs(base, local, remoteData);
-  } else if (remoteRev === meta.rev) {
-    merged = local; // cloud tidak berubah sejak sinkron terakhir
+  } else if (remoteRev === meta.rev && !adaOrderBaru) {
+    merged = local; // cloud tidak berubah sejak sinkron terakhir (dokumen & order)
   } else {
     merged = mergeDocs(base, local, remoteData);
   }
@@ -257,15 +270,24 @@ async function syncOnce() {
   if (remoteData) {
     // merged sudah memuat isi cloud versi ini -> base = versi cloud ini.
     writeBase(remoteData);
-    writeMeta({ userId: cloud.user.id, docOwner: owner, rev: remoteRev });
+    writeMeta({ userId: cloud.user.id, docOwner: owner, rev: remoteRev, ...(pulled ? { ordersSince } : {}) });
   }
 
-  if (!remoteData || !same(merged, remoteData)) {
-    const res = await rpc("doc_save", { p_owner: owner, p_data: merged, p_base_rev: remoteRev });
+  // Order yang berubah dikirim dulu ke tabel (aman diulang), baru dokumennya (tanpa order).
+  let orderTerkirim = false;
+  if (pulled) {
+    const kirim = ordersBerubah(merged.orders, remoteOrders);
+    for (let i = 0; i < kirim.length; i += 500) await rpc("orders_push", { p_owner: owner, p_orders: kirim.slice(i, i + 500) });
+    orderTerkirim = kirim.length > 0;
+  }
+  const docLokal = omit(merged, ["orders"]);
+  if (!remoteData || !same(docLokal, omit(remoteData, ["orders"]))) {
+    const res = await rpc("doc_save", { p_owner: owner, p_data: docLokal, p_base_rev: remoteRev });
     if (!res.ok) return false; // keduluan perangkat lain: gabung ulang
     writeBase(merged);
     writeMeta({ userId: cloud.user.id, docOwner: owner, rev: res.rev, syncedAt: res.updated_at });
   } else {
+    if (orderTerkirim) writeBase(merged); // dokumen sama, tapi order baru sudah ada di cloud
     writeMeta({ syncedAt: remote.updated_at });
   }
   if (store.get() === applied) writeMeta({ dirty: false });

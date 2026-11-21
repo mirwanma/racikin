@@ -157,6 +157,9 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Merchant demo TAHGUY (akun tes pemilik.tahguy) diisi ulang dengan generator ini sampai 20 Nov 2026 (skala 0,7 supaya muat batas dokumen 2 MB): omzet ±Rp443rb → Rp1,31jt per hari, order 15 → 47 per hari, belanja 2 minggu Rp2,5jt → Rp7,4jt. Brand, meja, ide, RAB, BEP, aktivasi, izin & setelan dipertahankan; pelanggan & token kartu stempel lama tetap. Dokumen lama dicadangkan di `private.cadangan_user_data`.
 - Catatan: dokumen usaha dibatasi 2 MB; usaha dengan ±70 order/hari mulai mendekati batas karena detail order 30 hari disimpan di dokumen. Kalau merchant nyata sampai sebesar itu, pindahkan detail order ke tabel sendiri atau perpendek masa simpan.
 
+### Fase 40: Detail order pindah ke tabel sendiri (selesai)
+- Order kasir tidak lagi di dokumen usaha (batas 2 MB) tapi di tabel `pos_orders`: `orders_pull` (per perubahan) / `orders_push` (cuma yang berubah), dokumen lewat `doc_get_v2`. Kompatibel app lama (`doc_get` / `doc_save`). Batal selalu menang. Migrasi `pos_orders` memindahkan order semua usaha.
+
 ### Fase 39: Pengingat push untuk tagihan & jadwal (selesai)
 - Pengingat di Beranda dari fitur Fase 32–38 sekarang juga dikirim ke HP lewat `racikin-push` (`notif.ts`): pajak UMKM, utang supplier, kasbon pelanggan, gajian & THR (pagi), jadwal kerja besok (malam). Bisa dimatikan per jenis di `#/notif`; kasir/dapur dapat jadwalnya sendiri. Logika dihitung ulang di Edge Function (porting ringkas dari js/pajak.js, utang.js, kasbon.js, gaji.js, jadwal.js), tanpa migrasi.
 
