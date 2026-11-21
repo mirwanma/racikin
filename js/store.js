@@ -34,8 +34,9 @@ const DEFAULT = {
   utangSupplier: [],      // utang ke supplier per nota belanja { id, supplierId, tanggal, tempo, total, rincian, bayar } (lihat js/utang.js)
   supplier: [],           // { id, nama, wa, catatan } (lihat js/belanja.js)
   meja: [],               // { id, nama, token } untuk pesan lewat QR meja (lihat js/meja.js)
-  posSetting: null,       // { wajibShift, openBill, kasbon, kasbonBatas }
+  posSetting: null,       // { wajibShift, openBill, kasbon, kasbonBatas, saldo }
   kasbon: [],
+  saldoPelanggan: [],     // saldo / titipan pelanggan: isi, pakai bayar, tarik (lihat js/saldo.js)
   karyawan: [],           // karyawan (tanpa akun) { id, nama, wa, posisi, pin (mesin absen), akunId, aktif } (lihat js/absen.js)
   absen: {},              // absen harian { "YYYY-MM-DD": { karyawanId: { status, masuk, pulang, sumber } } }
   absenSetting: null,

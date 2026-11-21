@@ -1,5 +1,5 @@
 // Halaman publik kartu stempel (dibuka pelanggan lewat link, tanpa login).
-import { esc } from "../ui.js";
+import { esc, rupiah } from "../ui.js";
 import { render } from "../app.js";
 import { icon } from "../icons.js";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../cloud.js";
@@ -62,6 +62,7 @@ export const kartu = {
           }
         </div>
       </section>
+      ${d.saldo != null ? `<section class="card lc-saldo row-between"><span>${icon("wallet", 18)} Saldo kamu</span><b>${rupiah(Number(d.saldo) || 0)}</b></section><p class="muted small center">Saldo bisa dipakai bayar di kasir. Simpan kembalian juga bisa jadi saldo.</p>` : ""}
       <p class="muted small center">${d.hadiahDiambil ? `Kamu sudah ${d.hadiahDiambil}× ambil hadiah. ` : ""}Diperbarui ${esc(diperbarui)}</p>
       <button class="btn ghost block" data-action="reload">${icon("sync", 16)} Muat ulang</button>
       <p class="muted small center lc-foot">Kartu stempel digital · dibuat dengan <span class="wordmark">racikin</span></p>`;

@@ -13,7 +13,8 @@ import { kumpulOpsi, hppOpsiTerjual } from "./varian.js";
 export const KAT_HPP = ["Bahan Baku", "Kemasan"];
 export const KAT_ASET = ["Peralatan"];
 // Pinjam & potong kasbon karyawan cuma pindah uang (piutang), bukan pendapatan / biaya (lihat js/gaji.js).
-export const KAT_PIUTANG = ["Kasbon karyawan", "Potong kasbon karyawan"];
+// Titipan saldo pelanggan juga bukan pendapatan / biaya (penjualannya sudah tercatat waktu order, lihat js/saldo.js).
+export const KAT_PIUTANG = ["Kasbon karyawan", "Potong kasbon karyawan", "Titipan saldo pelanggan"];
 const ONLINE = new Set(CHANNELS.map((c) => c.id));
 const sum = (arr, f = (x) => x) => arr.reduce((a, x) => a + f(x), 0);
 
