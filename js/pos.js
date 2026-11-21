@@ -13,6 +13,7 @@ import { program, patchStempel } from "./loyalty.js";
 import { CHANNELS, isOnline, channelNama, komisiRp } from "./online.js";
 import { laciTransactions } from "./shift.js";
 import { porsiKasbon, utangDariOrder, hapusUtangOrder, kasbonKasSemua } from "./kasbon.js";
+import { porsiSaldo, saldoDariOrder, hapusPakaiOrder, saldoKas, saldoKasSemua, saldoOf, KAT_SALDO } from "./saldo.js";
 
 // Metode bayar untuk order di toko. Order online memakai id saluran (gofood, grabfood, shopeefood) sebagai metode.
 export const METODE = [
@@ -21,7 +22,7 @@ export const METODE = [
   { id: "transfer", nama: "Transfer" },
 ];
 // Semua "metode" yang mungkin muncul di order (termasuk data lama "ojol").
-const SEMUA_METODE = [...METODE, ...CHANNELS.map((c) => ({ id: c.id, nama: c.nama })), { id: "ojol", nama: "Ojol" }, { id: "campur", nama: "Campuran" }, { id: "kasbon", nama: "Kasbon" }];
+const SEMUA_METODE = [...METODE, ...CHANNELS.map((c) => ({ id: c.id, nama: c.nama })), { id: "ojol", nama: "Ojol" }, { id: "campur", nama: "Campuran" }, { id: "kasbon", nama: "Kasbon" }, { id: "saldo", nama: "Saldo" }];
 /**
  * Porsi pembayaran order per metode: [{ metode, jumlah }]. Order biasa = 1 metode senilai total;
  * order dengan pembayaran campuran (mis. sebagian tunai, sisanya QRIS) punya o.pembayaran.
@@ -74,6 +75,18 @@ function kasPatch(transactions, orders, tanggal) {
         kategori: "Komisi Order Online",
         nominal: komisi,
         catatan: `Komisi ${m.nama} · ${list.length} order`,
+        ref: "pos",
+      });
+    }
+    // Dibayar pakai saldo: penjualannya tetap masuk (di atas), titipan pelanggan berkurang senilai yang sama.
+    if (m.id === "saldo") {
+      tx.push({
+        id: `pos-${tanggal}-saldo-pakai`,
+        tanggal,
+        jenis: "keluar",
+        kategori: KAT_SALDO,
+        nominal: Math.round(jumlahMetode(list, m.id)),
+        catatan: `Saldo pelanggan terpakai · ${list.length} order`,
         ref: "pos",
       });
     }
@@ -143,7 +156,7 @@ function itemOrder(i) {
  * Buat order baru. cart = [{ resepId|null, nama, harga, qty, opsi? }].
  * Return { patch, order, stempelInfo }.
  */
-export function buatOrder(s, { cart, diskon = 0, promo = null, metode = "tunai", bayar = 0, pelangganId = "", channel = "toko", kasir = null, shiftId = null, tunaiSebagian = 0, stok = true, bill = null }) {
+export function buatOrder(s, { cart, diskon = 0, promo = null, metode = "tunai", bayar = 0, pelangganId = "", channel = "toko", kasir = null, shiftId = null, tunaiSebagian = 0, stok = true, bill = null, saldoPakai = null, sisaMetode = "tunai", simpanKembalian = 0 }) {
   if (isOnline(channel)) metode = channel; // order online dibayar lewat platform
   const tanggal = todayISO();
   const items = cart.filter((i) => i.qty > 0).map(itemOrder);
@@ -173,7 +186,22 @@ export function buatOrder(s, { cart, diskon = 0, promo = null, metode = "tunai",
   };
   // Pembayaran campuran: sebagian tunai (pas), sisanya pakai metode non-tunai yang dipilih.
   const tunaiPart = Math.round(Number(tunaiSebagian) || 0);
-  if (!isOnline(channel) && metode !== "tunai" && tunaiPart > 0 && tunaiPart < total) {
+  if (metode === "saldo") {
+    // Bayar pakai saldo pelanggan; kalau saldonya kurang, sisanya dibayar tunai / QRIS / transfer.
+    if (!pelangganId) throw new Error("Bayar pakai saldo wajib pilih pelanggan");
+    const ada = saldoOf(s, pelangganId);
+    const pakai = Math.min(total, Math.max(0, Math.round(saldoPakai == null ? Math.min(ada, total) : Number(saldoPakai) || 0)));
+    if (pakai > ada) throw new Error(`Saldo cuma Rp${ada.toLocaleString("id-ID")}`);
+    if (pakai <= 0 && total > 0) throw new Error("Saldo pelanggan ini kosong");
+    if (pakai < total) {
+      if (!METODE.some((m) => m.id === sisaMetode)) throw new Error("Metode sisa bayar nggak dikenal");
+      order.pembayaran = [
+        { metode: sisaMetode, jumlah: total - pakai },
+        { metode: "saldo", jumlah: pakai },
+      ];
+      order.metode = "campur";
+    }
+  } else if (!isOnline(channel) && metode !== "tunai" && tunaiPart > 0 && tunaiPart < total) {
     order.pembayaran = [
       { metode: "tunai", jumlah: tunaiPart },
       { metode, jumlah: total - tunaiPart },
@@ -181,6 +209,14 @@ export function buatOrder(s, { cart, diskon = 0, promo = null, metode = "tunai",
     order.metode = "campur";
   }
   if (porsiKasbon(order) && !order.pelangganId) throw new Error("Kasbon wajib pilih pelanggan");
+  // Kembalian nggak diambil, disimpan jadi saldo pelanggan.
+  const simpan = Math.round(Number(simpanKembalian) || 0);
+  if (simpan > 0) {
+    if (order.metode !== "tunai" || !order.pelangganId) throw new Error("Simpan kembalian cuma untuk bayar tunai dengan pelanggan");
+    if (simpan > order.kembali) throw new Error("Yang disimpan lebih besar dari kembalian");
+    order.kembali -= simpan;
+    order.simpanSaldo = simpan;
+  }
   if (bill) order.bill = bill; // { id, nama, ronde } dari open bill (stok sudah dipotong per ronde)
   if (kasir) order.kasir = kasir; // { id, nama } yang mencatat (mode tim)
   if (shiftId) order.shiftId = shiftId; // shift kasir yang sedang terbuka
@@ -200,6 +236,9 @@ export function buatOrder(s, { cart, diskon = 0, promo = null, metode = "tunai",
   // kasbon pelanggan (piutang)
   const utang = utangDariOrder(order);
   if (utang) st = { ...st, kasbon: [...(st.kasbon || []), utang] };
+  // saldo pelanggan (dipakai bayar / kembalian disimpan); kasir & kasbon: lihat saldoDariOrder
+  const saldoBaru = saldoDariOrder(order);
+  if (saldoBaru.length) st = { ...st, saldoPelanggan: [...(st.saldoPelanggan || []), ...saldoBaru] };
   // stok (open bill: sudah dipotong waktu tiap ronde dikirim)
   if (stok) st = { ...st, ...stokPatch(st, items, tanggal, -1) };
   // order + kas + rekap
@@ -207,7 +246,7 @@ export function buatOrder(s, { cart, diskon = 0, promo = null, metode = "tunai",
   const patch = {
     ...st,
     orders,
-    transactions: kasPatch(st.transactions, orders, tanggal),
+    transactions: order.simpanSaldo ? saldoKas(kasPatch(st.transactions, orders, tanggal), st.saldoPelanggan, tanggal) : kasPatch(st.transactions, orders, tanggal),
     posHarian: rekapPatch(st, tanggal, orders),
   };
   return { patch: pick(patch), order, stempelInfo };
@@ -223,11 +262,12 @@ export function batalOrder(s, orderId, oleh = null) {
     st = { ...st, ...patchStempel(st, o.pelangganId, -o.stempel, "koreksi", `Batal kasir #${o.no}`) };
   }
   if (porsiKasbon(o)) st = { ...st, kasbon: hapusUtangOrder(st.kasbon, orderId) };
+  if (porsiSaldo(o)) st = { ...st, saldoPelanggan: hapusPakaiOrder(st.saldoPelanggan, orderId) };
   const orders = st.orders.map((x) => (x.id === orderId ? { ...x, status: "batal", ...(oleh ? { batalOleh: oleh } : {}) } : x));
   return pick({ ...st, orders, transactions: kasPatch(st.transactions, orders, o.tanggal), posHarian: rekapPatch(st, o.tanggal, orders) });
 }
 
-const KEYS = ["orders", "transactions", "posHarian", "bahan", "stokLog", "pelanggan", "stempelLog", "kasbon"];
+const KEYS = ["orders", "transactions", "posHarian", "bahan", "stokLog", "pelanggan", "stempelLog", "kasbon", "saldoPelanggan"];
 const pick = (obj) => Object.fromEntries(KEYS.filter((k) => k in obj).map((k) => [k, obj[k]]));
 
 /**
@@ -242,6 +282,8 @@ export function reconcile(s, { kas = true } = {}) {
   let transactions = kas && s.shifts?.length ? laciTransactions(s) : s.transactions || [];
   // Pelunasan kasbon (bisa dicatat akun kasir yang nggak boleh menulis Kas) juga dihitung ulang.
   if (kas && (s.kasbon?.length || transactions.some((t) => t.ref === "kasbon"))) transactions = kasbonKasSemua(transactions, s.kasbon || []);
+  // Isi / tarik saldo pelanggan (bisa dicatat akun kasir) juga dihitung ulang.
+  if (kas && (s.saldoPelanggan?.length || transactions.some((t) => t.ref === "saldo"))) transactions = saldoKasSemua(transactions, s.saldoPelanggan || []);
   if (!tanggal.length) return kas ? { ...s, transactions } : s;
   for (const t of tanggal) {
     posHarian = rekapPatch({ posHarian }, t, orders);
@@ -298,6 +340,7 @@ export function struk(o, bisnis, rp) {
     o.diskon ? `Diskon -${rp(o.diskon)}` : null,
     `*Total ${rp(o.total)}*`,
     isOnline(o.channel) ? `Pesanan ${channelNama(o.channel)}` : o.pembayaran ? `Bayar ${o.pembayaran.map((x) => `${metodeNama(x.metode)} ${rp(x.jumlah)}`).join(" + ")}` : `Bayar ${metodeNama(o.metode)}${o.metode === "tunai" ? ` ${rp(o.bayar)} · Kembali ${rp(o.kembali)}` : ""}`,
+    o.simpanSaldo ? `Kembalian ${rp(o.simpanSaldo)} disimpan jadi saldo` : null,
     "",
     "Terima kasih, ditunggu lagi ya!",
   ];

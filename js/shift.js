@@ -12,6 +12,7 @@
 // Order yang dibuat saat shift terbuka diberi order.shiftId.
 // "keluar" (beli es, dll.) dibayar dari laci -> juga jadi pengeluaran di Kas (ref "laci").
 // "tambah" (uang kembalian ditambah) & "ambil" (disetor ke pemilik) hanya memindah uang, tidak masuk Kas.
+import { tunaiSaldoShift } from "./saldo.js";
 import { uid } from "./store.js";
 
 // Sama dengan porsiMetode di js/pos.js (ditulis ulang di sini supaya tidak saling impor).
@@ -56,12 +57,15 @@ export function ringkasan(s, shift) {
   const ambil = sum(laci.filter((l) => l.jenis === "ambil"), (l) => l.nominal);
   // Pelunasan kasbon tunai yang diterima selama shift ikut masuk laci.
   const kasbon = sum((s.kasbon || []).filter((k) => k.jenis === "bayar" && k.shiftId === shift.id && (k.metode || "tunai") === "tunai"), (k) => Number(k.nominal) || 0);
-  const seharusnya = (Number(shift.modal) || 0) + tunai + kasbon + tambah - keluar - ambil;
+  // Saldo pelanggan tunai: isi saldo & kembalian yang disimpan masuk laci, tarik saldo keluar dari laci.
+  const saldo = tunaiSaldoShift(s, shift.id);
+  const seharusnya = (Number(shift.modal) || 0) + tunai + kasbon + saldo + tambah - keluar - ambil;
   return {
     order: orders.length,
     omzet: tunai + nonTunai + online,
     tunai,
     kasbon,
+    ...(saldo ? { saldo } : {}),
     nonTunai,
     online,
     keluar,

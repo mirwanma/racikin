@@ -5,6 +5,7 @@ import { isJalan } from "../tahap.js";
 import { ringkasIzin } from "../izin.js";
 import { hitungPajak, tagihanPajak, namaBulan } from "../pajak.js";
 import { kasbonAktif, ringkasKasbon } from "../kasbon.js";
+import { saldoModul } from "./saldo.js";
 import { ringkasUtang } from "../utang.js";
 import { absenAktif, ringkasHari } from "../absen.js";
 import { todayISO, short, rupiah } from "../ui.js";
@@ -147,6 +148,7 @@ export const bisnis = {
         </a>
         ${jalan ? "" : sehatMod + imporMod}
         ${kasbonMod}
+        ${saldoModul(s)}
         ${karyawanMod}
         ${izinMod}
         ${pajakMod}

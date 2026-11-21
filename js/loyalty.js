@@ -1,6 +1,7 @@
 // Kartu stempel & pelanggan (logika murni, tanpa UI).
 import { uid } from "./store.js";
 import { todayISO } from "./ui.js";
+import { saldoAktif, saldoOf } from "./saldo.js";
 
 export const DEFAULT_PROGRAM = { nama: "Kartu Setia", target: 5, hadiah: "1 porsi gratis", minBelanja: 0, pesanAjak: "" };
 export const AJAK_HARI = 21; // pelanggan dianggap "lama nggak balik" setelah sekian hari
@@ -96,5 +97,7 @@ export function cardData(s, p) {
     hadiahDiambil: Number(p.hadiahDiambil) || 0,
     lokasi: [s.profile?.area, s.profile?.kota].filter(Boolean).join(", "),
     warna: pal.length >= 2 ? { utama: pal[0].hex, aksen: pal[1].hex } : null,
+    // Saldo titipan (kalau fitur saldo aktif), supaya pelanggan bisa cek sendiri.
+    ...(saldoAktif(s) ? { saldo: Math.max(0, saldoOf(s, p.id)) } : {}),
   };
 }

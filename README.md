@@ -68,6 +68,13 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - Halaman kasbon: total, daftar siapa ngutang berapa & sejak kapan (FIFO), detail + riwayat, terima bayar, tagih sopan lewat WhatsApp, hapus catatan bayar (pemilik/manajer). Pengingat di Beranda kalau ada kasbon lewat 14 hari. Order dibatalkan → kasbonnya ikut hilang.
 - Kasir boleh memberi kasbon & menerima pelunasan (data `kasbon`, migrasi `kasbon_kasir`); Kas pelunasan dihitung ulang dari daftar kasbon di HP pemilik/manajer (`reconcile`). Logika di `js/kasbon.js`.
 
+### Saldo pelanggan / titipan (opsional)
+- Aktifkan di `#/saldo` (modul di Bisnis, link juga di Kasir > Hari ini), default nonaktif, fitur Gratis. Pelanggan bisa **isi saldo** (tunai/QRIS/transfer, tombol cepat 20/50/100rb, pelanggan baru langsung dari halaman saldo) atau **simpan kembalian**: di Kasir, bayar tunai + pilih pelanggan → centang "Simpan kembalian jadi saldo" (boleh sebagian).
+- Di Kasir ada metode bayar **Saldo**: pilih pelanggan, saldo dipotong; kalau kurang, sisanya dibayar tunai/QRIS/transfer (pembayaran campuran). Struk menampilkan sisa saldo. Order dibatalkan → saldo yang terpakai balik (kembalian yang disimpan tetap jadi saldo).
+- Pembukuan: isi saldo & kembalian disimpan masuk Kas kategori **Titipan saldo pelanggan** (`ref: "saldo"`, digabung per hari per metode), tarik saldo keluar dari kategori yang sama. Order dibayar saldo tetap **Penjualan** (omzet, laba rugi & pajak saat jual) + Kas keluar titipan senilai yang sama, jadi uang Kas nggak dobel. Titipan nggak dihitung laba rugi (`KAT_PIUTANG`) & pajak. Tunai yang lewat laci (isi, kembalian disimpan, tarik) ikut hitungan shift.
+- Halaman saldo: total titipan, daftar pelanggan bersaldo, cari pelanggan, isi / tarik, riwayat, hapus catatan isi/tarik (pemilik/manajer, nggak boleh bikin saldo minus). Fitur hanya bisa dimatikan kalau semua saldo sudah nol. Saldo juga tampil di **kartu stempel digital** pelanggan.
+- Kasir boleh isi, tarik & memakai saldo (data `saldoPelanggan`, migrasi `saldo_pelanggan`); Kas titipan dihitung ulang dari daftar saldo di HP pemilik/manajer (`reconcile`). Logika di `js/saldo.js`.
+
 ### Pajak UMKM (PPh Final 0,5%)
 - Halaman `#/pajak` (modul di Bisnis): omzet per bulan dari Kas, PPh Final 0,5% (orang pribadi: Rp500 juta pertama per tahun bebas; PT perorangan/koperasi: semua omzet; CV/PT biasa: info tarif umum), jatuh tempo tgl 15 bulan berikutnya, status & pengingat di Beranda.
 - Catat bayar (tanggal, nominal, NTPN), opsional jadi pengeluaran Kas kategori Pajak. Cara bayar lewat kode billing Coretax (KAP 411128 / KJS 420) dan salin rekap omzet untuk SPT Tahunan. Logika di `js/pajak.js` (`DICEK`, perbarui kalau aturan berubah), data di `pajak` (tidak dikirim ke kasir).

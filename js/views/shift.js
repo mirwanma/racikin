@@ -32,6 +32,7 @@ function rows(r) {
     <div class="row-between pos-sum"><span>Modal awal laci</span><b>${rupiah(r.modal)}</b></div>
     <div class="row-between pos-sum"><span>Penjualan tunai</span><b class="pos">+${rupiah(r.tunai)}</b></div>
     ${r.kasbon ? `<div class="row-between pos-sum"><span>Pelunasan kasbon tunai</span><b class="pos">+${rupiah(r.kasbon)}</b></div>` : ""}
+    ${r.saldo ? `<div class="row-between pos-sum"><span>Saldo pelanggan tunai (isi − tarik)</span><b class="${r.saldo > 0 ? "pos" : "neg"}">${r.saldo > 0 ? "+" : "−"}${rupiah(Math.abs(r.saldo))}</b></div>` : ""}
     ${r.tambah ? `<div class="row-between pos-sum"><span>Tambah uang</span><b class="pos">+${rupiah(r.tambah)}</b></div>` : ""}
     ${r.keluar ? `<div class="row-between pos-sum"><span>Pengeluaran dari laci</span><b class="neg">−${rupiah(r.keluar)}</b></div>` : ""}
     ${r.ambil ? `<div class="row-between pos-sum"><span>Disetor / diambil</span><b class="neg">−${rupiah(r.ambil)}</b></div>` : ""}
