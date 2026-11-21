@@ -16,7 +16,7 @@ const stok = (s, nama) => s.bahan.find((x) => x.nama === nama).stok;
   const jawab = []; // jawaban prompt/confirm berurutan
   p.on('dialog', (d) => { const j = jawab.shift(); if (j === false) d.dismiss(); else d.accept(typeof j === 'string' ? j : undefined); });
   await p.goto(B); await p.click('[data-action=dummy]'); await p.waitForSelector('.journey', { timeout: 20000 });
-  await p.evaluate(() => { const x = JSON.parse(localStorage.getItem('racikin:v1')); x.promo = x.promo.map((q) => ({ ...q, aktif: false })); localStorage.setItem('racikin:v1', JSON.stringify(x)); });
+  await p.evaluate(() => { const x = JSON.parse(localStorage.getItem('racikin:v1')); x.promo = x.promo.map((q) => ({ ...q, aktif: false })); localStorage.setItem('racikin:v1', JSON.stringify(x)); }); await p.reload(); await p.waitForSelector('.journey'); // promo mati (biar total nggak tergantung hari/jam)
 
   // --- Aktifkan open bill (default nonaktif)
   await p.goto(B + '#/kasir'); await p.waitForSelector('.pos-grid');
