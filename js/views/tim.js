@@ -5,7 +5,8 @@ import { kunciPro } from "./paket.js";
 import { render, go } from "../app.js";
 import { icon } from "../icons.js";
 import { head } from "./_shared.js";
-import { cloud, role, loadTeam, createInvite, listTeam, listInvites, cancelInvite, removeMember, setMemberRole, joinTeam, leaveTeam } from "../cloud.js";
+import { cabangChip } from "./cabang.js";
+import { cloud, role, cabangAktif, loadTeam, createInvite, listTeam, listInvites, cancelInvite, removeMember, setMemberRole, joinTeam, leaveTeam } from "../cloud.js";
 
 export const PERAN = {
   kasir: { nama: "Kasir", akses: ["Jualan di Kasir & lihat rekap hari ini", "Tambah stempel & data pelanggan", "Catat stok bahan masuk / opname"], tidak: "Tidak bisa lihat Kas, laporan, RAB, ide & rencana bisnis, atau ubah harga & resep." },
@@ -115,6 +116,7 @@ function ownerView(s) {
   const undangan = data.undangan || [];
   return `${head("Tim & Karyawan", "#/bisnis")}
     <p class="muted small">Ajak karyawan pakai Racikin di HP masing-masing. Penjualan dari semua HP masuk ke data usahamu, dan tiap order tercatat siapa kasirnya.</p>
+    ${cabangAktif() ? `<p class="ok-box small">Tim untuk <b>${esc(cabangAktif().nama || "cabang ini")}</b>. Anggota yang diundang di sini cuma bisa membuka cabang ini. ${cabangChip()}</p>` : ""}
     ${inviteCard(s)}
     ${bolehFitur("tim") ? "" : kunciPro("tim", anggota.length ? "Anggota tim yang sudah ada nggak bisa masuk sampai usaha ini Pro lagi. Upgrade buat buka lagi." : "")}
     <form class="card stack ${bolehFitur("tim") ? "" : "hidden"}" data-form="undang">

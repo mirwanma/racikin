@@ -156,7 +156,8 @@ async function halaman(b, { admin }) {
   // Paket & harga: tabel fitur Gratis/Pro, kuota AI, harga, masa coba, WA -> satu kali simpan
   await p.click('.tabbar a[data-tab="admin-paket"]'); await p.waitForSelector('form[data-form=paketAdmin]');
   const baris = await p.$$eval('.a-ptable .a-tr:not(.a-th)', (a) => a.length);
-  ok(baris === 6 + 1 + 6, `tabel fitur: 6 fitur bisa diatur + kuota AI + 6 fitur inti (${baris} baris)`);
+  ok(baris === 7 + 1 + 6, `tabel fitur: 7 fitur bisa diatur + kuota AI + 6 fitur inti (${baris} baris)`);
+  ok(await p.isChecked('input[name=f_cabang][value=max]'), 'awal: multi-cabang = Max');
   ok(await p.isChecked('input[name=f_meja][value=pro]'), 'awal: pesan meja = Pro');
   await p.click('label:has(input[name=f_meja][value=gratis])');
   await p.click('label:has(input[name=f_foto][value=gratis])');
@@ -167,8 +168,8 @@ async function halaman(b, { admin }) {
   p.once('dialog', (d) => { konfirmasi = d.message(); d.accept(); });
   await p.click('form[data-form=paketAdmin] button.primary'); await p.waitForTimeout(400);
   console.log('konfirmasi:', konfirmasi.replace(/\n/g, ' | '));
-  ok(/Jadi Gratis: Pesan lewat QR meja, Foto menu AI/.test(konfirmasi), 'konfirmasi menyebut fitur yang berubah');
-  ok(SET_PAKET && SET_PAKET.fitur.meja === 'gratis' && SET_PAKET.fitur.foto === 'gratis' && SET_PAKET.fitur.tim === 'pro' && SET_PAKET.ai_gratis === 50 && SET_PAKET.harga_bulan === 59000 && SET_PAKET.coba_hari === 7 && SET_PAKET.transisi_sampai.startsWith('2027-02-2'), 'semua pengaturan paket terkirim sekaligus');
+  ok(/Makin terbuka: Pesan lewat QR meja → Gratis, Foto menu AI → Gratis/.test(konfirmasi), 'konfirmasi menyebut fitur yang berubah');
+  ok(SET_PAKET && SET_PAKET.fitur.meja === 'gratis' && SET_PAKET.fitur.foto === 'gratis' && SET_PAKET.fitur.tim === 'pro' && SET_PAKET.fitur.cabang === 'max' && SET_PAKET.harga_max_bulan === 99000 && SET_PAKET.ai_gratis === 50 && SET_PAKET.harga_bulan === 59000 && SET_PAKET.coba_hari === 7 && SET_PAKET.transisi_sampai.startsWith('2027-02-2'), 'semua pengaturan paket terkirim sekaligus');
   ok(await p.isChecked('input[name=f_meja][value=gratis]') && (await p.inputValue('input[name=wa]')) === '081211112222', 'tampilan ikut data tersimpan');
 
   // Akun versi admin + pindah ke app usaha & balik

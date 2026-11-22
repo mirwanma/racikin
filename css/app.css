@@ -1447,12 +1447,15 @@ body[data-admin="1"] .adm-chart i { background: var(--a-y); }
 .paket-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
 .paket-kol h3 { margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .paket-kol.pro { border-width: 2px; box-shadow: 4px 4px 0 var(--shadow-c); }
+.paket-kol.max { border-width: 2px; border-color: var(--ink); box-shadow: 4px 4px 0 var(--yellow); }
+.paket-grid:has(.paket-kol.max) { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
 .paket-harga { display: block; font-size: 30px; font-weight: 900; font-stretch: 112%; margin: 8px 0 4px; }
 .paket-harga small { font-size: 14px; font-weight: 600; color: var(--muted); }
 .paket-kol .checks li small { display: inline; }
 @media (max-width: 680px) { .paket-grid { grid-template-columns: 1fr; } }
 .a-pk { display: inline-block; font: 700 10px var(--mono); letter-spacing: 0.04em; text-transform: uppercase; padding: 1px 6px; border-radius: 99px; border: 1px solid currentColor; vertical-align: middle; color: var(--a-mut); }
 .a-pk.bayar { color: var(--a-yl); background: var(--a-yfill); }
+.a-pk.max { color: var(--a-yl); background: var(--a-yfill); font-weight: 800; box-shadow: inset 0 0 0 1px var(--a-yl); }
 .a-pk.coba, .a-pk.transisi { color: var(--a-b); }
 .a-paket { display: flex; flex-direction: column; gap: 8px; }
 .a-paket p { margin: 0; }
@@ -1616,3 +1619,21 @@ body[data-admin="1"] .adm-chart i { background: var(--a-y); }
 .lc-saldo span { display: inline-flex; align-items: center; gap: 8px; }
 .lc-saldo b { font-size: 20px; font-stretch: 110%; }
 .saldo-cari { display: flex; flex-direction: column; max-height: 360px; overflow: auto; }
+
+/* Multi-cabang */
+.cabang-chip { margin: 0 0 8px; display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border: 1.5px solid var(--ink); border-radius: 999px; background: var(--yellow-tint); color: var(--ink); text-decoration: none; font-size: 13px; font-weight: 700; max-width: 100%; }
+.cabang-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cabang-chip small { font-weight: 500; color: var(--muted); }
+.cabang-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 0; border-top: 1px dashed var(--line); }
+.cabang-row:first-of-type { border-top: 0; }
+.cabang-row.on .cabang-info b { text-decoration: underline; text-decoration-color: var(--yellow); text-decoration-thickness: 3px; }
+.cabang-info { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; min-width: 0; }
+.cabang-info small { flex-basis: 100%; }
+.cabang-aksi { display: flex; gap: 6px; flex-wrap: wrap; }
+.cabang-tabel { display: flex; flex-direction: column; overflow-x: auto; }
+.cabang-tr { display: grid; grid-template-columns: minmax(120px, 1.4fr) repeat(4, minmax(92px, 1fr)); gap: 8px; padding: 8px 0; border-top: 1px dashed var(--line); align-items: center; min-width: 560px; }
+.cabang-tr.th { border-top: 0; font-family: "IBM Plex Mono", monospace; font-size: 11px; text-transform: uppercase; color: var(--muted); }
+.cabang-tr.total { border-top: 2px solid var(--ink); }
+.cabang-tr .num { display: flex; flex-direction: column; text-align: right; }
+.cabang-tr .num small { color: var(--muted); font-size: 11px; }
+.stack-sm { display: flex; flex-direction: column; gap: 6px; }

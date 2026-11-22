@@ -53,7 +53,12 @@ assert.equal(P.bolehPro(), true);
 const list = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }, { id: "e" }, { id: "f" }];
 const paket = { a: { paket: "pro", sumber: "bayar", periode: "bulan" }, b: { paket: "pro", sumber: "bayar", periode: "tahun" }, c: { paket: "pro", sumber: "coba" }, d: { paket: "pro", sumber: "transisi" }, e: { paket: "gratis" } };
 const r = A.ringkasPaket(list, paket, { harga_bulan: 49000, harga_tahun: 490000 });
-assert.deepEqual(r, { bayar: 2, coba: 1, transisi: 1, gratis: 2, mrr: Math.round(49000 + 490000 / 12), tahunan: 1, konversi: 50 });
+assert.deepEqual(r, { bayar: 2, max: 0, coba: 1, transisi: 1, gratis: 2, mrr: Math.round(49000 + 490000 / 12), tahunan: 1, konversi: 50 });
+// Max: dihitung terpisah, MRR pakai harga Max, ikut konversi berbayar
+const rMax = A.ringkasPaket([{ id: "m1" }, { id: "g1" }], { m1: { paket: "max", sumber: "bayar", periode: "bulan" }, g1: { paket: "gratis" } }, { harga_max_bulan: 99000 });
+assert.deepEqual([rMax.max, rMax.bayar, rMax.mrr, rMax.konversi], [1, 0, 99000, 50]);
+assert.equal(A.jenisPaket({ paket: "max", sumber: "bayar" }), "max");
+assert.equal(A.PAKET_NAMA.max, "Max");
 assert.equal(A.jenisPaket(undefined), "gratis");
 // Perpanjang dari sisa Pro berbayar, atau dari sekarang
 assert.equal(A.perpanjang({ paket: "pro", sumber: "bayar", sampai: "2027-01-10T00:00:00.000Z" }, "bulan", new Date("2026-12-01T00:00:00Z")), "2027-02-10T00:00:00.000Z");
@@ -73,6 +78,21 @@ assert.ok(isi.gratis.includes("Pesan lewat QR meja") && isi.gratis.includes("Fot
 assert.deepEqual(isi.pro.map((f) => f.id), ["tim", "dapur", "bill", "imporJual", "ai"]);
 assert.equal(isi.pro.at(-1).nama, "Kuota AI 400/hari");
 assert.ok(!P.isiPaket({ ai_gratis: 300, ai_pro: 300 }).pro.some((f) => f.id === "ai"), "kuota sama: AI bukan pembeda Pro");
-assert.deepEqual(P.FITUR.map((f) => f.id), ["tim", "meja", "dapur", "bill", "foto", "imporJual"], "sama dengan paket_fitur_ids() di SQL");
+assert.deepEqual(P.FITUR.map((f) => f.id), ["tim", "meja", "dapur", "bill", "foto", "imporJual", "cabang"], "sama dengan paket_fitur_ids() di SQL");
+
+// --- Paket Max: cabang default Max, Pro nggak boleh, Max boleh semua fitur Pro juga
+assert.equal(P.FITUR_DEFAULT.cabang, "max");
+assert.equal(P.bolehFitur("cabang", { paket: "pro" }), false, "Pro belum boleh cabang");
+assert.equal(P.bolehFitur("cabang", { paket: "max" }), true);
+assert.equal(P.bolehFitur("bill", { paket: "max" }), true, "Max termasuk fitur Pro");
+assert.equal(P.bolehFitur("cabang", { paket: "gratis", fitur: { cabang: "gratis" } }), true, "admin bisa bikin gratis");
+assert.equal(P.bolehFitur("bill", { paket: "pro", fitur: { bill: "max" } }), false, "admin bisa naikkan ke Max");
+assert.equal(P.bolehFitur("cabang", { paket: "lokal" }), true);
+assert.deepEqual(P.isiPaket(null).max.map((f) => f.id), ["cabang"]);
+assert.ok(!P.isiPaket(null).pro.some((f) => f.id === "cabang"));
+assert.equal(P.labelPaket({ paket: "max", sumber: "bayar", sampai: "2099-01-01" }), "Max");
+assert.deepEqual(P.hargaPaket({ harga_max_bulan: 120000 }, "max"), { bulan: 120000, tahun: P.HARGA_MAX.tahun });
+assert.equal(P.sisaHari({ paket: "max", sampai: "2026-12-11T00:00:00Z" }, "2026-12-01T00:00:00Z"), 10);
+assert.match(decodeURIComponent(P.linkUpgrade({ wa: "0812", harga_max_bulan: 99000 }, { paket: "max" })), /Racikin Max \(bulanan, Rp99\.000\)/);
 
 console.log("paket OK");

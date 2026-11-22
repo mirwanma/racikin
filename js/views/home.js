@@ -1,4 +1,5 @@
 import { icon } from "../icons.js";
+import { cabangChip } from "./cabang.js";
 import { esc, rupiah, todayISO, addDays, fmtDate } from "../ui.js";
 import { monthStats } from "./_shared.js";
 import { store } from "../store.js";
@@ -95,6 +96,7 @@ export const home = {
           <p class="eyebrow">${sapa}, ${esc(p.owner)}</p>
           <h1>${esc(s.brand?.terpilih?.nama || p.nama || "Bisnismu")}</h1>
           <p class="muted small">${esc(p.jenis)} · ${esc([p.area, p.kota].filter(Boolean).join(", "))}</p>
+          ${cabangChip()}
         </div>
         <div class="greet-actions">
           ${cloud.user ? syncBadge() : `<a href="#/akun" class="pill">${icon("cloud", 13)} Masuk</a>`}

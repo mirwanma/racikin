@@ -1,5 +1,6 @@
 import { icon } from "../icons.js";
 import { cloud, isMember } from "../cloud.js";
+import { cabangModul } from "./cabang.js";
 import { journey } from "./home.js";
 import { isJalan } from "../tahap.js";
 import { ringkasIzin } from "../izin.js";
@@ -147,6 +148,7 @@ export const bisnis = {
           <span class="chev">${icon("chevron", 18)}</span>
         </a>
         ${jalan ? "" : sehatMod + imporMod}
+        ${!isMember() ? cabangModul() : ""}
         ${kasbonMod}
         ${saldoModul(s)}
         ${karyawanMod}

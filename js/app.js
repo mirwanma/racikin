@@ -34,6 +34,7 @@ import { izin } from "./views/izin.js";
 import { pajak } from "./views/pajak.js";
 import { kasbon } from "./views/kasbon.js";
 import { saldo } from "./views/saldo.js";
+import { cabang } from "./views/cabang.js";
 import { karyawan } from "./views/karyawan.js";
 import { jadwalSaya } from "./views/jadwal.js";
 import { imporJual } from "./views/imporjual.js";
@@ -46,8 +47,8 @@ import { initMeja } from "./meja.js";
 import { initCloud, onCloudChange, cloud, role } from "./cloud.js";
 import { icon } from "./icons.js";
 
-const routes = { "": home, profil, bisnis, ide, rab, brand, aktivasi, kas, konten, mentor, setelan, akun, stok, resep, pelanggan, kartu, studio, kasir, online, tim, gabung, notif, shift, laporan, belanja, dapur, meja, varian, impor, sehat, izin, pajak, kasbon, saldo, karyawan, jadwal: jadwalSaya, "impor-jual": imporJual, promo, wa, admin, paket, m: pesan };
-const tabOf = { "": "", bisnis: "bisnis", ide: "bisnis", rab: "bisnis", brand: "bisnis", aktivasi: "bisnis", kas: "kas", stok: "bisnis", resep: "bisnis", pelanggan: "bisnis", studio: "bisnis", konten: "konten", kasir: "kasir", online: "kasir", tim: "bisnis", notif: "-", shift: "kasir", laporan: "kas", belanja: "bisnis", dapur: "kasir", meja: "bisnis", varian: "bisnis", impor: "bisnis", sehat: "bisnis", izin: "bisnis", pajak: "bisnis", kasbon: "kasir", saldo: "kasir", karyawan: "bisnis", jadwal: "kasir", "impor-jual": "bisnis", promo: "bisnis", wa: "bisnis", admin: "-", paket: "-", m: "-" };
+const routes = { "": home, profil, bisnis, ide, rab, brand, aktivasi, kas, konten, mentor, setelan, akun, stok, resep, pelanggan, kartu, studio, kasir, online, tim, gabung, notif, shift, laporan, belanja, dapur, meja, varian, impor, sehat, izin, pajak, kasbon, saldo, cabang, karyawan, jadwal: jadwalSaya, "impor-jual": imporJual, promo, wa, admin, paket, m: pesan };
+const tabOf = { "": "", bisnis: "bisnis", ide: "bisnis", rab: "bisnis", brand: "bisnis", aktivasi: "bisnis", kas: "kas", stok: "bisnis", resep: "bisnis", pelanggan: "bisnis", studio: "bisnis", konten: "konten", kasir: "kasir", online: "kasir", tim: "bisnis", notif: "-", shift: "kasir", laporan: "kas", belanja: "bisnis", dapur: "kasir", meja: "bisnis", varian: "bisnis", impor: "bisnis", sehat: "bisnis", izin: "bisnis", pajak: "bisnis", kasbon: "kasir", saldo: "kasir", cabang: "bisnis", karyawan: "bisnis", jadwal: "kasir", "impor-jual": "bisnis", promo: "bisnis", wa: "bisnis", admin: "-", paket: "-", m: "-" };
 // Kasir hanya melihat halaman jualan, pelanggan, dan stok bahan.
 const KASIR_ROUTES = new Set(["kasir", "kasbon", "saldo", "jadwal", "pelanggan", "stok", "akun", "setelan", "kartu", "tim", "gabung", "notif", "shift", "dapur", "m"]);
 const tabOfKasir = { kasir: "kasir", pelanggan: "pelanggan", stok: "stok", akun: "akun", setelan: "akun", tim: "akun", notif: "akun", shift: "kasir", dapur: "dapur" };

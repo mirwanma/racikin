@@ -1,20 +1,21 @@
-// Halaman Paket (#/paket): paket sekarang, perbandingan Gratis vs Pro, upgrade lewat WA admin Racikin.
+// Halaman Paket (#/paket): paket sekarang, perbandingan Gratis vs Pro vs Max, upgrade lewat WA admin Racikin.
 import { icon } from "../icons.js";
 import { esc, rupiah, fmtDate } from "../ui.js";
 import { cloud } from "../cloud.js";
 import { head } from "./_shared.js";
-import { HARGA, paketKini, muatPaket, labelPaket, sisaHari, hematTahun, linkUpgrade, namaFitur, perluIngat, isiPaket, kuotaAi } from "../paket.js";
+import { paketKini, muatPaket, labelPaket, sisaHari, hematTahun, linkUpgrade, namaFitur, perluIngat, isiPaket, kuotaAi, tingkatFitur, hargaPaket, NAMA_PAKET } from "../paket.js";
 
 const tgl = (t) => (t ? fmtDate(String(t).slice(0, 10), { day: "numeric", month: "long", year: "numeric" }) : "-");
 const usahaOf = (s) => s.brand?.terpilih?.nama || s.profile?.nama || "";
 
-/** Kotak "fitur ini khusus Pro" untuk ditaruh menggantikan tombol/fitur yang dikunci. */
+/** Kotak "fitur ini khusus Pro / Max" untuk ditaruh menggantikan tombol/fitur yang dikunci. */
 export function kunciPro(fitur, teks = "") {
+  const pk = NAMA_PAKET[tingkatFitur(fitur, paketKini())] || "Pro";
   return `<section class="card pro-kunci">
-    <span class="pro-tag">${icon("lock", 13)} PRO</span>
-    <h3>${esc(namaFitur(fitur))} khusus paket Pro</h3>
-    <p class="small">${esc(teks || "Upgrade ke Pro buat buka fitur ini. Data kamu tetap aman di paket Gratis.")}</p>
-    <a href="#/paket" class="btn primary">Lihat paket Pro</a>
+    <span class="pro-tag">${icon("lock", 13)} ${pk.toUpperCase()}</span>
+    <h3>${esc(namaFitur(fitur))} khusus paket ${pk}</h3>
+    <p class="small">${esc(teks || `Upgrade ke ${pk} buat buka fitur ini. Data kamu tetap aman di paket sekarang.`)}</p>
+    <a href="#/paket" class="btn primary">Lihat paket ${pk}</a>
   </section>`;
 }
 
@@ -38,13 +39,24 @@ export const paket = {
   render(s) {
     const p = paketKini();
     if (cloud.user && !p.harga_bulan) muatPaket().catch(() => {});
-    const h = { bulan: p.harga_bulan ?? HARGA.bulan, tahun: p.harga_tahun ?? HARGA.tahun };
+    const h = hargaPaket(p, "pro");
+    const hm = hargaPaket(p, "max");
     const hemat = hematTahun(h);
-    const pro = p.paket === "pro";
+    const hematMax = hematTahun(hm);
+    const pro = p.paket === "pro" || p.paket === "max";
     const isi = isiPaket(p);
     const ai = kuotaAi(p);
     const n = sisaHari(p);
-    const link = (periode) => linkUpgrade(p, { email: cloud.user?.email, usaha: usahaOf(s), periode });
+    const link = (periode, paket = "pro") => linkUpgrade(p, { email: cloud.user?.email, usaha: usahaOf(s), periode, paket });
+    const tombol = (paket, hh) =>
+      p.paket === "lokal"
+        ? ""
+        : link("bulan", paket)
+          ? `<div class="stack">
+              <a href="${esc(link("bulan", paket))}" target="_blank" rel="noopener" class="btn primary block">${icon("chat", 16)} ${p.paket === paket && p.sumber === "bayar" ? "Perpanjang" : "Upgrade"} bulanan · ${rupiah(hh.bulan)}</a>
+              <a href="${esc(link("tahun", paket))}" target="_blank" rel="noopener" class="btn soft block">${p.paket === paket && p.sumber === "bayar" ? "Perpanjang" : "Upgrade"} tahunan · ${rupiah(hh.tahun)}</a>
+            </div>`
+          : `<p class="small muted">Upgrade sebentar lagi dibuka. Hubungi admin Racikin ya.</p>`;
     const status =
       p.paket === "lokal"
         ? `<section class="card paket-status"><h2 class="card-title" style="margin:0">Mode coba di HP ini</h2>
@@ -77,19 +89,22 @@ export const paket = {
           <p class="small">atau ${rupiah(h.tahun)}/tahun (hemat ${rupiah(hemat.rp)}, ±${hemat.bulan} bulan gratis)</p>
           <p class="small muted">Semua fitur Gratis, plus:</p>
           <ul class="checks">${isi.pro.map((f) => `<li><b>${esc(f.nama)}</b><small class="muted"> · ${esc(f.ket)}</small></li>`).join("")}</ul>
-          ${
-            p.paket === "lokal"
-              ? ""
-              : link("bulan")
-                ? `<div class="stack">
-                    <a href="${esc(link("bulan"))}" target="_blank" rel="noopener" class="btn primary block">${icon("chat", 16)} ${pro && p.sumber === "bayar" ? "Perpanjang" : "Upgrade"} bulanan · ${rupiah(h.bulan)}</a>
-                    <a href="${esc(link("tahun"))}" target="_blank" rel="noopener" class="btn soft block">${pro && p.sumber === "bayar" ? "Perpanjang" : "Upgrade"} tahunan · ${rupiah(h.tahun)}</a>
-                    <p class="small muted">Pembayaran lewat chat WhatsApp admin Racikin (transfer / QRIS). Pro aktif setelah pembayaran dicek.</p>
-                  </div>`
-                : `<p class="small muted">Upgrade sebentar lagi dibuka. Hubungi admin Racikin ya.</p>`
-          }
+          ${p.paket === "max" ? `<p class="small muted">Sudah termasuk di paket Max kamu.</p>` : tombol("pro", h)}
         </section>
+        ${
+          isi.max.length
+            ? `<section class="card paket-kol max">
+          <h3>Max <span class="pro-tag">${icon("spark", 12)} BANYAK CABANG</span></h3>
+          <b class="paket-harga">${rupiah(hm.bulan)}<small>/bulan</small></b>
+          <p class="small">atau ${rupiah(hm.tahun)}/tahun${hematMax.rp > 0 ? ` (hemat ${rupiah(hematMax.rp)})` : ""}</p>
+          <p class="small muted">Semua fitur Pro, plus:</p>
+          <ul class="checks">${isi.max.map((f) => `<li><b>${esc(f.nama)}</b><small class="muted"> · ${esc(f.ket)}</small></li>`).join("")}</ul>
+          ${tombol("max", hm)}
+        </section>`
+            : ""
+        }
       </div>
+      ${p.paket === "lokal" ? "" : `<p class="small muted center">Pembayaran lewat chat WhatsApp admin Racikin (transfer / QRIS). Paket aktif setelah pembayaran dicek.</p>`}
       <p class="small muted center">Kuota AI per akun: Gratis ${ai.gratis}x/hari, Pro ${ai.pro}x/hari. Harga sudah termasuk semua update fitur.</p>`;
   },
 };
