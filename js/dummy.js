@@ -150,8 +150,9 @@ function kasirHari(tim, tanggal) {
  * jam = "HH:MM" jam sekarang (default jam perangkat); order hari ini hanya sampai jam ini.
  * skala = pengali jumlah order per hari (rasio tumbuh tetap); dipakai kalau data harus lebih kecil (batas dokumen 2 MB).
  */
-export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH, tumbuh = 3, pelangganAda = null, jam = null, skala = 1 } = {}) {
-  const r = rng(20261111);
+export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH, tumbuh = 3, pelangganAda = null, jam = null, skala = 1, hari: H = HARI, seed = 0, denganTim = true, saldo = true } = {}) {
+  const r = rng(20261111 + seed);
+  const off = HARI - H; // usaha / cabang yang lebih muda: hari ke-d setara hari ke-(d + off) usaha 60 hari (menu baru, voucher)
   const chance = (p) => r() < p;
   const between = (a, b) => a + Math.floor(r() * (b - a + 1));
   const weighted = (list, w) => {
@@ -160,7 +161,7 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH, 
     for (const it of list) if ((x -= w(it)) < 0) return it;
     return list[list.length - 1];
   };
-  const start = addDays(today, -(HARI - 1));
+  const start = addDays(today, -(H - 1));
   const jamSekarang = jam || (() => {
     const d = new Date();
     return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
@@ -216,7 +217,7 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH, 
     token: newToken(),
     // bobot kunjungan; 8 pelanggan terakhir hanya aktif di bulan pertama (jadi "perlu diajak balik")
     _w: i < 8 ? 6 : i < 24 ? 3 : 1,
-    _sampai: i >= 32 ? 28 : HARI,
+    _sampai: i >= 32 ? 28 : H,
   }));
   // Pakai identitas pelanggan lama (id, WA, token kartu stempel) kalau namanya sama, supaya kartu yang sudah dibagikan tetap nyambung.
   for (const x of pelangganAda || []) {
@@ -249,11 +250,11 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH, 
   const orders = [];
   const pakaiHarian = {}; // tanggal -> { bahanId: qty }
   const hujan = new Set([addDays(start, 17), addDays(start, 41)]);
-  for (let d = 0; d < HARI; d++) {
+  for (let d = 0; d < H; d++) {
     const tanggal = addDays(start, d);
     const dow = new Date(tanggal + "T00:00:00").getDay();
     const base = dow === 0 || dow === 6 ? 44 : dow === 5 ? 38 : 32;
-    const tren = 0.52 * (1 + (tumbuh - 1) * 1.25 * (d / (HARI - 1))); // usaha makin rame: minggu terakhir ±tumbuh x minggu pertama
+    const tren = 0.52 * (1 + (tumbuh - 1) * 1.25 * (d / (H - 1))); // usaha makin rame: minggu terakhir ±tumbuh x minggu pertama
     let n = Math.round(base * skala * tren * (0.85 + r() * 0.3) * (hujan.has(tanggal) ? 0.5 : 1));
     const jamList = Array.from({ length: n }, () => {
       const jam = weighted([15, 16, 17, 18, 19, 20, 21], (h) => ({ 15: 2, 16: 4, 17: 7, 18: 8, 19: 7, 20: 4, 21: 2 })[h]);
@@ -261,7 +262,7 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH, 
     })
       .sort()
       .filter((j) => tanggal < today || j <= jamSekarang); // hari ini: hanya order yang jamnya sudah lewat
-    const tersedia = (list) => list.filter((m) => d >= m.mulai);
+    const tersedia = (list) => list.filter((m) => d + off >= m.mulai);
     pakaiHarian[tanggal] = {};
     jamList.forEach((jam, i) => {
       const channel = weighted(["toko", "gofood", "grabfood", "shopeefood"], (c) => ({ toko: 78, gofood: 11, grabfood: 8, shopeefood: 3 })[c]);
@@ -294,7 +295,7 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH, 
       const items = [...cart.values()].map(({ m, qty, opsi: o }) => ({ resepId: m.resep.id, nama: m.resep.nama, harga: hargaItem(sOnline, m.resep, o, channel), qty, ...(o.length ? { opsi: o } : {}) }));
       const sub = items.reduce((a, it) => a + it.harga * it.qty, 0);
       // Promo otomatis + sesekali voucher (kode dari brosur/IG)
-      const kode = channel === "toko" && d >= 30 && chance(0.05) ? "TAHGUY5" : "";
+      const kode = channel === "toko" && d + off >= 30 && chance(0.05) ? "TAHGUY5" : "";
       const pr = pilihPromo(sPromo, items, { channel, waktu: `${tanggal}T${jam}`, kode }).promo;
       const pot = pr?.potongan || 0;
       const diskon = channel === "toko" && chance(0.04) ? Math.min(2000, sub - pot) : 0;
@@ -361,11 +362,11 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH, 
   const rataSekitar = (id, d, w = 3) => {
     let s = 0;
     let n = 0;
-    for (let i = Math.max(0, d - w); i <= Math.min(HARI - 1, d + w); i++) (s += pakaiPada(id, i)), n++;
+    for (let i = Math.max(0, d - w); i <= Math.min(H - 1, d + w); i++) (s += pakaiPada(id, i)), n++;
     return n ? s / n : 0;
   };
   const rata = {};
-  for (const b of bahan) rata[b.id] = rataSekitar(b.id, HARI - 1, 6);
+  for (const b of bahan) rata[b.id] = rataSekitar(b.id, H - 1, 6);
   const stokLog = [];
   const transactions = [];
   const utangSupplier = [];
@@ -397,7 +398,7 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH, 
   const hargaPada = (b, d) => {
     const g = GERAK[kodeOf[b.id]];
     if (!g || d < g[0]) return b.harga;
-    const t = Math.min(1, (d - g[0]) / Math.max(1, HARI - 1 - g[0]));
+    const t = Math.min(1, (d - g[0]) / Math.max(1, H - 1 - g[0]));
     return round2(b.harga * (1 + g[1] * (0.4 + 0.6 * t)));
   };
   const hargaAkhir = {};
@@ -408,12 +409,12 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH, 
     stok[b.id] = Math.max(pack, Math.ceil(rataSekitar(b.id, 0) * 3));
     stokLog.push({ id: uid(), tanggal: start, bahanId: b.id, delta: stok[b.id], alasan: "opname", catatan: "Stok awal (hitung fisik)" });
   }
-  for (let d = 0; d < HARI; d++) {
+  for (let d = 0; d < H; d++) {
     const tanggal = addDays(start, d);
     const belanja = { food: [], kemasan: [], tempo: [] };
     for (const b of bahan) {
       const [, , , , kemasan, pack] = BAHAN.find(([k]) => idB[k] === b.id);
-      const akhir = d >= HARI - 3 && kurangDiBelanja.has(b.id);
+      const akhir = d >= H - 3 && kurangDiBelanja.has(b.id);
       const rd = rataSekitar(b.id, d);
       if (!akhir && stok[b.id] < rd * 2.2) {
         const butuh = rd * 4 - stok[b.id];
@@ -423,7 +424,7 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH, 
         hargaAkhir[b.id] = harga;
         stokLog.push({ id: uid(), tanggal, bahanId: b.id, delta: qty, alasan: "beli", catatan: supNama[supOf[b.id]], harga, supplierId: supOf[b.id] });
         // 10 hari terakhir frozen food dibayar tempo 7 hari (utang supplier), sisanya bayar langsung.
-        const tempo = supOf[b.id] === supId.frozen && d >= HARI - 10;
+        const tempo = supOf[b.id] === supId.frozen && d >= H - 10;
         (tempo ? belanja.tempo : kemasan ? belanja.kemasan : belanja.food).push({ nama: b.nama, total: qty * harga });
       }
       const pakai = pakaiHarian[tanggal][b.id] || 0;
@@ -472,8 +473,8 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH, 
   }
 
   // ---------- Biaya rutin & pemasukan lain ----------
-  const tx = (tanggal, jenis, kategori, nominal, catatan) => transactions.push({ id: uid(), tanggal, jenis, kategori, nominal, catatan });
-  for (let d = 0; d < HARI; d++) {
+  const tx = (tanggal, jenis, kategori, nominal, catatan) => tanggal <= today && transactions.push({ id: uid(), tanggal, jenis, kategori, nominal, catatan });
+  for (let d = 0; d < H; d++) {
     const tanggal = addDays(start, d);
     const dow = new Date(tanggal + "T00:00:00").getDay();
     const tgl = Number(tanggal.slice(8));
@@ -544,12 +545,14 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH, 
       .map(({ _w, _sampai, _ada, ...x }) => ({ ...x, dibuat: x.dibuat || start })),
     stempelLog,
     shifts: [],
-    posSetting: { wajibShift: false },
+    posSetting: { wajibShift: false, ...(saldo ? { saldo: true } : {}) },
     supplier,
     utangSupplier,
     meja: Array.from({ length: 8 }, (_, i) => ({ id: uid() + "m" + i, nama: i < 6 ? `Meja ${i + 1}` : `Teras ${i - 5}`, token: (uid() + uid() + "racikin").slice(0, 24) })),
     settings: settings || { aiMode: "demo", endpoint: "", anonKey: "" },
   };
+  // Saldo pelanggan (titipan): beberapa langganan isi saldo, bayar pakai saldo, simpan kembalian.
+  if (saldo) state = tambahSaldo(state, { today, H, seed, jamSekarang });
   // Shift kasir 30 hari terakhir: satu shift per hari, hari ini masih buka.
   const sr = rng(777);
   for (let d = SIMPAN_HARI - 1; d >= 0; d--) {
@@ -558,6 +561,8 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH, 
     if (d === 0 && jamSekarang < buka) continue; // hari ini belum buka
     const sh = { id: uid() + "s", kasir: kasirHari(tim, tanggal), buka: `${tanggal}T${buka}`, tutup: null, modal: 200000, laci: [], setor: null, hasil: null, catatan: "" };
     for (const o of state.orders) if (o.tanggal === tanggal) o.shiftId = sh.id;
+    // Uang saldo tunai (isi & kembalian yang disimpan) lewat laci shift hari itu.
+    for (const k of state.saldoPelanggan || []) if (k.tanggal === tanggal && k.jenis !== "pakai" && (k.metode || "tunai") === "tunai") k.shiftId = sh.id;
     const lewat = (w) => d > 0 || w.slice(11) <= jamSekarang;
     if (sr() < 0.35) sh.laci.push({ id: uid(), waktu: `${tanggal}T18:${String(Math.floor(sr() * 50) + 10)}`, jenis: "keluar", nominal: 20000, kategori: "Bahan Baku", catatan: "Beli es batu tambahan" });
     sh.laci = sh.laci.filter((l) => lewat(l.waktu));
@@ -576,7 +581,7 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH, 
   // Detail order disimpan 30 hari (sama seperti kasir); rekap harian & Kas tetap 60 hari.
   const batas = addDays(today, -SIMPAN_HARI);
   state.orders = state.orders.filter((o) => o.tanggal >= batas);
-  state = tambahTim(state, { today, start, tim, jamSekarang });
+  if (denganTim) state = tambahTim(state, { today, start, tim, jamSekarang });
   // Utang frozen food yang sudah jatuh tempo dibayar (transfer) di tanggal tempo; yang belum, masih utang.
   for (const n of state.utangSupplier) if (n.tempo < today) state = { ...state, ...bayarUtang(state, n.id, { nominal: sisaNota(n), tanggal: n.tempo, metode: "transfer" }) };
   state.utangSupplier = state.utangSupplier.map((n) => ({ ...n, bayar: n.bayar || [] }));
@@ -589,6 +594,76 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH, 
  * (kadang telat, izin, sakit, lembur di akhir pekan yang ramai), gaji mingguan / bulanan dibayar lewat menu Gaji
  * (Kas kategori Gaji), kasbon karyawan dipotong gaji. Rina / Dodi / Sari dihubungkan ke akun tim (Jadwal saya).
  */
+/**
+ * Saldo pelanggan contoh (24 hari terakhir): 7 langganan isi saldo (tunai/QRIS/transfer), lalu sebagian kunjungannya
+ * dibayar pakai saldo (kalau kurang, sisanya tunai), isi ulang kalau saldo menipis, pelanggan lain kadang menyimpan
+ * kembalian. Order yang diubah tetap order yang sama (total, item, stok, stempel nggak berubah); Kas dihitung ulang
+ * lewat reconcile, jadi Kas Penjualan = omzet & Kas titipan = total saldo.
+ */
+function tambahSaldo(state, { today, H, seed, jamSekarang }) {
+  const r = rng(9090 + seed);
+  const chance = (p) => r() < p;
+  const pilih = (arr) => arr[Math.floor(r() * arr.length)];
+  const dari = addDays(today, -Math.min(24, H - 1));
+  const sekarang = `${today}T${jamSekarang}`;
+  const toko = state.orders.filter((o) => o.tanggal >= dari && o.status !== "batal" && o.channel === "toko" && !o.pembayaran && o.waktu <= sekarang).sort((a, b) => a.waktu.localeCompare(b.waktu));
+  const kunj = new Map();
+  for (const o of toko) if (o.pelangganId) kunj.set(o.pelangganId, (kunj.get(o.pelangganId) || 0) + 1);
+  const pool = new Set([...kunj].filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]).slice(0, 7).map(([id]) => id));
+  const list = [];
+  const saldo = new Map();
+  const jam1 = (waktu) => {
+    // 1 menit sebelum order (isi saldo di kasir sebelum bayar)
+    const t = new Date(waktu + ":00Z");
+    t.setUTCMinutes(t.getUTCMinutes() - 1);
+    return t.toISOString().slice(0, 16);
+  };
+  const isi = (pelangganId, waktu, nominal, metode, extra = {}) => {
+    list.push({ id: uid() + "sd", jenis: "isi", pelangganId, tanggal: waktu.slice(0, 10), waktu, nominal, metode, ...extra });
+    saldo.set(pelangganId, (saldo.get(pelangganId) || 0) + nominal);
+  };
+  for (const o of toko) {
+    const pid = o.pelangganId;
+    if (!pid) continue;
+    if (pool.has(pid)) {
+      const ada = saldo.get(pid) || 0;
+      if (ada < 15000 && chance(ada ? 0.5 : 0.8)) {
+        isi(pid, jam1(o.waktu), pilih([50000, 100000, 100000, 150000, 200000]), pilih(["tunai", "tunai", "qris", "transfer"]), { catatan: ada ? "Isi ulang" : "Isi saldo pertama" });
+      }
+      const s = saldo.get(pid) || 0;
+      if (s >= o.total && chance(0.7)) {
+        Object.assign(o, { metode: "saldo", bayar: o.total, kembali: 0 });
+        list.push({ id: `o-${o.id}`, jenis: "pakai", pelangganId: pid, tanggal: o.tanggal, waktu: o.waktu, nominal: o.total, orderId: o.id, no: o.no });
+        saldo.set(pid, s - o.total);
+        continue;
+      }
+      if (s > 0 && s < o.total && chance(0.6)) {
+        Object.assign(o, { metode: "campur", bayar: o.total, kembali: 0, pembayaran: [{ metode: "tunai", jumlah: o.total - s }, { metode: "saldo", jumlah: s }] });
+        list.push({ id: `o-${o.id}`, jenis: "pakai", pelangganId: pid, tanggal: o.tanggal, waktu: o.waktu, nominal: s, orderId: o.id, no: o.no });
+        saldo.set(pid, 0);
+        continue;
+      }
+    }
+    // Kembalian nggak diambil, disimpan jadi saldo
+    if (o.metode === "tunai" && o.kembali > 0 && o.kembali <= 50000 && chance(pool.has(pid) ? 0.35 : 0.1)) {
+      const n = o.kembali;
+      Object.assign(o, { kembali: 0, simpanSaldo: n });
+      isi(pid, o.waktu, n, "tunai", { sumber: "kembalian", orderId: o.id, no: o.no, ...(o.kasir ? { oleh: o.kasir } : {}) });
+      list[list.length - 1].id = `k-${o.id}`;
+    }
+  }
+  // Satu pelanggan narik sebagian saldonya (pindah kos), 3 hari lalu.
+  const tarik = [...saldo].filter(([, n]) => n >= 30000).sort((a, b) => b[1] - a[1])[0];
+  const tglTarik = addDays(today, -3);
+  if (tarik && tglTarik >= dari) {
+    const n = Math.floor(tarik[1] / 2 / 1000) * 1000;
+    list.push({ id: uid() + "tr", jenis: "tarik", pelangganId: tarik[0], tanggal: tglTarik, waktu: `${tglTarik}T16:10`, nominal: n, metode: "tunai", catatan: "Pindah kos, ambil sebagian" });
+    saldo.set(tarik[0], tarik[1] - n);
+  }
+  list.sort((a, b) => a.waktu.localeCompare(b.waktu));
+  return { ...state, saldoPelanggan: list };
+}
+
 function tambahTim(state, { today, start, tim, jamSekarang }) {
   const r = rng(4242);
   const L = "libur";

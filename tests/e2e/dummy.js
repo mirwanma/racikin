@@ -44,6 +44,14 @@ const txt = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').tr
   const kasUtang = s.transactions.filter((x) => x.ref === 'utang').reduce((a, x) => a + x.nominal, 0);
   ok(kasUtang === s.utangSupplier.reduce((a, n) => a + n.bayar.reduce((x, y) => x + y.nominal, 0), 0) && s.utangSupplier.some((n) => !n.bayar.length), 'utang supplier: Kas = yang sudah dibayar, ada yang belum lunas');
   ok(!('_ada' in s.pelanggan[0]) && s.pelanggan.every((x) => x.token), 'pelanggan bersih & punya token kartu');
+  const tanda = { isi: 1, pakai: -1, tarik: -1 };
+  const saldoP = (id) => (s.saldoPelanggan || []).filter((k) => k.pelangganId === id).reduce((x, k) => x + tanda[k.jenis] * k.nominal, 0);
+  const totalSaldo = s.pelanggan.reduce((x, pl) => x + saldoP(pl.id), 0);
+  const kasTitipan = s.transactions.filter((t) => t.kategori === 'Titipan saldo pelanggan').reduce((x, t) => x + (t.jenis === 'masuk' ? 1 : -1) * t.nominal, 0);
+  console.log('saldo pelanggan:', (s.saldoPelanggan || []).length, 'catatan | total', totalSaldo, '| order dibayar saldo', s.orders.filter((o) => o.metode === 'saldo' || o.pembayaran?.some((x) => x.metode === 'saldo')).length);
+  ok(s.posSetting.saldo && totalSaldo > 0 && kasTitipan === totalSaldo && s.pelanggan.every((pl) => saldoP(pl.id) >= 0), 'saldo pelanggan: Kas titipan = total saldo, nggak ada yang minus');
+  const pakaiCocok = (s.saldoPelanggan || []).filter((k) => k.jenis === 'pakai').every((k) => { const o = s.orders.find((x) => x.id === k.orderId); return o && (o.metode === 'saldo' ? o.total : o.pembayaran.find((x) => x.metode === 'saldo').jumlah) === k.nominal; });
+  ok(pakaiCocok, 'pemakaian saldo = bagian saldo di order');
   const bulan = {};
   for (const t of s.transactions) { const m = t.tanggal.slice(0, 7); bulan[m] ??= { masuk: 0, keluar: 0 }; bulan[m][t.jenis] += t.nominal; }
   console.log('per bulan:', JSON.stringify(bulan));

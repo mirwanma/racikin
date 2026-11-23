@@ -79,4 +79,18 @@ assert.equal(C.dariRingkasan("2026-11-22"), "2026-10-24");
 assert.equal(C.dariRingkasan("2026-12-31"), "2026-12-01");
 assert.equal(C.namaCabang({ nama: "", utama: true }), "Cabang utama");
 
+// --- Data contoh cabang muda (opsi hari / seed / denganTim di dummy.js)
+const muda = buatDataDummy({ today, jam: "20:00", hari: 21, seed: 7, denganTim: false, tumbuh: 1.8, skala: 0.45, tim: [{ id: "o", nama: "Pemilik" }] });
+const hariMuda = Object.keys(muda.posHarian).sort();
+assert.equal(hariMuda[0], addDays(today, -20), "21 hari data");
+assert.ok(muda.transactions.every((t) => t.tanggal <= today), "nggak ada Kas di masa depan");
+assert.ok(!muda.karyawan?.length && !muda.gajian?.length, "tanpa karyawan");
+assert.ok(muda.orders.every((o) => o.kasir?.id === "o"), "order atas nama pemilik");
+for (const [t, r] of Object.entries(muda.posHarian)) {
+  const kas = muda.transactions.filter((x) => x.ref === "pos" && x.tanggal === t && x.jenis === "masuk").reduce((a, x) => a + x.nominal, 0);
+  assert.equal(kas, r.omzet, `Kas = omzet ${t}`);
+}
+assert.ok(Object.keys(Object.values(muda.posHarian).reduce((a, r) => ({ ...a, ...r.items }), {})).length >= 12, "menu baru tetap terjual di cabang muda");
+assert.notEqual(JSON.stringify(muda.orders.slice(0, 3).map((o) => o.total)), JSON.stringify(src.orders.slice(0, 3).map((o) => o.total)), "seed beda = pola beda");
+
 console.log("cabang OK");
