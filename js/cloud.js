@@ -44,7 +44,7 @@ export const cloud = {
   error: "",
   recovery: false, // sedang reset password (dari link email)
   quota: null, // { used_today, limit_day } dari panggilan AI terakhir
-  team: null, // { ownerId, role: owner|manajer|kasir, nama, bisnis, anggota }
+  team: null, // { ownerId, role: owner|manajer|kasir, nama, bisnis, anggota, cabang?: [{ id, nama, utama, anggota }] }
 };
 
 /** Peran user di perangkat ini. Belum login = pemilik (pakai sendiri). */
@@ -111,31 +111,80 @@ async function rpc(fn, args) {
   return data;
 }
 
-// ---------- Tim ----------
+// ---------- Tim & cabang ----------
+// Pemilik dengan beberapa cabang (paket Max): dokumen yang dipakai perangkat ini = cabang aktif (disimpan per akun).
+const CABANG_KEY = "racikin:cabang";
+const cabangTersimpan = () => {
+  const c = readJSON(CABANG_KEY, null);
+  return c && c.uid === cloud.user?.id ? c.id : null;
+};
+
 export async function loadTeam() {
   if (!cloud.user) return (cloud.team = null);
   const t = await rpc("my_team");
-  cloud.team = { ownerId: t.owner_id, role: t.role, nama: t.nama || "", bisnis: t.bisnis || "", anggota: Number(t.anggota) || 0 };
+  const cabang = t.role === "owner" && Array.isArray(t.cabang) ? t.cabang.map((c) => ({ id: c.id, nama: c.nama || "", utama: !!c.utama, anggota: Number(c.anggota) || 0 })) : [];
+  const pilih = cabangTersimpan();
+  const aktif = cabang.find((c) => c.id === pilih) || cabang.find((c) => c.utama) || null;
+  cloud.team = {
+    ownerId: aktif ? aktif.id : t.owner_id,
+    role: t.role,
+    nama: t.nama || "",
+    bisnis: t.bisnis || "",
+    anggota: aktif ? aktif.anggota : Number(t.anggota) || 0,
+    cabang,
+  };
   teamLoadedAt = Date.now();
   emit();
   return cloud.team;
+}
+
+/** Cabang yang lagi dibuka (pemilik). null kalau cuma satu usaha / bukan pemilik. */
+export const cabangAktif = () => (cloud.team?.cabang?.length > 1 ? cloud.team.cabang.find((c) => c.id === cloud.team.ownerId) || null : null);
+
+/** Pindah ke cabang lain: simpan dulu perubahan, lalu perangkat ini memakai dokumen cabang itu. */
+export async function pindahCabang(id) {
+  need();
+  if (readMeta().dirty) await sync();
+  writeJSON(CABANG_KEY, { uid: cloud.user.id, id });
+  await loadTeam();
+  await sync(); // dokumen beda -> data lokal dikosongkan lalu ditarik dari cloud (syncOnce)
+  return cabangAktif();
+}
+
+export const cabangBuat = (nama) => rpc("cabang_buat", { p_nama: nama });
+export const cabangUbah = (id, nama) => rpc("cabang_ubah", { p_id: id, p_nama: nama });
+export async function cabangHapus(id) {
+  need();
+  if (cloud.team?.ownerId === id) throw new Error("Pindah ke cabang lain dulu sebelum menghapus cabang ini");
+  await rpc("cabang_hapus", { p_id: id });
+  await loadTeam();
+}
+export const cabangRingkasan = (dari) => rpc("cabang_ringkasan", { p_dari: dari });
+/** Dokumen cabang lain (tanpa order) untuk dikirimi menu. */
+export const docCabang = (id) => rpc("doc_get_v2", { p_owner: id });
+/** Simpan dokumen cabang lain (rev = versi yang dibaca; false kalau keduluan). */
+export async function simpanDocCabang(id, data, rev) {
+  const res = await rpc("doc_save", { p_owner: id, p_data: omit(data, ["orders"]), p_base_rev: rev || 0 });
+  return !!res?.ok;
 }
 
 /** Ganti dokumen yang dipakai perangkat ini (gabung/keluar tim): data lokal dikosongkan dulu. */
 function resetDoc() {
   store.clearLocal();
   writeBase(null);
-  writeMeta({ docOwner: null, rev: 0, dirty: false, syncedAt: null });
+  // userId ikut dikosongkan: kalau nggak, sinkron berikutnya mengira data kosong di HP ini adalah versi terbaru
+  // dokumen pemilik (cabang "sameDoc") lalu menimpa cloud dengan data kosong.
+  writeMeta({ userId: null, docOwner: null, rev: 0, dirty: false, syncedAt: null, ordersSince: null });
 }
 
 export async function createInvite(peran, nama) {
-  return rpc("create_invite", { p_role: peran, p_nama: nama });
+  return rpc("create_invite", { p_role: peran, p_nama: nama, p_owner: cloud.team?.ownerId || null });
 }
 export async function listTeam() {
-  return rpc("team_list");
+  return rpc("team_list", { p_owner: cloud.team?.ownerId || null });
 }
 export async function listInvites() {
-  const { data, error } = await client.from("team_invites").select("code, role, nama, expires_at").gt("expires_at", new Date().toISOString()).order("created_at");
+  const { data, error } = await client.from("team_invites").select("code, role, nama, expires_at").eq("owner_id", cloud.team?.ownerId || cloud.user.id).gt("expires_at", new Date().toISOString()).order("created_at");
   if (error) throw new Error(error.message);
   return data;
 }
@@ -144,12 +193,12 @@ export async function cancelInvite(code) {
   if (error) throw new Error(error.message);
 }
 export async function removeMember(memberId) {
-  const { error } = await client.from("team_members").delete().eq("owner_id", cloud.user.id).eq("member_id", memberId);
+  const { error } = await client.from("team_members").delete().eq("owner_id", cloud.team?.ownerId || cloud.user.id).eq("member_id", memberId);
   if (error) throw new Error(error.message);
   await loadTeam();
 }
 export async function setMemberRole(memberId, peran) {
-  const { error } = await client.from("team_members").update({ role: peran }).eq("owner_id", cloud.user.id).eq("member_id", memberId);
+  const { error } = await client.from("team_members").update({ role: peran }).eq("owner_id", cloud.team?.ownerId || cloud.user.id).eq("member_id", memberId);
   if (error) throw new Error(error.message);
 }
 

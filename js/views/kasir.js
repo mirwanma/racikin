@@ -7,6 +7,7 @@ import { bahanMap, bisaDibuat } from "../stok-utils.js";
 import { program, waLink, normWa, newToken } from "../loyalty.js";
 import { kasbonAktif, cekKasbon, saldoKasbon, batasKasbon } from "../kasbon.js";
 import { saldoAktif, saldoOf, porsiSaldo, cekSaldo } from "../saldo.js";
+import { cabangChip } from "./cabang.js";
 import { cloud, markCards, isKasir, pelaku, teamActive } from "../cloud.js";
 import { METODE, metodeNama, subtotal, buatOrder, batalOrder, rekapHari, struk, perKasir } from "../pos.js";
 import { billAktif, billTerbuka, cariBill, billMeja, keranjangBill, totalBill, jumlahItem, lamaBuka, bukaBill, tambahRonde, hapusItem, batalBill, ubahBill, tutupBill, voucherBill, itemBill, rapikanPilih, keranjangPilih, totalPilih, semuaDipilih, bayarSebagian, gabungBill, pindahMeja } from "../bill.js";
@@ -903,10 +904,10 @@ export const kasir = {
         : step === "struk" && last
           ? strukView(s)
           : `<section class="card empty pos-empty"><div class="empty-icon">${icon("register", 30)}</div><h3>Keranjang kosong</h3><p>Ketuk menu di kiri untuk mulai pesanan.</p></section>`;
-      return `${head("Kasir", "#/")}${tabs}<div class="pos-split"><div class="pos-left">${billBanner(s)}${menuView(s)}</div><aside class="pos-right">${panel}</aside></div>${pilihSheet(s)}${chatSheet(s)}${billSheetView(s)}`;
+      return `${head("Kasir", "#/")}${cabangChip()}${tabs}<div class="pos-split"><div class="pos-left">${billBanner(s)}${menuView(s)}</div><aside class="pos-right">${panel}</aside></div>${pilihSheet(s)}${chatSheet(s)}${billSheetView(s)}`;
     }
     const body = tab === "rekap" ? rekapView(s) : tab === "bill" ? billView(s) + billSplitView(s) + billPindahView(s) : step === "struk" && last ? strukView(s) : step === "bayar" && cart.length ? bayarView(s) : billBanner(s) + menuView(s);
-    return `${head("Kasir", "#/")}${tabs}${body}${tab === "jual" ? pilihSheet(s) + chatSheet(s) + billSheetView(s) : ""}`;
+    return `${head("Kasir", "#/")}${cabangChip()}${tabs}${body}${tab === "jual" ? pilihSheet(s) + chatSheet(s) + billSheetView(s) : ""}`;
   },
 
   actions: {

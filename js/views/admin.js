@@ -211,16 +211,19 @@ function paketPanel(m) {
   const ket =
     j === "gratis"
       ? `Gratis${p.pro_terakhir ? ` · Pro terakhir ${tgl(p.pro_terakhir)}` : ""}`
-      : `${PAKET_NAMA[j]} sampai ${tgl(p.sampai)}${j === "bayar" ? ` · ${p.periode === "tahun" ? "tahunan" : "bulanan"}` : ""}`;
+      : `${PAKET_NAMA[j]} sampai ${tgl(p.sampai)}${j === "bayar" || j === "max" ? ` · ${p.periode === "tahun" ? "tahunan" : "bulanan"}` : ""}`;
+  const aksi = (pk) => (j === (pk === "max" ? "max" : "bayar") ? "Perpanjang" : "Aktifkan");
   return `<div class="a-panel a-paket">
     <h4>Paket</h4>
     <p><span class="a-pk ${j}">${PAKET_NAMA[j]}</span> ${esc(ket)}</p>
     ${p.catatan ? `<p class="a-mut">Catatan: ${esc(p.catatan)}</p>` : ""}
     <input class="a-input" value="${esc(catatanPro[m.id] || "")}" maxlength="200" placeholder="Catatan pembayaran (cth: transfer BCA 20/11)" data-change="catatanPro" data-id="${esc(m.id)}" aria-label="Catatan pembayaran">
     <div class="a-paket-act">
-      <button class="a-btn" data-action="proSet" data-id="${esc(m.id)}" data-periode="bulan">${j === "bayar" ? "Perpanjang" : "Aktifkan"} 1 bulan</button>
-      <button class="a-btn" data-action="proSet" data-id="${esc(m.id)}" data-periode="tahun">${j === "bayar" ? "Perpanjang" : "Aktifkan"} 1 tahun</button>
-      ${j === "bayar" ? `<button class="a-btn neg" data-action="proHenti" data-id="${esc(m.id)}">Hentikan</button>` : ""}
+      <button class="a-btn" data-action="proSet" data-id="${esc(m.id)}" data-periode="bulan" data-paket="pro">${aksi("pro")} Pro 1 bulan</button>
+      <button class="a-btn" data-action="proSet" data-id="${esc(m.id)}" data-periode="tahun" data-paket="pro">${aksi("pro")} Pro 1 tahun</button>
+      <button class="a-btn" data-action="proSet" data-id="${esc(m.id)}" data-periode="bulan" data-paket="max">${aksi("max")} Max 1 bulan</button>
+      <button class="a-btn" data-action="proSet" data-id="${esc(m.id)}" data-periode="tahun" data-paket="max">${aksi("max")} Max 1 tahun</button>
+      ${j === "bayar" || j === "max" ? `<button class="a-btn neg" data-action="proHenti" data-id="${esc(m.id)}">Hentikan</button>` : ""}
     </div>
   </div>`;
 }
@@ -395,21 +398,22 @@ function paketTab() {
   const r = ringkasPaket(semuaMerchant(), data.paket, st);
   const hb = Number(st.harga_bulan ?? 49000);
   const ht = Number(st.harga_tahun ?? 490000);
+  const mb = Number(st.harga_max_bulan ?? 99000);
+  const mt = Number(st.harga_max_tahun ?? 990000);
   const seg = (id, v) => `<div class="a-seg a-seg-sm" role="radiogroup" aria-label="${esc(id)}">
-      <label class="${v === "gratis" ? "on" : ""}"><input type="radio" name="f_${id}" value="gratis" ${v === "gratis" ? "checked" : ""} data-change="segPaket">Gratis</label>
-      <label class="${v !== "gratis" ? "on" : ""}"><input type="radio" name="f_${id}" value="pro" ${v !== "gratis" ? "checked" : ""} data-change="segPaket">Pro</label>
+      ${["gratis", "pro", "max"].map((k) => `<label class="${v === k ? "on" : ""}"><input type="radio" name="f_${id}" value="${k}" ${v === k ? "checked" : ""} data-change="segPaket">${PAKET_NAMA[k === "pro" ? "bayar" : k]}</label>`).join("")}
     </div>`;
   return `<header class="a-top"><div><h1>Paket & harga</h1><p class="a-mut">Atur fitur Gratis vs Pro, kuota AI & harga. Langsung berlaku ke semua merchant (dicek server).</p></div>
       <div class="a-top-act"><button class="a-btn" data-action="muat">${icon("sync", 15)}<span>Muat ulang</span></button></div></header>
     <div class="a-bento a-bento-4">
-      ${tile("Pro berbayar", `<div class="a-big-row"><b class="a-big">${r.bayar}</b></div><p class="a-mut">MRR ${rp(r.mrr)}</p>`)}
+      ${tile("Pro / Max berbayar", `<div class="a-big-row"><b class="a-big">${r.bayar + r.max}</b></div><p class="a-mut">${r.max} Max · MRR ${rp(r.mrr)}</p>`)}
       ${tile("Masa coba / transisi", `<div class="a-big-row"><b class="a-big">${r.coba + r.transisi}</b></div><p class="a-mut">tetap dapat semua fitur Pro</p>`)}
       ${tile("Gratis", `<div class="a-big-row"><b class="a-big">${r.gratis}</b></div><p class="a-mut">kena aturan di bawah</p>`)}
       ${tile("Terakhir diubah", `<div class="a-big-row"><b class="a-big sm">${st.diubah ? tgl(st.diubah) : "-"}</b></div>`)}
     </div>
     <form class="a-stack" data-form="paketAdmin">
       <section class="a-tile a-flush">
-        <div class="a-tile-head"><h2>Tabel fitur</h2><span class="a-mut">pilih Gratis / Pro per fitur</span></div>
+        <div class="a-tile-head"><h2>Tabel fitur</h2><span class="a-mut">pilih Gratis / Pro / Max per fitur (Max sudah termasuk semua fitur Pro)</span></div>
         <div class="a-table a-ptable">
           <div class="a-tr a-th"><span>Fitur</span><span>Paket</span></div>
           ${FITUR_PAKET.map((f) => `<div class="a-tr"><span class="a-usaha"><span><b>${esc(f.nama)}</b><small>${esc(f.ket)}</small></span></span><span>${seg(f.id, fitur[f.id])}</span></div>`).join("")}
@@ -426,6 +430,14 @@ function paketTab() {
             <label>Tahunan (Rp)<input class="a-input" type="number" name="harga_tahun" min="0" step="1000" value="${ht}" required></label>
           </div>
           <p class="a-mut">${ht < hb * 12 ? `Tahunan hemat ${rp(hb * 12 - ht)} (±${Math.round((hb * 12 - ht) / Math.max(1, hb))} bulan gratis)` : "Tahunan nggak lebih murah dari 12x bulanan"}</p>
+        </section>
+        <section class="a-tile">
+          <h3>Harga Max</h3>
+          <div class="a-form-grid">
+            <label>Bulanan (Rp)<input class="a-input" type="number" name="harga_max_bulan" min="0" step="1000" value="${mb}" required></label>
+            <label>Tahunan (Rp)<input class="a-input" type="number" name="harga_max_tahun" min="0" step="1000" value="${mt}" required></label>
+          </div>
+          <p class="a-mut">Max = semua fitur Pro + fitur yang diatur Max (default multi-cabang).</p>
         </section>
         <section class="a-tile">
           <h3>Masa coba & transisi</h3>
@@ -450,20 +462,24 @@ function paketTab() {
 /** Simpan konfigurasi paket dari form. */
 async function simpanPaket(form) {
   const fd = new FormData(form);
-  const fitur = Object.fromEntries(FITUR_PAKET.map((f) => [f.id, fd.get("f_" + f.id) === "gratis" ? "gratis" : "pro"]));
+  const fitur = Object.fromEntries(FITUR_PAKET.map((f) => [f.id, ["gratis", "pro", "max"].includes(fd.get("f_" + f.id)) ? fd.get("f_" + f.id) : f.default || "pro"]));
   const p = {
     wa: String(fd.get("wa") || ""),
     harga_bulan: Number(fd.get("harga_bulan")) || 0,
     harga_tahun: Number(fd.get("harga_tahun")) || 0,
+    harga_max_bulan: Number(fd.get("harga_max_bulan")) || 0,
+    harga_max_tahun: Number(fd.get("harga_max_tahun")) || 0,
     coba_hari: Number(fd.get("coba_hari")) || 0,
     transisi_sampai: `${fd.get("transisi_sampai")}T23:59:59+07:00`,
     ai_gratis: Number(fd.get("ai_gratis")) || 0,
     ai_pro: Number(fd.get("ai_pro")) || 0,
     fitur,
   };
-  const gratisJadi = FITUR_PAKET.filter((f) => fitur[f.id] === "gratis" && (data.setting?.fitur?.[f.id] || "pro") !== "gratis").map((f) => f.nama);
-  const proJadi = FITUR_PAKET.filter((f) => fitur[f.id] === "pro" && (data.setting?.fitur?.[f.id] || "pro") === "gratis").map((f) => f.nama);
-  const ubah = [gratisJadi.length ? `Jadi Gratis: ${gratisJadi.join(", ")}` : "", proJadi.length ? `Jadi Pro (merchant Gratis kehilangan akses): ${proJadi.join(", ")}` : ""].filter(Boolean).join("\n");
+  const LV = { gratis: 0, pro: 1, max: 2 };
+  const lama = (f) => data.setting?.fitur?.[f.id] || f.default || "pro";
+  const turun = FITUR_PAKET.filter((f) => LV[fitur[f.id]] < LV[lama(f)]).map((f) => `${f.nama} → ${PAKET_NAMA[fitur[f.id] === "pro" ? "bayar" : fitur[f.id]]}`);
+  const naik = FITUR_PAKET.filter((f) => LV[fitur[f.id]] > LV[lama(f)]).map((f) => `${f.nama} → ${PAKET_NAMA[fitur[f.id] === "pro" ? "bayar" : fitur[f.id]]}`);
+  const ubah = [turun.length ? `Makin terbuka: ${turun.join(", ")}` : "", naik.length ? `Makin dikunci (merchant di bawahnya kehilangan akses): ${naik.join(", ")}` : ""].filter(Boolean).join("\n");
   if (!confirm(`Simpan pengaturan paket? Langsung berlaku ke semua merchant.${ubah ? "\n\n" + ubah : ""}`)) return;
   const { data: st, error } = await sb().rpc("admin_set_paket", { p });
   if (error) throw new Error(error.message);
@@ -563,12 +579,14 @@ export const admin = {
       const m = data.list.find((x) => x.id === id);
       const p = data.paket[id];
       const sampai = perpanjang(p, el.dataset.periode);
-      if (!confirm(`${jenisPaket(p) === "bayar" ? "Perpanjang" : "Aktifkan"} Pro ${m?.nama || ""} sampai ${tgl(sampai)}?`)) return;
-      const { data: info, error } = await sb().rpc("admin_set_langganan", { p_owner: id, p_sampai: sampai, p_periode: el.dataset.periode, p_catatan: catatanPro[id] || "" });
+      const pk = el.dataset.paket === "max" ? "max" : "pro";
+      const namaPk = pk === "max" ? "Max" : "Pro";
+      if (!confirm(`${jenisPaket(p) === (pk === "max" ? "max" : "bayar") ? "Perpanjang" : "Aktifkan"} ${namaPk} ${m?.nama || ""} sampai ${tgl(sampai)}?`)) return;
+      const { data: info, error } = await sb().rpc("admin_set_langganan", { p_owner: id, p_sampai: sampai, p_periode: el.dataset.periode, p_catatan: catatanPro[id] || "", p_paket: pk });
       if (error) return toast(error.message, "err");
       data.paket = { ...data.paket, [id]: { ...info, id, catatan: catatanPro[id] || "" } };
       delete catatanPro[id];
-      toast(`Pro ${m?.nama || ""} aktif sampai ${tgl(sampai)}`);
+      toast(`${namaPk} ${m?.nama || ""} aktif sampai ${tgl(sampai)}`);
       render();
     },
     async proHenti(el) {

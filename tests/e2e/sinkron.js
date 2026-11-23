@@ -109,6 +109,15 @@ const sinkron = (p) => p.evaluate(async () => { const m = await import('./js/clo
   await sinkron(c); sc = await st(c);
   ok(sc.orders.find((x) => x.id === baru.id).status === 'batal' && sc.posHarian[baru.tanggal].omzet === omzetSebelum, 'HP kedua: ikut batal & rekap turun');
 
+  // HP pemilik sebelumnya memegang dokumen lain (mis. habis pindah cabang / keluar tim): data lokal dikosongkan lalu
+  // ditarik dari cloud. Dulu userId masih tersimpan, jadi data kosong dianggap versi terbaru & menimpa cloud.
+  const resepServer = server.doc.resep.length;
+  const revSebelum = server.rev;
+  await a.evaluate(() => { const m = JSON.parse(localStorage.getItem('racikin:sync')); localStorage.setItem('racikin:sync', JSON.stringify({ ...m, docOwner: 'dokumen-lain' })); });
+  await sinkron(a); sa = await st(a);
+  ok(server.doc.resep.length === resepServer && server.rev === revSebelum, 'ganti dokumen: cloud nggak ditimpa data kosong');
+  ok(sa.resep.length === resepServer && sa.orders.length === sc.orders.length, 'ganti dokumen: data ditarik lagi dari cloud');
+
   for (const p of [a, c]) { console.log(p.nama, 'errors:', p.errs); ok(!p.errs.length, `${p.nama}: tanpa error`); }
   await b.close();
 })();

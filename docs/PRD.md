@@ -157,6 +157,9 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Merchant demo TAHGUY (akun tes pemilik.tahguy) diisi ulang dengan generator ini sampai 20 Nov 2026 (skala 0,7 supaya muat batas dokumen 2 MB): omzet ±Rp443rb → Rp1,31jt per hari, order 15 → 47 per hari, belanja 2 minggu Rp2,5jt → Rp7,4jt. Brand, meja, ide, RAB, BEP, aktivasi, izin & setelan dipertahankan; pelanggan & token kartu stempel lama tetap. Dokumen lama dicadangkan di `private.cadangan_user_data`.
 - Catatan: dokumen usaha dibatasi 2 MB; usaha dengan ±70 order/hari mulai mendekati batas karena detail order 30 hari disimpan di dokumen. Kalau merchant nyata sampai sebesar itu, pindahkan detail order ke tabel sendiri atau perpendek masa simpan.
 
+### Fase 42: Multi-cabang + paket Max (selesai)
+- Paket Max di atas Pro (fitur bisa diatur gratis/pro/max, harga Max, admin aktifkan Max). Multi-cabang default Max: tabel `usaha`, tiap cabang data terpisah, pindah cabang, tambah cabang (salin menu), kirim menu ke cabang lain, ringkasan gabungan, tim per cabang. Perbaikan: ganti dokumen (pindah cabang / keluar tim) nggak lagi menimpa cloud dengan data kosong.
+
 ### Fase 41: Saldo pelanggan / titipan (selesai)
 - Opsional (`posSetting.saldo`): isi saldo, simpan kembalian dari Kasir, metode bayar Saldo (kurang → sisa tunai/QRIS/transfer), tarik saldo, riwayat, saldo di kartu stempel. Kas kategori "Titipan saldo pelanggan" (bukan omzet), penjualan dicatat saat saldo dipakai. Data `saldoPelanggan`, kasir boleh menulis (migrasi `saldo_pelanggan`).
 
@@ -237,7 +240,7 @@ Keputusan pemilik (20 Nov 2026):
 - Desain ulang "pusat kontrol" (gelap, ikut mode terang): periode 7/30/90 hari, grafik omzet & order harian, tabel merchant dengan grafik mini, "Perlu disapa". Migrasi `admin_desain`: `admin_harian` + `seri14`/`order90` di `admin_merchants`.
 
 ### Di luar MVP (fase berikutnya)
-Payment gateway sungguhan (langganan Pro otomatis + QRIS pesan meja), WhatsApp Business API resmi, multi-cabang.
+Payment gateway sungguhan (langganan Pro otomatis + QRIS pesan meja), WhatsApp Business API resmi, stok / transfer bahan antar cabang.
 
 ## 6. Arsitektur MVP
 - **Frontend**: PWA statis (HTML + CSS + JS modules, tanpa build) di root repo ini, di-host di GitHub Pages. Data disimpan di `localStorage` (offline-first).
