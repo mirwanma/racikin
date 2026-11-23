@@ -1639,3 +1639,4 @@ body[data-admin="1"] .adm-chart i { background: var(--a-y); }
 .stack-sm { display: flex; flex-direction: column; gap: 6px; }
 .tf-list { display: flex; flex-direction: column; max-height: 360px; overflow: auto; }
 .tf-row span small { font-weight: 400; }
+.stok-num .stok-kemasan { display: block; margin-top: 2px; white-space: nowrap; }

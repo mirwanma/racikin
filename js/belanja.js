@@ -6,6 +6,7 @@
 // stokLog beli      -> { ..., alasan: "beli", harga (per satuan), supplierId }  => riwayat harga
 import { uid } from "./store.js";
 import { notaUtang } from "./utang.js";
+import { teksKemasan } from "./stok-utils.js";
 import { todayISO, addDays } from "./ui.js";
 
 const sum = (arr, f) => arr.reduce((a, x) => a + f(x), 0);
@@ -79,7 +80,12 @@ export function pesanWA(group, bisnis) {
   return [
     `${halo}saya dari ${bisnis} mau pesan:`,
     "",
-    ...group.items.map((it, i) => `${i + 1}. ${it.bahan.nama}: ${fmt(it.qty ?? it.beli)} ${it.bahan.satuan}`),
+    ...group.items.map((it, i) => {
+      const q = it.qty ?? it.beli;
+      const k = teksKemasan(q, it.bahan);
+      // Kalau dibeli per kemasan: sebut kemasannya dulu (yang dipakai supplier), satuan di kurung.
+      return `${i + 1}. ${it.bahan.nama}: ${k ? `${k} (${fmt(q)} ${it.bahan.satuan})` : `${fmt(q)} ${it.bahan.satuan}`}`;
+    }),
     "",
     "Mohon info total & kapan bisa diambil/dikirim ya. Terima kasih!",
   ].join("\n");

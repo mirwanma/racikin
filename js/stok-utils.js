@@ -7,6 +7,28 @@ export const bahanMap = (bahan) => Object.fromEntries((bahan || []).map((b) => [
 const round = (n, d = 2) => Math.round(n * 10 ** d) / 10 ** d;
 export const fmtQty = (n) => (Number.isInteger(n) ? String(n) : String(round(n, 2)).replace(".", ","));
 
+// Kemasan beli (opsional): bahan yang dibeli per dus / pak / tray. b.pack = isi per kemasan (dalam satuan bahan),
+// b.packNama = nama kemasannya. Dipakai daftar belanja (dibulatkan per kemasan), pesan WA ke supplier & form beli.
+export const KEMASAN = ["dus", "pak", "karton", "tray", "kotak", "bal", "karung", "renteng", "lusin", "jeriken"];
+/** { isi, nama } kemasan beli bahan, atau null kalau dibeli satuan. */
+export const kemasanOf = (b) => (Number(b?.pack) > 0 ? { isi: Number(b.pack), nama: String(b.packNama || "dus").trim() || "dus" } : null);
+/** Jumlah dalam kemasan: "2 dus", "1 dus + 6 pcs", "0,5 dus". "" kalau bahan nggak punya kemasan. */
+export function teksKemasan(qty, b) {
+  const k = kemasanOf(b);
+  const q = Number(qty) || 0;
+  if (!k || q <= 0) return "";
+  const n = Math.floor(q / k.isi + 1e-9);
+  const sisa = round(q - n * k.isi, 2);
+  if (!n) return `${fmtQty(round(q / k.isi, 2))} ${k.nama}`;
+  return sisa > 0 ? `${n} ${k.nama} + ${fmtQty(sisa)} ${b.satuan || ""}`.trim() : `${n} ${k.nama}`;
+}
+/** Patch kemasan dari isian form (isi kosong / 0 = hapus kemasan). */
+export function patchKemasan(b, isi, nama) {
+  const n = Number(isi) || 0;
+  const { pack, packNama, ...rest } = b;
+  return n > 0 ? { ...rest, pack: round(n, 2), packNama: String(nama || "").trim().slice(0, 20) || "dus" } : rest;
+}
+
 /** Rincian biaya resep per porsi. */
 export function hppOf(resep, map) {
   const hasil = Math.max(1, Number(resep.hasil) || 1);
