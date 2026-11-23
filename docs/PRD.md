@@ -158,7 +158,7 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Catatan: dokumen usaha dibatasi 2 MB; usaha dengan ±70 order/hari mulai mendekati batas karena detail order 30 hari disimpan di dokumen. Kalau merchant nyata sampai sebesar itu, pindahkan detail order ke tabel sendiri atau perpendek masa simpan.
 
 ### Fase 46: Isi per kemasan beli (selesai)
-- Kolom isi per kemasan + nama kemasan di bahan (dus / tray / kotak / pak ...): tampil di stok & form beli (tombol 1/2/3/5 dus), daftar belanja & pesan WA supplier per kemasan.
+- Satuan baru **renceng**. Kolom isi per kemasan + nama kemasan di bahan (dus / tray / kotak / pak / renceng ...): tampil di stok & form beli (tombol 1/2/3/5 dus), daftar belanja & pesan WA supplier per kemasan.
 
 ### Fase 45: Data contoh saldo & demo multi-cabang (selesai)
 - Data contoh: saldo pelanggan aktif (isi, bayar pakai saldo, simpan kembalian, tarik), opsi cabang muda (`hari`, `seed`, `denganTim`). Akun demo TAHGUY: cabang utama dilanjutkan s/d hari ini + saldo 6 langganan, cabang baru TAHGUY Dago (21 hari, menu sama, transfer bahan dari utama).

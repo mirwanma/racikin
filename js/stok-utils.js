@@ -1,6 +1,6 @@
 // Perhitungan stok & resep (murni, tanpa UI).
 
-export const SATUAN = ["gram", "ml", "pcs", "butir", "lembar", "bungkus", "ikat", "sdm", "porsi"];
+export const SATUAN = ["gram", "ml", "pcs", "butir", "lembar", "bungkus", "renceng", "ikat", "sdm", "porsi"];
 
 export const bahanMap = (bahan) => Object.fromEntries((bahan || []).map((b) => [b.id, b]));
 
@@ -9,7 +9,7 @@ export const fmtQty = (n) => (Number.isInteger(n) ? String(n) : String(round(n, 
 
 // Kemasan beli (opsional): bahan yang dibeli per dus / pak / tray. b.pack = isi per kemasan (dalam satuan bahan),
 // b.packNama = nama kemasannya. Dipakai daftar belanja (dibulatkan per kemasan), pesan WA ke supplier & form beli.
-export const KEMASAN = ["dus", "pak", "karton", "tray", "kotak", "bal", "karung", "renteng", "lusin", "jeriken"];
+export const KEMASAN = ["dus", "pak", "karton", "tray", "kotak", "bal", "karung", "renceng", "lusin", "jeriken"];
 /** { isi, nama } kemasan beli bahan, atau null kalau dibeli satuan. */
 export const kemasanOf = (b) => (Number(b?.pack) > 0 ? { isi: Number(b.pack), nama: String(b.packNama || "dus").trim() || "dus" } : null);
 /** Jumlah dalam kemasan: "2 dus", "1 dus + 6 pcs", "0,5 dus". "" kalau bahan nggak punya kemasan. */

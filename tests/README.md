@@ -15,7 +15,7 @@ cd tests && npm run unit
 
 | File | Menguji |
 |---|---|
-| `unit/kemasan.test.mjs` | isi per kemasan beli: teks jumlah ("1 dus + 6 pcs"), patch dari form, daftar belanja dibulatkan per kemasan, pesan WA supplier, data contoh |
+| `unit/kemasan.test.mjs` | isi per kemasan beli: teks jumlah ("1 dus + 6 pcs"), patch dari form, daftar belanja dibulatkan per kemasan, pesan WA supplier, data contoh, satuan renceng (pilihan & impor teks) |
 | `unit/transfer.test.mjs` | transfer stok antar cabang: validasi, stok asal/tujuan = riwayat, bahan baru, kirim ulang nggak dobel, gabung 3-way dengan HP kasir tujuan, riwayat |
 | `unit/cabang.test.mjs` | multi-cabang: cabang baru disalin dari data contoh (stok 0, Kas kosong, token meja baru), kirim menu (stok & Kas tujuan tetap), ringkasan gabungan & laba per cabang, data contoh cabang muda (`hari`, `seed`, `denganTim`) |
 | `unit/saldo.test.mjs` | saldo pelanggan: isi (Kas titipan), bayar pakai saldo (penuh & kurang + sisa QRIS), simpan kembalian, batal order, tarik, hapus, laci shift, reconcile, laba rugi & pajak, kartu publik |

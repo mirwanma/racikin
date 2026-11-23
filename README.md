@@ -191,6 +191,7 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 - Untuk QRIS/Transfer bisa centang **Sebagian dibayar tunai**: order menyimpan `pembayaran: [{ metode, jumlah }]` (`metode: "campur"`). Kas per metode, rekap Hari ini, struk & laci shift memakai porsi masing-masing (`porsiMetode` di `js/pos.js`).
 
 ## Belanja & supplier
+- Satuan bahan: gram, ml, pcs, butir, lembar, bungkus, **renceng**, ikat, sdm, porsi (impor teks juga mengenali "renceng" / "rentengan").
 - **Isi per kemasan beli** (opsional, di form tambah / edit bahan): mis. air mineral 1 dus = 24 pcs, telur 1 tray = 30 butir. Baris bahan menampilkan harga per kemasan & stok ≈ kemasan, form beli punya tombol cepat 1/2/3/5 dus, daftar belanja dibulatkan per kemasan & pesan WA ke supplier menyebut kemasannya ("2 dus (48 pcs)"). Data `bahan.pack` + `bahan.packNama`, helper `kemasanOf` / `teksKemasan` / `patchKemasan` di `js/stok-utils.js`.
 - Halaman `#/belanja` (Bisnis, atau Stok > Bahan & Stok). Khusus pemilik/manajer.
 - **Daftar belanja**: untuk 1/3/7 hari ke depan = rata-rata pemakaian 14 hari terakhir (riwayat stok dari Kasir) × hari + stok minimum − stok sekarang, dibulatkan (gram/ml per 100–500, atau per kemasan `bahan.pack`). Dikelompokkan per supplier dengan perkiraan biaya; jumlah bisa diubah, item bisa dicoret atau ditambah. Tombol **Pesan via WA** mengirim daftar ke nomor supplier.
