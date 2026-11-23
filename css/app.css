@@ -1637,3 +1637,5 @@ body[data-admin="1"] .adm-chart i { background: var(--a-y); }
 .cabang-tr .num { display: flex; flex-direction: column; text-align: right; }
 .cabang-tr .num small { color: var(--muted); font-size: 11px; }
 .stack-sm { display: flex; flex-direction: column; gap: 6px; }
+.tf-list { display: flex; flex-direction: column; max-height: 360px; overflow: auto; }
+.tf-row span small { font-weight: 400; }

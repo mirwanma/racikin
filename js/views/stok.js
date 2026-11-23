@@ -4,7 +4,7 @@ import { esc, rupiah, todayISO, fmtDate, toast } from "../ui.js";
 import { render } from "../app.js";
 import { head } from "./_shared.js";
 import { program, patchStempel, siapTukar } from "../loyalty.js";
-import { markCards, isKasir } from "../cloud.js";
+import { markCards, isKasir, isMember, cabangAktif } from "../cloud.js";
 import { varianTab } from "./varian.js";
 import { grupMenu } from "../varian.js";
 import { SATUAN, bahanMap, hppOf, bisaDibuat, menipis, belumDiisi, kebutuhan, fmtQty } from "../stok-utils.js";
@@ -154,8 +154,10 @@ function bahanTab(s) {
   const map = bahanMap(s.bahan);
   const log = [...s.stokLog].slice(-15).reverse();
   const cepat = isKasir() ? "" : `<a href="#/impor?jenis=bahan" class="lr-link">${icon("spark", 16)}<span><b>Bahan & stok cepat</b><small class="muted">Tulis daftar bahan atau foto nota belanja, sekaligus jadi stok awal</small></span>${icon("chevron", 16)}</a>`;
+  const tfLink = !isMember() && cabangAktif() ? `<a href="#/cabang" class="lr-link">${icon("send", 16)}<span><b>Kirim stok ke cabang lain</b><small class="muted">Lagi di ${esc(cabangAktif().nama || "cabang ini")}. Pindahin bahan ke cabang lain, stok dua-duanya ikut tercatat</small></span>${icon("chevron", 16)}</a>` : "";
   return `
     ${cepat}
+    ${tfLink}
     ${
       kosong.length
         ? `<section class="card info-card">
