@@ -44,7 +44,7 @@ import { paket } from "./views/paket.js";
 import { initPaket, onPaket } from "./paket.js";
 import { admin, isAdminMode, adminDiketahui, cekAdmin, tabAdmin } from "./views/admin.js";
 import { initMeja } from "./meja.js";
-import { initCloud, onCloudChange, cloud, role } from "./cloud.js";
+import { initCloud, onCloudChange, cloud, role, cabangDariLink } from "./cloud.js";
 import { icon } from "./icons.js";
 
 const routes = { "": home, profil, bisnis, ide, rab, brand, aktivasi, kas, konten, mentor, setelan, akun, stok, resep, pelanggan, kartu, studio, kasir, online, tim, gabung, notif, shift, laporan, belanja, dapur, meja, varian, impor, sehat, izin, pajak, kasbon, saldo, cabang, karyawan, jadwal: jadwalSaya, "impor-jual": imporJual, promo, wa, admin, paket, m: pesan };
@@ -68,6 +68,13 @@ function routeName() {
 }
 
 export function render() {
+  // Link notifikasi cabang lain (?cabang=): pindah cabang dulu, halaman tujuannya dibuka setelah datanya masuk.
+  if (cabangDariLink()) {
+    const tunggu = `<section class="card empty"><div class="empty-icon">${icon("sync", 30)}</div><h3>Membuka cabang…</h3><p class="muted">Data cabangnya lagi diambil.</p></section>`;
+    current = { render: () => tunggu };
+    view.innerHTML = tunggu;
+    return;
+  }
   const name = routeName();
   const peran = role();
   document.body.dataset.role = peran;

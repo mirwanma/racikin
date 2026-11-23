@@ -158,6 +158,13 @@ const sinkron = (p) => p.evaluate(async () => { const m = await import('./js/clo
   await sinkron(p);
   ok(bh.every((x) => Math.abs(utama.doc.bahan.find((y) => y.id === x.id).stok - (x.stok - 10)) < 0.01), 'transfer: stok utama di cloud ikut berkurang');
 
+  // Link dari notifikasi cabang lain (?cabang=): app pindah cabang dulu, parameternya dibuang
+  await p.goto(B + `#/stok?tab=bahan&cabang=${idDago}`); await p.waitForTimeout(2500);
+  ok((await txt(p, 'main')).includes('Cabang Dago') && !(await p.evaluate(() => location.hash)).includes('cabang=') && (await p.evaluate(() => location.hash)) === '#/stok?tab=bahan', 'link notifikasi: pindah ke Cabang Dago, tetap di halaman Stok');
+  ok((await p.evaluate(() => JSON.parse(localStorage.getItem('racikin:sync')).docOwner)) === idDago, 'link notifikasi: dokumen yang dipakai = Dago');
+  await p.goto(B + `#/kasir?cabang=${uid}`); await p.waitForTimeout(2500);
+  ok((await p.evaluate(() => JSON.parse(localStorage.getItem('racikin:sync')).docOwner)) === uid && (await st(p)).orders.length >= su.orders.length, 'link notifikasi: balik ke cabang utama, data utama lengkap');
+
   // Hapus Dago (ketik nama)
   await p.goto(B + '#/cabang'); await p.waitForSelector(`[data-action=hapus][data-id="${idDago}"]`);
   p.ketik = 'Cabang Dago';

@@ -6,7 +6,7 @@
 //
 // Deploy dengan verify_jwt = false (pg_cron tidak membawa JWT user); akses dicek manual di sini.
 import { sendPush, generateVapid, type Vapid, type PushSub } from "./webpush.ts";
-import { dueNotifs, type Notif } from "./notif.ts";
+import { dueNotifs, dueNotifsCabang, namaCabang, type Notif, type Cabang } from "./notif.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -84,7 +84,14 @@ async function run() {
   const members = (await rest(`team_members?select=owner_id,member_id,role&member_id=in.(${users.join(",")})`)) as { owner_id: string; member_id: string; role: string }[];
   const roleOf = new Map(users.map((u) => [u, { owner: u, role: "owner" }]));
   for (const m of members) roleOf.set(m.member_id, { owner: m.owner_id, role: m.role });
-  const owners = [...new Set([...roleOf.values()].map((r) => r.owner))];
+  // Pemilik dengan beberapa cabang (paket Max): pengingat dihitung untuk semua cabangnya.
+  const pemilik = [...roleOf].filter(([, r]) => r.role === "owner").map(([u]) => u);
+  const usaha = pemilik.length
+    ? ((await rest(`usaha?select=id,pemilik,nama,utama&pemilik=in.(${pemilik.join(",")})&order=dibuat`)) as { id: string; pemilik: string; nama: string; utama: boolean }[])
+    : [];
+  const cabangOf = new Map<string, typeof usaha>();
+  for (const u of usaha) cabangOf.set(u.pemilik, [...(cabangOf.get(u.pemilik) || []), u]);
+  const owners = [...new Set([...[...roleOf.values()].map((r) => r.owner), ...usaha.map((u) => u.id)])];
   const docs = (await rest(`user_data?select=user_id,data&user_id=in.(${owners.join(",")})`)) as { user_id: string; data: Record<string, unknown> }[];
   const docOf = new Map(docs.map((d) => [d.user_id, d.data]));
 
@@ -92,9 +99,17 @@ async function run() {
   let terkirim = 0;
   for (const s of subs) {
     const r = roleOf.get(s.user_id)!;
-    const doc = docOf.get(r.owner);
-    if (!doc) continue;
-    const due = dueNotifs(doc, { role: r.role, prefs: s.prefs, tz: s.tz, now, sent: s.sent || {}, userId: s.user_id });
+    const opt = { role: r.role, prefs: s.prefs, tz: s.tz, now, sent: s.sent || {}, userId: s.user_id };
+    const cabang = r.role === "owner" ? cabangOf.get(s.user_id) || [] : [];
+    let due: Notif[];
+    if (cabang.length > 1) {
+      const list: Cabang[] = cabang.map((u) => ({ id: u.id, utama: u.utama, doc: docOf.get(u.id) || null, nama: namaCabang(u, docOf.get(u.id) || null) }));
+      due = dueNotifsCabang(list, opt);
+    } else {
+      const doc = docOf.get(r.owner);
+      if (!doc) continue;
+      due = dueNotifs(doc, opt);
+    }
     if (!due.length) continue;
     const sent = { ...(s.sent || {}) };
     const tanggal = new Intl.DateTimeFormat("en-CA", { timeZone: safeTz(s.tz) }).format(now);
