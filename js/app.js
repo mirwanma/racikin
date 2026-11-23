@@ -44,7 +44,8 @@ import { paket } from "./views/paket.js";
 import { initPaket, onPaket } from "./paket.js";
 import { admin, isAdminMode, adminDiketahui, cekAdmin, tabAdmin } from "./views/admin.js";
 import { initMeja } from "./meja.js";
-import { initCloud, onCloudChange, cloud, role, cabangDariLink } from "./cloud.js";
+import { initCloud, onCloudChange, cloud, role, cabangDariLink, sb } from "./cloud.js";
+import { setDaftar as setSatuan } from "./satuan.js";
 import { icon } from "./icons.js";
 
 const routes = { "": home, profil, bisnis, ide, rab, brand, aktivasi, kas, konten, mentor, setelan, akun, stok, resep, pelanggan, kartu, studio, kasir, online, tim, gabung, notif, shift, laporan, belanja, dapur, meja, varian, impor, sehat, izin, pajak, kasbon, saldo, cabang, karyawan, jadwal: jadwalSaya, "impor-jual": imporJual, promo, wa, admin, paket, m: pesan };
@@ -185,6 +186,14 @@ if (typeof matchMedia === "function") {
   });
 }
 initCloud();
+// Daftar satuan bahan & kemasan dari admin platform (publik, boleh tanpa login). Disimpan di HP buat offline.
+function muatSatuan() {
+  const c = sb();
+  if (!c || !navigator.onLine) return;
+  c.rpc("satuan_daftar").then(({ data, error }) => !error && data && setSatuan(data) && softRender(), () => {});
+}
+muatSatuan();
+window.addEventListener("online", muatSatuan);
 initMeja();
 initPaket();
 onPaket(() => softRender());

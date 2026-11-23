@@ -157,6 +157,9 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Merchant demo TAHGUY (akun tes pemilik.tahguy) diisi ulang dengan generator ini sampai 20 Nov 2026 (skala 0,7 supaya muat batas dokumen 2 MB): omzet ±Rp443rb → Rp1,31jt per hari, order 15 → 47 per hari, belanja 2 minggu Rp2,5jt → Rp7,4jt. Brand, meja, ide, RAB, BEP, aktivasi, izin & setelan dipertahankan; pelanggan & token kartu stempel lama tetap. Dokumen lama dicadangkan di `private.cadangan_user_data`.
 - Catatan: dokumen usaha dibatasi 2 MB; usaha dengan ±70 order/hari mulai mendekati batas karena detail order 30 hari disimpan di dokumen. Kalau merchant nyata sampai sebesar itu, pindahkan detail order ke tabel sendiri atau perpendek masa simpan.
 
+### Fase 47: Satuan & kemasan diatur admin (selesai)
+- Dashboard admin → Satuan & kemasan: tambah / ganti / hapus satuan bahan (gram, ml, pcs dikunci), kata lain untuk impor teks, saran nama kemasan. App memakai daftar dari server (cache di HP, bawaan kalau offline pertama kali). Migrasi `satuan_bahan`.
+
 ### Fase 46: Isi per kemasan beli (selesai)
 - Satuan baru **renceng**. Kolom isi per kemasan + nama kemasan di bahan (dus / tray / kotak / pak / renceng ...): tampil di stok & form beli (tombol 1/2/3/5 dus), daftar belanja & pesan WA supplier per kemasan.
 

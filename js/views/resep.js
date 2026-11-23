@@ -5,7 +5,8 @@ import { esc, rupiah, toast, list } from "../ui.js";
 import { ai } from "../ai.js";
 import { render, go } from "../app.js";
 import { busy, runAI, head } from "./_shared.js";
-import { SATUAN, fmtQty } from "../stok-utils.js";
+import { fmtQty } from "../stok-utils.js";
+import { opsiSatuan } from "../satuan.js";
 import { cloud, role } from "../cloud.js";
 import { GAYA, siapkan, percantikOtomatis, percantikAI, upload, hapusFile } from "../foto.js";
 
@@ -157,7 +158,7 @@ function rowHtml(row, i) {
   return `<div class="resep-row" data-i="${i}">
     <input list="bahan-list" placeholder="Bahan" value="${esc(row.nama)}" data-change="row" data-f="nama" data-i="${i}" aria-label="Nama bahan">
     <input type="number" min="0" step="any" placeholder="Jml" value="${esc(row.qty)}" data-change="row" data-f="qty" data-i="${i}" aria-label="Jumlah">
-    <select data-change="row" data-f="satuan" data-i="${i}" ${b ? "disabled" : ""} aria-label="Satuan">${SATUAN.map((s) => `<option ${s === (b?.satuan || row.satuan) ? "selected" : ""}>${s}</option>`).join("")}</select>
+    <select data-change="row" data-f="satuan" data-i="${i}" ${b ? "disabled" : ""} aria-label="Satuan">${opsiSatuan(b?.satuan || row.satuan).map((s) => `<option ${s === (b?.satuan || row.satuan) ? "selected" : ""}>${esc(s)}</option>`).join("")}</select>
     <button type="button" class="icon-btn sm" data-action="delRow" data-i="${i}" aria-label="Hapus baris">${icon("x", 14)}</button>
     ${
       row.nama && !b
