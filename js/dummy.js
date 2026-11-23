@@ -468,8 +468,8 @@ export function buatDataDummy({ today = todayISO(), settings, tim = TIM_CONTOH, 
     b.harga = hargaAkhir[b.id] ?? b.harga; // harga sekarang = harga belanja terakhir
     b.supplierId = supOf[b.id] || null;
     if (BAHAN.find(([k]) => idB[k] === b.id)[4]) b.kemasan = true;
-    const pack = { air: 24, telur: 30, teh: 25 }[kodeOf[b.id]]; // beli per dus / tray / kotak
-    if (pack) b.pack = pack;
+    const pack = { air: [24, "dus"], telur: [30, "tray"], teh: [25, "kotak"] }[kodeOf[b.id]]; // beli per dus / tray / kotak
+    if (pack) [b.pack, b.packNama] = pack;
   }
 
   // ---------- Biaya rutin & pemasukan lain ----------

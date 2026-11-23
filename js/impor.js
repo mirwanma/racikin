@@ -79,12 +79,13 @@ const UNIT = [
   [/^(butir|btr)$/, "butir", 1],
   [/^(pcs|biji|bj|buah|bh|potong|ptg|cup|botol|btl|kaleng)$/, "pcs", 1],
   [/^(bks|bungkus|pak|pack|sachet|saset|dus|box)$/, "bungkus", 1],
+  [/^(renceng|rencengan|renteng|rentengan)$/, "renceng", 1],
   [/^(ikat|iket)$/, "ikat", 1],
   [/^(lembar|lbr)$/, "lembar", 1],
   [/^(sdm)$/, "sdm", 1],
   [/^(porsi)$/, "porsi", 1],
 ];
-const UNIT_RE = /(\d+(?:[.,]\d+)?)\s*(kg|kilogram|kilo|ons|gram|gr|g|liter|ltr|lt|l|ml|lusin|tray|rak|butir|btr|pcs|biji|bj|buah|bh|potong|ptg|cup|botol|btl|kaleng|bungkus|bks|pack|pak|sachet|saset|dus|box|ikat|iket|lembar|lbr|sdm|porsi)\b/i;
+const UNIT_RE = /(\d+(?:[.,]\d+)?)\s*(kg|kilogram|kilo|ons|gram|gr|g|liter|ltr|lt|l|ml|lusin|tray|rak|butir|btr|pcs|biji|bj|buah|bh|potong|ptg|cup|botol|btl|kaleng|bungkus|bks|pack|pak|sachet|saset|dus|box|rencengan|renceng|rentengan|renteng|ikat|iket|lembar|lbr|sdm|porsi)\b/i;
 
 /** Parser lokal daftar bahan: "tahu 200 pcs @600", "cabai rawit 1 kg 80rb", "minyak 5 liter 90.000". */
 export function parseBahanLokal(text) {

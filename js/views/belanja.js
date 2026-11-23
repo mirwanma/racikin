@@ -4,7 +4,7 @@ import { esc, rupiah, short, toast, copy, fmtDate, todayISO } from "../ui.js";
 import { render } from "../app.js";
 import { icon } from "../icons.js";
 import { head } from "./_shared.js";
-import { fmtQty } from "../stok-utils.js";
+import { fmtQty, teksKemasan } from "../stok-utils.js";
 import { normWa, waLink } from "../loyalty.js";
 import { rencanaBelanja, perSupplier, pesanWA, perubahanHarga, riwayatHarga, belanjaSupplier, catatBelanja } from "../belanja.js";
 import { TEMPO_DEFAULT, METODE_BAYAR, tambahHari, ringkasUtang, pengingatUtang, notaSupplier, sisaNota, dibayar, statusNota, bayarUtang, lunasiSupplier, hapusBayarUtang, hapusNota, ubahTempo } from "../utang.js";
@@ -43,7 +43,7 @@ function itemRow(it) {
   return `<div class="bl-row ${it.ikut ? "" : "off"}">
     <input type="checkbox" data-change="ikut" data-id="${b.id}" ${!skip.has(b.id) ? "checked" : ""} aria-label="Ikut dibeli">
     <div><b>${esc(b.nama)}</b><p class="small muted">${esc(info)}${it.menipis ? ` · <span class="neg">menipis</span>` : ""}</p></div>
-    <label class="bl-qty"><input type="number" inputmode="decimal" min="0" step="any" value="${it.qty}" data-change="qty" data-id="${b.id}" aria-label="Jumlah ${esc(b.nama)}"><small>${esc(b.satuan)}</small></label>
+    <label class="bl-qty"><input type="number" inputmode="decimal" min="0" step="any" value="${it.qty}" data-change="qty" data-id="${b.id}" aria-label="Jumlah ${esc(b.nama)}"><small>${esc(b.satuan)}${teksKemasan(it.qty, b) ? ` · ${esc(teksKemasan(it.qty, b))}` : ""}</small></label>
     <b class="bl-est">${short(it.estimasi)}</b>
   </div>`;
 }
