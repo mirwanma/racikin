@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { dueNotifs, localNow, pphBulan, pajakTagihan, utangTagihan, kasbonTagihan, gajiTagihan, jadwalBesok } from "../../supabase/functions/racikin-push/notif.ts";
+import { dueNotifs, dueNotifsCabang, urlCabang, namaCabang, localNow, pphBulan, pajakTagihan, utangTagihan, kasbonTagihan, gajiTagihan, jadwalBesok } from "../../supabase/functions/racikin-push/notif.ts";
 
 const doc = {
   calendar: { start: "2026-11-09", jadwal: [
@@ -138,3 +138,34 @@ d = dueNotifs(uang, { role: "dapur", prefs: {}, tz: "Asia/Jakarta", now: at("202
 assert.deepEqual(d.map((n) => [n.kind, n.title]), [["jadwal", "Besok kamu libur"]]);
 
 console.log("notif OK");
+
+// ---------- Multi-cabang: pengingat per cabang untuk pemilik ----------
+{
+  const pagi = at("2026-11-15T01:30:00Z"); // Minggu 08.30 WIB
+  const dago = { bahan: [{ nama: "Keju", tracked: true, stok: 1, min: 10 }], posHarian: {} };
+  const cab = [
+    { id: "u1", nama: "TAHGUY", utama: true, doc },
+    { id: "c2", nama: "Cabang Dago", utama: false, doc: dago },
+    { id: "c3", nama: "Cabang Kosong", utama: false, doc: null },
+  ];
+  let c = dueNotifsCabang(cab, { role: "owner", prefs: {}, tz: "Asia/Jakarta", now: pagi, sent: {} });
+  assert.deepEqual(c.map((n) => n.kind), ["konten", "stok", "stok@c2"]);
+  assert.equal(c[1].title, "TAHGUY · 1 bahan menipis");
+  assert.equal(c[2].title, "Cabang Dago · 1 bahan menipis");
+  assert.match(c[2].body, /^Keju/);
+  assert.equal(c[2].url, "#/stok?tab=bahan&cabang=c2");
+  assert.equal(c[0].url, "#/konten?cabang=u1");
+  // Penanda terkirim per cabang: stok utama sudah, stok Dago belum
+  c = dueNotifsCabang(cab, { role: "owner", prefs: {}, tz: "Asia/Jakarta", now: pagi, sent: { konten: "2026-11-15", stok: "2026-11-15" } });
+  assert.deepEqual(c.map((n) => n.kind), ["stok@c2"]);
+  c = dueNotifsCabang(cab, { role: "owner", prefs: {}, tz: "Asia/Jakarta", now: pagi, sent: { konten: "2026-11-15", stok: "2026-11-15", "stok@c2": "2026-11-15" } });
+  assert.equal(c.length, 0);
+  // Penanda cabang lain nggak memblokir cabang utama
+  c = dueNotifsCabang(cab, { role: "owner", prefs: {}, tz: "Asia/Jakarta", now: pagi, sent: { "stok@c2": "2026-11-15" } });
+  assert.deepEqual(c.map((n) => n.kind), ["konten", "stok"]);
+  // Satu cabang (utama) saja = sama persis seperti dueNotifs (judul tanpa nama cabang)
+  assert.deepEqual(dueNotifsCabang([cab[0]], { role: "owner", prefs: {}, tz: "Asia/Jakarta", now: pagi, sent: {} }), dueNotifs(doc, { role: "owner", prefs: {}, tz: "Asia/Jakarta", now: pagi, sent: {} }));
+  assert.equal(urlCabang("#/kasbon", "x y"), "#/kasbon?cabang=x%20y");
+  assert.equal(namaCabang({ nama: "", utama: true }, { profile: { nama: "TAHGUY" } }), "TAHGUY");
+  assert.equal(namaCabang({ nama: "", utama: false }, { profile: { cabang: "Dago", nama: "TAHGUY" } }), "Dago");
+}

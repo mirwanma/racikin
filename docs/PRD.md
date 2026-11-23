@@ -157,6 +157,9 @@ PWA berbasis AI yang menemani user dari **ide → modal → brand → launching 
 - Merchant demo TAHGUY (akun tes pemilik.tahguy) diisi ulang dengan generator ini sampai 20 Nov 2026 (skala 0,7 supaya muat batas dokumen 2 MB): omzet ±Rp443rb → Rp1,31jt per hari, order 15 → 47 per hari, belanja 2 minggu Rp2,5jt → Rp7,4jt. Brand, meja, ide, RAB, BEP, aktivasi, izin & setelan dipertahankan; pelanggan & token kartu stempel lama tetap. Dokumen lama dicadangkan di `private.cadangan_user_data`.
 - Catatan: dokumen usaha dibatasi 2 MB; usaha dengan ±70 order/hari mulai mendekati batas karena detail order 30 hari disimpan di dokumen. Kalau merchant nyata sampai sebesar itu, pindahkan detail order ke tabel sendiri atau perpendek masa simpan.
 
+### Fase 44: Pengingat push per cabang (selesai)
+- Pemilik multi-cabang dapat pengingat dari semua cabang (judul + nama cabang, penanda terkirim per cabang); klik notifikasi membuka cabang yang benar (`?cabang=`, pindah cabang aman lewat sinkron dulu).
+
 ### Fase 43: Transfer stok antar cabang (selesai)
 - Kirim bahan dari cabang yang lagi dibuka ke cabang lain: stok asal berkurang, stok tujuan bertambah, riwayat stok alasan "transfer" di dua cabang, riwayat transfer + nilai barang. Kas tetap (`js/transfer.js`).
 

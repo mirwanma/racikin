@@ -281,3 +281,35 @@ export function dueNotifs(doc: Doc, opt: { role: string; prefs: Prefs; tz: strin
   }
   return out.filter(Boolean);
 }
+
+// ---------- Multi-cabang ----------
+export type Cabang = { id: string; nama: string; utama: boolean; doc: Doc | null };
+
+/** Tambahkan ?cabang=<id> ke url hash, supaya app langsung membuka cabang itu waktu notifikasi diklik. */
+export const urlCabang = (url: string, id: string) => `${url}${url.includes("?") ? "&" : "?"}cabang=${encodeURIComponent(id)}`;
+
+/**
+ * Pengingat pemilik dengan beberapa cabang: dihitung per cabang. Penanda "sudah dikirim" per cabang (kunci
+ * "<jenis>" untuk cabang utama, sama seperti sebelumnya, "<jenis>@<cabangId>" untuk cabang lain), judul diawali nama
+ * cabang, url membawa ?cabang=. Satu cabang saja = sama persis dengan dueNotifs.
+ */
+export function dueNotifsCabang(cabang: Cabang[], opt: { role: string; prefs: Prefs; tz: string; now: Date; sent: Record<string, string>; userId?: string }): Notif[] {
+  const list = cabang.filter((c) => c.doc);
+  if (list.length <= 1 && (!list[0] || list[0].utama)) return list[0] ? dueNotifs(list[0].doc!, opt) : [];
+  const out: Notif[] = [];
+  for (const c of list) {
+    const akhiran = c.utama ? "" : `@${c.id}`;
+    const sent: Record<string, string> = {};
+    for (const [k, v] of Object.entries(opt.sent || {})) {
+      if (akhiran ? k.endsWith(akhiran) : !k.includes("@")) sent[akhiran ? k.slice(0, -akhiran.length) : k] = v;
+    }
+    for (const n of dueNotifs(c.doc!, { ...opt, sent })) {
+      out.push({ ...n, kind: n.kind + akhiran, title: `${c.nama} · ${n.title}`, url: urlCabang(n.url, c.id) });
+    }
+  }
+  return out;
+}
+
+/** Nama cabang untuk judul notifikasi. */
+export const namaCabang = (u: { nama?: string; utama?: boolean }, doc: Doc | null) =>
+  String(u.nama || doc?.profile?.cabang || doc?.profile?.nama || (u.utama ? "Cabang utama" : "Cabang")).slice(0, 40);

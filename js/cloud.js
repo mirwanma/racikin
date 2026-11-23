@@ -151,6 +151,35 @@ export async function pindahCabang(id) {
   return cabangAktif();
 }
 
+/**
+ * Link dengan ?cabang=<id> (mis. dari notifikasi pengingat cabang lain): pindah ke cabang itu dulu (perubahan lokal
+ * disinkron dulu lewat pindahCabang), lalu parameternya dibuang dari alamat. Dipanggil tiap render; return true kalau
+ * lagi pindah.
+ */
+let bukaLink = null;
+export function cabangDariLink() {
+  const [jalur, query = ""] = location.hash.split("?");
+  const q = new URLSearchParams(query);
+  const id = q.get("cabang");
+  if (!id || bukaLink) return !!bukaLink;
+  if (!cloud.user || !cloud.team) return false; // tunggu info tim dulu
+  q.delete("cabang");
+  const bersih = jalur + (q.toString() ? `?${q}` : "");
+  const buang = () => location.hash.includes("cabang=") && history.replaceState(null, "", bersih);
+  if (cloud.team.role !== "owner" || id === cloud.team.ownerId || !cloud.team.cabang?.some((c) => c.id === id)) {
+    buang();
+    return false;
+  }
+  bukaLink = pindahCabang(id)
+    .catch((e) => console.error("Gagal pindah cabang dari link", e))
+    .finally(() => {
+      bukaLink = null;
+      buang();
+      emit();
+    });
+  return true;
+}
+
 export const cabangBuat = (nama) => rpc("cabang_buat", { p_nama: nama });
 export const cabangUbah = (id, nama) => rpc("cabang_ubah", { p_id: id, p_nama: nama });
 export async function cabangHapus(id) {
