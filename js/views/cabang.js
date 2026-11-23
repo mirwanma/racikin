@@ -2,19 +2,21 @@
 // dibuka), kirim menu ke cabang lain, ringkasan gabungan (omzet, order, laba per cabang), ganti nama & hapus cabang.
 // Khusus pemilik. Tiap cabang punya Kasir, stok, Kas, pelanggan & tim sendiri.
 import { icon } from "../icons.js";
-import { esc, rupiah, toast, todayISO } from "../ui.js";
-import { store } from "../store.js";
+import { esc, rupiah, toast, todayISO, fmtDate } from "../ui.js";
+import { store, uid } from "../store.js";
 import { render } from "../app.js";
 import { head } from "./_shared.js";
 import { cloud, role, isMember, loadTeam, sync, pindahCabang, cabangAktif, cabangBuat, cabangUbah, cabangHapus, cabangRingkasan, docCabang, simpanDocCabang } from "../cloud.js";
 import { bolehFitur } from "../paket.js";
 import { kunciPro } from "./paket.js";
 import { docCabangBaru, kirimMenu, ringkasCabang, dariRingkasan, namaCabang, BAGIAN, MAKS_CABANG } from "../cabang.js";
+import { cekTransfer, keluarStok, masukStok, nilaiTransfer, riwayatTransfer, rapikan } from "../transfer.js";
 
 let ringkas = { status: "idle", data: null, error: "", at: 0, key: "" };
 let busy = "";
 let ubahId = null;
 let kirim = { ke: new Set(), bagian: new Set(["menu"]) };
+let tf = { ke: "", qty: {}, cari: "" }; // transfer stok: cabang tujuan, { bahanId: qty }
 
 const daftar = () => cloud.team?.cabang || [];
 const kunciRingkas = () => `${cloud.user?.id}|${daftar().map((c) => c.id).join(",")}`;
@@ -144,6 +146,51 @@ function kirimView() {
   </section>`;
 }
 
+const fmtQ = (n) => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString("id-ID");
+
+function transferView(s) {
+  const lain = daftar().filter((c) => c.id !== cloud.team?.ownerId);
+  if (!lain.length) return "";
+  const bahan = (s.bahan || []).filter((b) => (Number(b.stok) || 0) > 0).sort((a, b) => a.nama.localeCompare(b.nama, "id"));
+  const q = tf.cari.trim().toLowerCase();
+  const tampil = bahan.filter((b) => !q || b.nama.toLowerCase().includes(q) || tf.qty[b.id]);
+  const items = Object.entries(tf.qty).map(([bahanId, qty]) => ({ bahanId, qty }));
+  const ke = lain.find((c) => c.id === tf.ke);
+  const err = items.length ? cekTransfer(s, items, ke ? { id: ke.id, nama: namaCabang(ke) } : null) : "";
+  const n = rapikan(items).length;
+  const riwayat = riwayatTransfer(s, 8);
+  return `<section class="card stack" id="transfer-stok">
+    <h2 class="card-title" style="margin:0">Kirim stok ke cabang lain</h2>
+    <p class="small muted">Bahan dari <b>${esc(namaCabang(cabangAktif()))}</b> dipindah ke cabang lain: stok di sini berkurang, stok tujuan bertambah. Kas nggak berubah.</p>
+    <label class="field"><span>Cabang tujuan</span>
+      <select data-change="tfKe"><option value="">Pilih cabang</option>${lain.map((c) => `<option value="${c.id}" ${tf.ke === c.id ? "selected" : ""}>${esc(namaCabang(c))}</option>`).join("")}</select></label>
+    ${
+      bahan.length
+        ? `${bahan.length > 8 ? `<input type="search" placeholder="Cari bahan" value="${esc(tf.cari)}" data-change="tfCari" aria-label="Cari bahan">` : ""}
+      <div class="tf-list">${tampil
+        .map(
+          (b) => `<label class="bulk-row tf-row"><span>${esc(b.nama)}<small class="muted"> · ada ${fmtQ(b.stok)} ${esc(b.satuan || "")}</small></span>
+          <input type="number" min="0" max="${b.stok}" step="any" inputmode="decimal" placeholder="0" value="${tf.qty[b.id] ?? ""}" data-change="tfQty" data-id="${b.id}" aria-label="Jumlah ${esc(b.nama)}">
+          <small>${esc(b.satuan || "")}</small></label>`,
+        )
+        .join("")}</div>`
+        : `<p class="small muted">Belum ada bahan yang ada stoknya di cabang ini.</p>`
+    }
+    ${err ? `<p class="small neg">${esc(err)}</p>` : n ? `<div class="row-between pos-sum"><span>${n} bahan · nilai barang</span><b>${rupiah(nilaiTransfer(s, items))}</b></div>` : ""}
+    <button class="btn primary" data-action="transfer" ${!n || err || busy ? "disabled" : ""}>${busy === "transfer" ? "Lagi kirim stok…" : `${icon("send", 16)} Kirim stok${ke ? ` ke ${esc(namaCabang(ke))}` : ""}`}</button>
+    ${
+      riwayat.length
+        ? `<h3 class="small muted" style="margin:6px 0 0">Riwayat transfer</h3>
+      <div class="tf-riwayat">${riwayat
+        .map(
+          (t) => `<div class="row-between pos-sum"><span><b>${t.arah === "keluar" ? "Ke" : "Dari"} ${esc(t.cabang?.nama || "-")}</b><small class="muted"> · ${fmtDate(t.tanggal, { day: "numeric", month: "short" })} · ${esc(t.items.map((x) => `${fmtQ(x.qty)} ${x.satuan} ${x.nama}`).join(", "))}</small></span><b class="${t.arah === "keluar" ? "neg" : "pos"}">${t.arah === "keluar" ? "−" : "+"}${rupiah(t.nilai)}</b></div>`,
+        )
+        .join("")}</div>`
+        : ""
+    }
+  </section>`;
+}
+
 export const cabang = {
   render(s) {
     const back = "#/bisnis";
@@ -170,9 +217,29 @@ export const cabang = {
       ${ringkasView()}
       ${daftarView()}
       ${boleh ? tambahView(s) : `${kunciPro("cabang", "Paket kamu sekarang belum Max: cabang yang sudah ada tetap bisa dibuka, tapi nggak bisa nambah cabang baru.")}`}
-      ${kirimView()}`;
+      ${kirimView()}
+      ${transferView(s)}`;
   },
   changes: {
+    tfKe(el) {
+      tf.ke = el.value;
+      render();
+    },
+    tfCari(el) {
+      tf.cari = el.value;
+      render();
+      const i = document.querySelector('input[data-change="tfCari"]');
+      if (i) {
+        i.focus();
+        i.setSelectionRange(i.value.length, i.value.length);
+      }
+    },
+    tfQty(el) {
+      const v = Number(el.value) || 0;
+      if (v > 0) tf.qty[el.dataset.id] = v;
+      else delete tf.qty[el.dataset.id];
+      render();
+    },
     ke(el) {
       if (el.checked) kirim.ke.add(el.value);
       else kirim.ke.delete(el.value);
@@ -217,6 +284,33 @@ export const cabang = {
         kirim.ke.delete(c.id);
         ringkas.key = "";
         toast(`${namaCabang(c)} dihapus`);
+      });
+    },
+    transfer() {
+      const s = store.get();
+      const c = daftar().find((x) => x.id === tf.ke && x.id !== cloud.team?.ownerId);
+      const ke = c ? { id: c.id, nama: namaCabang(c) } : null;
+      const dari = { id: cloud.team?.ownerId, nama: namaCabang(cabangAktif()) };
+      const items = rapikan(Object.entries(tf.qty).map(([bahanId, qty]) => ({ bahanId, qty })));
+      const err = cekTransfer(s, items, ke);
+      if (err) return toast(err, "err");
+      const teks = items.map((it) => { const b = s.bahan.find((x) => x.id === it.bahanId); return `${fmtQ(it.qty)} ${b?.satuan || ""} ${b?.nama || ""}`.replace(/\s+/g, " ").trim(); }).join(", ");
+      if (!confirm(`Kirim ${teks} ke ${ke.nama}?`)) return;
+      const tfId = uid();
+      const tanggal = todayISO();
+      return jalan("transfer", async () => {
+        // Tambah dulu di cabang tujuan (cloud); kalau berhasil, baru stok di sini dikurangi.
+        let ok = false;
+        for (let i = 0; i < 3 && !ok; i++) {
+          const remote = await docCabang(ke.id);
+          if (!remote?.data) throw new Error(`Data ${ke.nama} belum ada di cloud. Buka cabang itu sekali dulu.`);
+          ok = await simpanDocCabang(ke.id, masukStok(remote.data, items, { tfId, tanggal, dari, bahanAsal: s.bahan }), remote.rev);
+        }
+        if (!ok) throw new Error(`Gagal kirim ke ${ke.nama}, data di sana lagi berubah. Coba lagi ya`);
+        store.set((st) => keluarStok(st, items, { tfId, tanggal, ke }));
+        tf = { ke: tf.ke, qty: {}, cari: "" };
+        ringkas.key = "";
+        toast(`Stok terkirim ke ${ke.nama}`);
       });
     },
     kirim() {

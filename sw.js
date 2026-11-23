@@ -1,5 +1,5 @@
 // Service worker: app shell offline-first. Naikkan VERSION tiap rilis.
-const VERSION = "racikin-v52";
+const VERSION = "racikin-v53";
 const SHELL = [
   "./",
   "index.html",
@@ -33,6 +33,7 @@ const SHELL = [
   "js/kasbon.js",
   "js/saldo.js",
   "js/cabang.js",
+  "js/transfer.js",
   "js/utang.js",
   "js/absen.js",
   "js/gaji.js",

@@ -137,6 +137,27 @@ const sinkron = (p) => p.evaluate(async () => { const m = await import('./js/clo
   const sb = await st(p);
   ok(sb.orders.length === su.orders.length && sb.resep[0].harga === hargaBaru, 'balik ke utama: order utama lengkap, harga ikut kiriman');
 
+  // Transfer stok dari utama ke Dago
+  await p.goto(B + '#/stok?tab=bahan'); await p.waitForTimeout(400);
+  ok(!!(await p.$('a.lr-link[href="#/cabang"]')), 'Stok: link kirim stok ke cabang lain');
+  await p.goto(B + '#/cabang'); await p.waitForSelector('#transfer-stok select[data-change=tfKe]');
+  const sBefore = await st(p);
+  const bh = sBefore.bahan.filter((x) => x.stok >= 10).slice(0, 2);
+  await p.selectOption('#transfer-stok select[data-change=tfKe]', idDago);
+  for (const x of bh) { await p.fill(`input[data-change=tfQty][data-id="${x.id}"]`, '10'); await p.dispatchEvent(`input[data-change=tfQty][data-id="${x.id}"]`, 'change'); await p.waitForTimeout(80); }
+  await p.fill(`input[data-change=tfQty][data-id="${bh[0].id}"]`, String(bh[0].stok + 1)); await p.dispatchEvent(`input[data-change=tfQty][data-id="${bh[0].id}"]`, 'change'); await p.waitForTimeout(80);
+  ok((await txt(p, '#transfer-stok')).includes('cuma') && (await p.isDisabled('[data-action=transfer]')), 'transfer lebih dari stok: ditolak');
+  await p.fill(`input[data-change=tfQty][data-id="${bh[0].id}"]`, '10'); await p.dispatchEvent(`input[data-change=tfQty][data-id="${bh[0].id}"]`, 'change'); await p.waitForTimeout(80);
+  await p.screenshot({ path: `${OUT}/cabang-transfer.png`, fullPage: true });
+  await p.click('[data-action=transfer]'); await p.waitForTimeout(1200);
+  const sAfter = await st(p);
+  ok(bh.every((x) => Math.abs(sAfter.bahan.find((y) => y.id === x.id).stok - (x.stok - 10)) < 0.01), 'transfer: stok utama berkurang 10');
+  ok(bh.every((x) => dago.doc.bahan.find((y) => y.id === x.id).stok === 10), 'transfer: stok Dago bertambah 10');
+  ok(dago.doc.stokLog.filter((l) => l.alasan === 'transfer').length === 2 && sAfter.stokLog.filter((l) => l.alasan === 'transfer').length === 2, 'transfer: tercatat di riwayat stok dua cabang');
+  ok((await txt(p, '#transfer-stok')).includes('Ke Cabang Dago'), 'riwayat transfer tampil');
+  await sinkron(p);
+  ok(bh.every((x) => Math.abs(utama.doc.bahan.find((y) => y.id === x.id).stok - (x.stok - 10)) < 0.01), 'transfer: stok utama di cloud ikut berkurang');
+
   // Hapus Dago (ketik nama)
   await p.goto(B + '#/cabang'); await p.waitForSelector(`[data-action=hapus][data-id="${idDago}"]`);
   p.ketik = 'Cabang Dago';
