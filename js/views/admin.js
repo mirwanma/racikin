@@ -5,6 +5,7 @@ import { FITUR as FITUR_PAKET, SELALU_GRATIS, FITUR_DEFAULT } from "../paket.js"
 import { esc, rupiah, short, todayISO, fmtDate, download, toast } from "../ui.js";
 import { render } from "../app.js";
 import { sb, cloud } from "../cloud.js";
+import { rapikan as rapikanSatuan, daftarLengkap as daftarSatuanLengkap, setDaftar as setSatuan, INTI as SATUAN_INTI } from "../satuan.js";
 import { FITUR, STATUS, statusMerchant, ringkasPlatform, saringMerchant, URUT, toCSV, isTes, PERIODE, ringkasHarian, persen, angkaPeriode, perluDisapa, ringkasPaket, jenisPaket, PAKET_NAMA, perpanjang } from "../admin.js";
 
 let data = { status: "idle", list: [], harian: [], paket: {}, setting: null, at: null, error: "" }; // idle | loading | ok | bukan | error
@@ -80,6 +81,7 @@ export const TAB_ADMIN = [
   ["merchant", "Merchant"],
   ["tren", "Pertumbuhan"],
   ["paket", "Paket & harga"],
+  ["satuan", "Satuan & kemasan"],
 ];
 export const tabAdmin = () => {
   const t = new URLSearchParams(location.hash.split("?")[1] || "").get("tab");
@@ -228,9 +230,10 @@ function paketPanel(m) {
   </div>`;
 }
 
-/** Setelan platform (harga & nomor WA upgrade), dipakai di halaman Akun mode admin. */
+/** Setelan platform (harga & nomor WA upgrade, satuan bahan), dipakai di halaman Akun mode admin. */
 export function platformCard() {
-  return `<a href="#/admin?tab=paket" class="card module"><span class="module-num">${icon("receipt", 18)}</span><div><h3>Paket & harga</h3><p class="muted small">Atur fitur Gratis / Pro, kuota AI, harga, masa coba & nomor WA upgrade</p></div><span class="chev">${icon("chevron", 18)}</span></a>`;
+  return `<a href="#/admin?tab=paket" class="card module"><span class="module-num">${icon("receipt", 18)}</span><div><h3>Paket & harga</h3><p class="muted small">Atur fitur Gratis / Pro, kuota AI, harga, masa coba & nomor WA upgrade</p></div><span class="chev">${icon("chevron", 18)}</span></a>
+    <a href="#/admin?tab=satuan" class="card module"><span class="module-num">${icon("box", 18)}</span><div><h3>Satuan & kemasan</h3><p class="muted small">Tambah / ubah satuan bahan (gram, pcs, renceng...), kata lain buat impor teks & nama kemasan beli</p></div><span class="chev">${icon("chevron", 18)}</span></a>`;
 }
 
 // ---------- Bagian halaman ----------
@@ -488,7 +491,79 @@ async function simpanPaket(form) {
   render();
 }
 
-const TAB_VIEW = { ringkasan: ringkasanTab, merchant: merchantTab, tren: trenTab, paket: paketTab };
+// ---------- Satuan & kemasan ----------
+let drafSatuan = null; // { satuan: [{ nama, alias: "teks", inti? }], kemasan: "teks" } yang lagi diedit
+
+const awalSatuan = () => {
+  const d = rapikanSatuan(data.setting?.satuan ? { satuan: data.setting.satuan, kemasan: data.setting.kemasan } : null) || daftarSatuanLengkap();
+  return { satuan: d.satuan.map((x) => ({ nama: x.nama, alias: (x.alias || []).join(", "), ...(x.inti ? { inti: true } : {}) })), kemasan: d.kemasan.join(", ") };
+};
+/** Baca isian form ke draf (sebelum render ulang, supaya ketikan nggak hilang). */
+function bacaDrafSatuan() {
+  const f = document.querySelector('form[data-form="satuanAdmin"]');
+  if (!f || !drafSatuan) return;
+  const fd = new FormData(f);
+  drafSatuan = {
+    satuan: drafSatuan.satuan.map((x, i) => ({ ...x, nama: x.inti ? x.nama : String(fd.get(`n_${i}`) ?? x.nama), alias: String(fd.get(`a_${i}`) ?? x.alias) })),
+    kemasan: String(fd.get("kemasan") ?? drafSatuan.kemasan),
+  };
+}
+const pisah = (t) => String(t || "").split(/[,\n]/).map((x) => x.trim().toLowerCase()).filter(Boolean);
+
+/** Halaman Satuan & kemasan: satuan bahan (+ kata lain untuk impor teks) & saran nama kemasan beli. */
+function satuanTab() {
+  drafSatuan ||= awalSatuan();
+  const d = drafSatuan;
+  return `<header class="a-top"><div><h1>Satuan & kemasan</h1><p class="a-mut">Pilihan satuan bahan & nama kemasan di app merchant. Langsung berlaku (app ambil daftar terbaru waktu dibuka).</p></div>
+      <div class="a-top-act"><a class="a-btn" href="#/admin?tab=paket">${icon("receipt", 15)}<span>Paket & harga</span></a></div></header>
+    <form class="a-stack" data-form="satuanAdmin">
+      <section class="a-tile a-flush">
+        <div class="a-tile-head"><h2>Satuan bahan</h2><span class="a-mut">${d.satuan.length} satuan · ${SATUAN_INTI.join(", ")} dikunci (dipakai hitungan app)</span></div>
+        <div class="a-table a-stable">
+          <div class="a-tr a-th"><span>Satuan</span><span>Kata lain (buat impor teks, pisah koma)</span><span></span></div>
+          ${d.satuan
+            .map(
+              (x, i) => `<div class="a-tr">
+            <span>${x.inti ? `<b>${esc(x.nama)}</b> <small class="a-mut">inti</small>` : `<input class="a-input" name="n_${i}" value="${esc(x.nama)}" maxlength="20" required aria-label="Nama satuan">`}</span>
+            <span><input class="a-input" name="a_${i}" value="${esc(x.alias)}" placeholder="${x.nama === "renceng" ? "rentengan, renteng" : "opsional"}" aria-label="Kata lain ${esc(x.nama)}"></span>
+            <span>${x.inti ? "" : `<button type="button" class="a-btn neg" data-action="satuanHapus" data-i="${i}" aria-label="Hapus ${esc(x.nama)}">${icon("x", 14)}</button>`}</span>
+          </div>`,
+            )
+            .join("")}
+        </div>
+        <div class="a-save"><button type="button" class="a-btn a-btn-teks" data-action="satuanTambah">${icon("plus", 15)}<span>Tambah satuan</span></button></div>
+      </section>
+      <section class="a-tile">
+        <h3>Nama kemasan beli</h3>
+        <label class="a-full"><span class="a-mut">Saran di kolom "nama kemasan" bahan (pisah koma). Merchant tetap bisa ngetik nama lain.</span>
+          <textarea class="a-input" name="kemasan" rows="3">${esc(d.kemasan)}</textarea></label>
+      </section>
+      <p class="a-mut">Bahan merchant menyimpan nama satuannya sendiri, jadi satuan yang diganti / dihapus di sini tetap tampil di bahan lama. Kata lain dipakai waktu merchant impor bahan dari teks (mis. "5 rentengan" jadi 5 renceng). Konversi kg / ons / liter / lusin / tray tetap otomatis.</p>
+      <div class="a-save"><button type="button" class="btn ghost" data-action="satuanReset">Batalkan perubahan</button><button class="btn primary">Simpan satuan & kemasan</button></div>
+    </form>`;
+}
+
+async function simpanSatuan() {
+  bacaDrafSatuan();
+  const p = {
+    satuan: drafSatuan.satuan.map((x) => ({ nama: String(x.nama).trim().toLowerCase(), alias: pisah(x.alias) })),
+    kemasan: pisah(drafSatuan.kemasan),
+  };
+  const lama = awalSatuan().satuan.map((x) => x.nama);
+  const hilang = lama.filter((n) => !p.satuan.some((x) => x.nama === n));
+  const baru = p.satuan.map((x) => x.nama).filter((n) => !lama.includes(n));
+  const info = [baru.length ? `Baru / ganti nama: ${baru.join(", ")}` : "", hilang.length ? `Hilang dari pilihan: ${hilang.join(", ")} (bahan lama tetap aman)` : ""].filter(Boolean).join("\n");
+  if (!confirm(`Simpan satuan & kemasan? Berlaku ke semua merchant.${info ? "\n\n" + info : ""}`)) return;
+  const { data: hasil, error } = await sb().rpc("admin_set_satuan", { p });
+  if (error) throw new Error(error.message);
+  setSatuan(hasil);
+  data = { ...data, setting: { ...(data.setting || {}), satuan: hasil.satuan, kemasan: hasil.kemasan, diubah: hasil.diubah } };
+  drafSatuan = null;
+  toast("Satuan & kemasan disimpan");
+  render();
+}
+
+const TAB_VIEW = { ringkasan: ringkasanTab, merchant: merchantTab, tren: trenTab, paket: paketTab, satuan: satuanTab };
 
 /** Angka "berisiko" di menu samping (badge di Merchant). */
 function badgeMenu() {
@@ -538,6 +613,9 @@ export const admin = {
     paketAdmin(form) {
       return simpanPaket(form);
     },
+    satuanAdmin() {
+      return simpanSatuan();
+    },
   },
   changes: {
     segPaket(el) {
@@ -569,7 +647,26 @@ export const admin = {
     },
   },
   actions: {
-    muat: () => muat(),
+    muat: () => {
+      drafSatuan = null;
+      return muat();
+    },
+    satuanTambah() {
+      bacaDrafSatuan();
+      drafSatuan.satuan.push({ nama: "", alias: "" });
+      render();
+      const inp = document.querySelectorAll('form[data-form="satuanAdmin"] input[name^="n_"]');
+      inp[inp.length - 1]?.focus();
+    },
+    satuanHapus(el) {
+      bacaDrafSatuan();
+      drafSatuan.satuan.splice(Number(el.dataset.i), 1);
+      render();
+    },
+    satuanReset() {
+      drafSatuan = null;
+      render();
+    },
     periode(el) {
       f.periode = Number(el.dataset.n) || 30;
       render();

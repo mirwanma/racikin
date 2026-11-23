@@ -7,19 +7,20 @@ import { program, patchStempel, siapTukar } from "../loyalty.js";
 import { markCards, isKasir, isMember, cabangAktif } from "../cloud.js";
 import { varianTab } from "./varian.js";
 import { grupMenu } from "../varian.js";
-import { SATUAN, bahanMap, hppOf, bisaDibuat, menipis, belumDiisi, kebutuhan, fmtQty, KEMASAN, kemasanOf, teksKemasan, patchKemasan } from "../stok-utils.js";
+import { bahanMap, hppOf, bisaDibuat, menipis, belumDiisi, kebutuhan, fmtQty, kemasanOf, teksKemasan, patchKemasan } from "../stok-utils.js";
+import { opsiSatuan, daftarKemasan } from "../satuan.js";
 
 let tab = "menu"; // menu | bahan | varian
 let open = null; // { type: beli|opname|edit|jual, id }
 
 const isOpen = (type, id) => open && open.type === type && open.id === id;
-const satuanOpts = (cur) => SATUAN.map((s) => `<option ${s === cur ? "selected" : ""}>${s}</option>`).join("");
-const kemasanList = `<datalist id="kemasan-list">${KEMASAN.map((k) => `<option value="${k}">`).join("")}</datalist>`;
+const satuanOpts = (cur) => opsiSatuan(cur).map((s) => `<option ${s === cur ? "selected" : ""}>${esc(s)}</option>`).join("");
+const kemasanList = () => `<datalist id="kemasan-list">${daftarKemasan().map((k) => `<option value="${esc(k)}">`).join("")}</datalist>`;
 /** Isian kemasan beli (opsional) di form tambah / edit bahan. */
 const kemasanField = (b = {}) => `<div class="row2">
     <label class="field"><span>Isi per kemasan beli (opsional)</span><input name="pack" type="number" min="0" step="any" inputmode="decimal" value="${Number(b.pack) > 0 ? esc(b.pack) : ""}" placeholder="cth: 24 (1 dus isi 24)"></label>
     <label class="field"><span>Nama kemasan</span><input name="packNama" list="kemasan-list" maxlength="20" value="${esc(b.packNama || "")}" placeholder="dus"></label>
-  </div>${kemasanList}`;
+  </div>${kemasanList()}`;
 
 function menuTab(s) {
   const map = bahanMap(s.bahan);

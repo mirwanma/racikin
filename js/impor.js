@@ -1,7 +1,7 @@
 // Pindahan data usaha yang sudah jalan: input menu & bahan cepat (dari teks / foto lewat AI) + saldo kas awal.
 // Murni (tanpa UI). Parser lokal di sini dipakai Mode Demo (teks saja); AI Online pakai task parse_menu / parse_bahan.
 import { uid } from "./store.js";
-import { SATUAN } from "./stok-utils.js";
+import { daftarSatuan, kataSatuan } from "./satuan.js";
 
 const key = (n) => String(n || "").trim().toLowerCase().replace(/\s+/g, " ");
 const round2 = (n) => Math.round(n * 100) / 100;
@@ -85,7 +85,21 @@ const UNIT = [
   [/^(sdm)$/, "sdm", 1],
   [/^(porsi)$/, "porsi", 1],
 ];
-const UNIT_RE = /(\d+(?:[.,]\d+)?)\s*(kg|kilogram|kilo|ons|gram|gr|g|liter|ltr|lt|l|ml|lusin|tray|rak|butir|btr|pcs|biji|bj|buah|bh|potong|ptg|cup|botol|btl|kaleng|bungkus|bks|pack|pak|sachet|saset|dus|box|rencengan|renceng|rentengan|renteng|ikat|iket|lembar|lbr|sdm|porsi)\b/i;
+const KATA_BAWAAN = "kg|kilogram|kilo|ons|gram|gr|g|liter|ltr|lt|l|ml|lusin|tray|rak|butir|btr|pcs|biji|bj|buah|bh|potong|ptg|cup|botol|btl|kaleng|bungkus|bks|pack|pak|sachet|saset|dus|box|rencengan|renceng|rentengan|renteng|ikat|iket|lembar|lbr|sdm|porsi".split("|");
+const escRe = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/** Pola "angka + satuan": kata bawaan (dengan konversi) + satuan & kata lain yang diatur admin (js/satuan.js). */
+function polaSatuan() {
+  const kata = [...new Set([...KATA_BAWAAN, ...kataSatuan().map(([k]) => k)])].sort((a, b) => b.length - a.length);
+  return new RegExp(`(\\d+(?:[.,]\\d+)?)\\s*(${kata.map(escRe).join("|")})\\b`, "i");
+}
+/** Satuan Racikin & faktor untuk kata tertulis: konversi bawaan dulu (kg -> gram x1000), lalu daftar dari admin. */
+function cariSatuan(kata) {
+  const k = kata.toLowerCase();
+  const u = UNIT.find(([re]) => re.test(k));
+  if (u) return [u[1], u[2]];
+  const c = kataSatuan().find(([x]) => x === k);
+  return c ? [c[1], 1] : ["pcs", 1];
+}
 
 /** Parser lokal daftar bahan: "tahu 200 pcs @600", "cabai rawit 1 kg 80rb", "minyak 5 liter 90.000". */
 export function parseBahanLokal(text) {
@@ -93,16 +107,14 @@ export function parseBahanLokal(text) {
   for (const raw of String(text || "").split(/\n|;/)) {
     const line = raw.trim();
     if (!line) continue;
-    const q = line.match(UNIT_RE);
+    const q = line.match(polaSatuan());
     let satuan = "pcs";
     let stok = 0;
     let faktor = 1;
     let nama = line;
     let sisa = "";
     if (q) {
-      const u = UNIT.find(([re]) => re.test(q[2].toLowerCase()));
-      satuan = u ? u[1] : "pcs";
-      faktor = u ? u[2] : 1;
+      [satuan, faktor] = cariSatuan(q[2]);
       stok = round2(parseFloat(q[1].replace(",", ".")) * faktor);
       nama = line.slice(0, q.index);
       sisa = line.slice(q.index + q[0].length);
@@ -154,7 +166,7 @@ export function simpanMenu(s, rows) {
   return { patch: { resep }, baru, ubah };
 }
 
-const satuanValid = (x) => (SATUAN.includes(x) ? x : "pcs");
+const satuanValid = (x) => (daftarSatuan().includes(x) ? x : "pcs");
 
 /** Baris review bahan: cocokkan nama dengan bahan yang sudah ada (pakai satuannya). */
 export function barisBahan(s, bahan) {

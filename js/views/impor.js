@@ -6,7 +6,8 @@ import { esc, rupiah, toast, todayISO } from "../ui.js";
 import { render } from "../app.js";
 import { head } from "./_shared.js";
 import { ai, isDemo, AuthRequiredError } from "../ai.js";
-import { SATUAN, fmtQty } from "../stok-utils.js";
+import { fmtQty } from "../stok-utils.js";
+import { opsiSatuan } from "../satuan.js";
 import { barisMenu, simpanMenu, barisBahan, simpanBahan } from "../impor.js";
 
 const MAX_SISI = 1600;
@@ -140,7 +141,7 @@ function reviewBahan() {
         (r, i) => `<div class="impor-row bahan ${r.aksi !== "simpan" ? "off" : ""}">
           <input value="${esc(r.nama)}" maxlength="60" data-change="row" data-f="nama" data-i="${i}" aria-label="Nama bahan">
           <input type="number" min="0" step="any" value="${r.stok || ""}" placeholder="Stok" data-change="row" data-f="stok" data-i="${i}" aria-label="Stok">
-          <select data-change="row" data-f="satuan" data-i="${i}" ${r.adaId ? "disabled" : ""} aria-label="Satuan">${SATUAN.map((x) => `<option ${x === r.satuan ? "selected" : ""}>${x}</option>`).join("")}</select>
+          <select data-change="row" data-f="satuan" data-i="${i}" ${r.adaId ? "disabled" : ""} aria-label="Satuan">${opsiSatuan(r.satuan).map((x) => `<option ${x === r.satuan ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>
           <label class="impor-harga"><small class="muted">Rp / ${esc(r.satuan)}</small><input type="number" min="0" step="any" value="${r.harga || ""}" placeholder="belum tahu" data-change="row" data-f="harga" data-i="${i}" aria-label="Harga per satuan"></label>
           <label class="impor-cek"><input type="checkbox" data-change="row" data-f="pakai" data-i="${i}" ${r.aksi === "simpan" ? "checked" : ""}><span>Simpan</span></label>
           <small class="muted impor-info">${r.adaId ? `Sudah ada${r.stokLama !== null ? ` · stok sekarang ${fmtQty(r.stokLama)} ${esc(r.satuan)} (diganti)` : ""}` : "Bahan baru"}</small>

@@ -27,6 +27,7 @@ const PAKET = [
 ];
 const SETTING = { wa: '', harga_bulan: 49000, harga_tahun: 490000, coba_hari: 14, transisi_sampai: '2027-02-20T16:59:59Z', ai_gratis: 20, ai_pro: 300, fitur: { tim: 'pro', meja: 'pro', dapur: 'pro', bill: 'pro', foto: 'pro', imporJual: 'pro' }, diubah: '2026-11-20T10:00:00Z' };
 let SET_PAKET = null;
+let SET_SATUAN = null;
 const SET = [];
 const DETAIL = { harian: Array.from({ length: 60 }, (_, i) => ({ tgl: iso(59 - i), order: 5 + (i % 7), omzet: (5 + (i % 7)) * 20000 })), terlaris: [{ nama: 'Bakso Urat', porsi: 420 }, { nama: 'Es Teh', porsi: 210 }], tim: [{ role: 'kasir', n: 2 }], ai: [{ task: 'mentor_chat', n: 10 }], meja: 30 };
 
@@ -47,6 +48,7 @@ async function halaman(b, { admin }) {
     if (url.includes('/rpc/admin_harian')) return json(HARIAN);
     if (url.includes('/rpc/admin_paket')) return json(PAKET);
     if (url.includes('/rpc/admin_setting')) return json(SETTING);
+    if (url.includes('/rpc/admin_set_satuan')) { SET_SATUAN = JSON.parse(route.request().postData()).p; Object.assign(SETTING, SET_SATUAN); return json({ ...SET_SATUAN, satuan: SET_SATUAN.satuan.map((x) => (['gram', 'ml', 'pcs'].includes(x.nama) ? { ...x, inti: true } : x)), diubah: new Date().toISOString() }); }
     if (url.includes('/rpc/admin_set_paket')) { SET_PAKET = JSON.parse(route.request().postData()).p; Object.assign(SETTING, SET_PAKET, { wa: SET_PAKET.wa.replace(/\D/g, '') }); return json(SETTING); }
     if (url.includes('/rpc/admin_set_langganan')) { const b = JSON.parse(route.request().postData()); SET.push(b); return json({ paket: 'pro', sumber: 'bayar', sampai: b.p_sampai, periode: b.p_periode }); }
     if (url.includes('/rpc/paket_saya')) return json({ paket: 'pro', sumber: 'transisi', sampai: '2027-02-20T16:59:59Z' });
@@ -207,6 +209,29 @@ async function halaman(b, { admin }) {
   await m.click('.a-row:has-text("Bakso Bu Sari") button.a-tr'); await m.waitForSelector('.adm-chart i');
   await m.screenshot({ path: OUT + '/a7-hp-merchant.png', fullPage: true });
   ok(await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'HP Merchant: tidak ada scroll ke samping');
+
+  // Satuan & kemasan: tambah satuan + kata lain, hapus satuan, ubah kemasan, inti terkunci
+  await m.goto(B + '#/akun'); await m.waitForSelector('a[href="#/admin?tab=satuan"]');
+  await m.click('a[href="#/admin?tab=satuan"]'); await m.waitForSelector('form[data-form=satuanAdmin]');
+  ok(!(await m.$('form[data-form=satuanAdmin] input[name=n_0]')) && (await txt(m, 'form[data-form=satuanAdmin]')).includes('gram inti'), 'satuan inti (gram) terkunci');
+  const nAwal = await m.$$eval('form[data-form=satuanAdmin] .a-stable .a-tr:not(.a-th)', (a) => a.length);
+  await m.fill('form[data-form=satuanAdmin] input[name=a_6]', 'rentengan, renteng, sachetan');
+  await m.click('[data-action=satuanTambah]');
+  ok((await m.$$eval('form[data-form=satuanAdmin] .a-stable .a-tr:not(.a-th)', (a) => a.length)) === nAwal + 1 && (await m.inputValue('form[data-form=satuanAdmin] input[name=a_6]')) === 'rentengan, renteng, sachetan', 'tambah baris: ketikan sebelumnya nggak hilang');
+  await m.fill(`form[data-form=satuanAdmin] input[name=n_${nAwal}]`, 'Slop');
+  await m.fill(`form[data-form=satuanAdmin] input[name=a_${nAwal}]`, 'slof, pak rokok');
+  await m.click('[data-action=satuanHapus][data-i="9"]'); // porsi
+  await m.fill('form[data-form=satuanAdmin] textarea[name=kemasan]', 'dus, krat, karton');
+  await m.screenshot({ path: OUT + '/a8-satuan.png', fullPage: true });
+  ok(await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'HP Satuan: tidak ada scroll ke samping');
+  let konfSatuan = '';
+  m.once('dialog', (d) => { konfSatuan = d.message(); d.accept(); });
+  await m.click('form[data-form=satuanAdmin] button.primary'); await m.waitForTimeout(400);
+  console.log('konfirmasi satuan:', konfSatuan.replace(/\n/g, ' | '));
+  ok(/Baru \/ ganti nama: slop/.test(konfSatuan) && /Hilang dari pilihan: porsi/.test(konfSatuan), 'konfirmasi menyebut satuan baru & yang hilang');
+  ok(SET_SATUAN && SET_SATUAN.satuan.some((x) => x.nama === 'slop' && x.alias.join() === 'slof,pak rokok') && !SET_SATUAN.satuan.some((x) => x.nama === 'porsi') && SET_SATUAN.satuan.find((x) => x.nama === 'renceng').alias.includes('sachetan') && SET_SATUAN.kemasan.join() === 'dus,krat,karton', 'isian satuan & kemasan terkirim');
+  const lokal = await m.evaluate(() => JSON.parse(localStorage.getItem('racikin:satuan')));
+  ok(lokal.satuan.some((x) => x.nama === 'slop') && lokal.kemasan.includes('krat'), 'daftar baru langsung dipakai di HP ini');
 
   console.log('errors:', [...n.errs, ...p.errs, ...m.errs]);
   await b.close();
