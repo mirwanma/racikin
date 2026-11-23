@@ -315,7 +315,8 @@ PWA co-founder AI buat usaha F&B. Spesifikasi lengkap ada di [`docs/PRD.md`](doc
 ## Data contoh (demo)
 - Onboarding: **Coba demo lengkap (data 2 bulan)**; atau Setelan > Data kamu > **Isi data contoh TAHGUY (2 bulan)**.
 - Isi (`js/dummy.js`, acak tapi tetap/seeded): 15 menu + resep & HPP, 4 grup varian (level pedas, topping, ukuran, tingkat manis) yang ikut terpakai di order, 25 bahan dengan riwayat belanja & pemakaian, ±2.000 order kasir 60 hari (toko + GoFood/GrabFood/ShopeeFood, detail order 30 hari terakhir), Kas lengkap (penjualan, komisi order online, belanja bahan & kemasan, sewa, gas, gaji, iklan, pesanan katering), 35 pelanggan setia + stempel, RAB + realisasi, brand kit, checklist aktivasi, kalender konten, riwayat shift 30 hari (dengan beberapa selisih), 5 supplier & riwayat harga (cabai, telur, bakso naik; minyak turun). Data hari ini hanya sampai jam sekarang (TAHGUY buka ±14.30).
-- Semua angka saling cocok: Kas = rekap kasir per hari, stok = total riwayat stok, stempel = total log stempel. Beberapa bahan sengaja menipis & beberapa pelanggan "perlu diajak balik" supaya fitur pengingat kelihatan.
+- **Saldo pelanggan** ikut aktif: 7 langganan isi saldo (tunai/QRIS/transfer), sebagian kunjungan dibayar pakai saldo (kurang → sisanya tunai), beberapa kembalian disimpan jadi saldo, 1 pelanggan tarik sebagian.
+- Semua angka saling cocok: Kas = rekap kasir per hari, stok = total riwayat stok, stempel = total log stempel, Kas titipan = total saldo pelanggan. Beberapa bahan sengaja menipis & beberapa pelanggan "perlu diajak balik" supaya fitur pengingat kelihatan.
 - Mengganti data bisnis di perangkat (dan di cloud kalau sedang login); setelan perangkat tetap.
 
 ## Akun demo tim TAHGUY
@@ -329,6 +330,7 @@ Untuk mencoba mode tim, dapur, dan pesan meja di beberapa perangkat, ada 4 akun 
 | Dapur | `dapur.tahguy@racikin.test` | Sari |
 
 - Password **tidak** disimpan di repo (tanya pemilik project). Akun pemilik sudah berisi data contoh 2 bulan, mode dapur & pesan meja aktif (8 meja).
+- **Multi-cabang**: akun pemilik punya 2 cabang: **TAHGUY** (utama, data s/d hari ini + saldo 6 pelanggan langganan) dan **TAHGUY Dago** (buka 21 hari lalu, menu & bahan sama dengan utama, Kasir/Kas/stok/pelanggan/saldo sendiri, 3 kali kiriman bahan dari utama di riwayat transfer). Buka lewat Bisnis → Cabang. Akun pemilik paketnya bukan Max, jadi tambah cabang baru tetap terkunci, tapi kedua cabang bisa dibuka, dipantau di ringkasan, dikirimi menu & stok.
 - Data contoh mencatat order & shift atas nama yang jaga: Rina (hari kerja), Dodi (akhir pekan), Pemilik (sesekali). Kalau data contoh dimuat oleh pemilik yang punya tim, nama & ID diambil dari anggota tim sungguhan.
 - Hapus akun demo dari dashboard Supabase (Authentication → Users) kalau sudah tidak dipakai.
 

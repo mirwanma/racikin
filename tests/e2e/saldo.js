@@ -21,8 +21,10 @@ const angka = (s) => Number(String(s).replace(/\D/g, ''));
     const errs = []; p.on('pageerror', (e) => errs.push(e.message)); p.on('console', (m) => m.type() === 'error' && errs.push(m.text()));
     p.on('dialog', (d) => d.accept());
     await p.goto(B); await p.click('[data-action=dummy]'); await p.waitForSelector('.journey', { timeout: 20000 });
-    await p.evaluate(() => { const x = JSON.parse(localStorage.getItem('racikin:v1')); x.promo = x.promo.map((q) => ({ ...q, aktif: false })); x.posSetting = { ...(x.posSetting || {}), wajibShift: false }; localStorage.setItem('racikin:v1', JSON.stringify(x)); });
+    await p.evaluate(() => { const x = JSON.parse(localStorage.getItem('racikin:v1')); x.promo = x.promo.map((q) => ({ ...q, aktif: false })); x.posSetting = { ...(x.posSetting || {}), wajibShift: false, saldo: false }; localStorage.setItem('racikin:v1', JSON.stringify(x)); });
     await p.reload(); await p.waitForSelector('.journey');
+    // Data contoh sudah punya saldo pelanggan: angka Kas titipan dicek sebagai selisih dari awal.
+    const base = titipan(await st(p));
     const hariIni = await p.evaluate(() => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); });
 
     // Belum aktif: tanpa metode Saldo
@@ -46,10 +48,10 @@ const angka = (s) => Number(String(s).replace(/\D/g, ''));
     await p.click('form[data-form=simpan] button.primary'); await p.waitForTimeout(200);
     s = await st(p);
     const rara = s.pelanggan.find((x) => x.nama === 'Mbak Rara');
-    const t0 = titipan(s);
+    const t0 = titipan(s) - base;
     ok(saldo(s, rara.id) === 50000 && t0 === 50000, 'isi 50rb: saldo & Kas titipan');
     ok(s.transactions.some((t) => t.id === `saldo-${hariIni}-tunai` && t.ref === 'saldo'), 'Kas titipan per hari per metode');
-    ok((await txt(p, '.kasbon-row')).includes('Mbak Rara'), 'masuk daftar punya saldo');
+    ok(!!(await p.$(`.kasbon-row[data-id="${rara.id}"]`)), 'masuk daftar punya saldo');
     await p.screenshot({ path: `${OUT}/saldo-${hp ? 'hp' : 'lebar'}.png`, fullPage: true });
 
     // Kasir: tunai, simpan kembalian ke saldo pelanggan lain (Mbak Rara juga, biar gampang)
@@ -73,7 +75,7 @@ const angka = (s) => Number(String(s).replace(/\D/g, ''));
     let o = s.orders[s.orders.length - 1];
     ok(o.kembali === 3000 && o.simpanSaldo === kembali1 - 3000, 'order: kembali 3rb, sisanya disimpan');
     ok(saldo(s, rara.id) === 50000 + kembali1 - 3000, 'saldo naik dari kembalian');
-    ok(titipan(s) === 50000 + kembali1 - 3000, 'Kas titipan naik');
+    ok(titipan(s) - base === 50000 + kembali1 - 3000, 'Kas titipan naik');
 
     // Bayar pakai saldo penuh (2 porsi)
     await p.click('[data-action=baru]'); await p.waitForSelector('.pos-grid');
@@ -108,7 +110,7 @@ const angka = (s) => Number(String(s).replace(/\D/g, ''));
     ok(o.metode === 'campur' && o.pembayaran.find((x) => x.metode === 'qris').jumlah === total3 - sisaSaldo && saldo(s, rara.id) === 0, 'saldo kurang: sisanya QRIS, saldo habis');
     ok((s.posHarian[hariIni]?.omzet || 0) === omzet0 + total1 + total2 + total3, 'omzet naik penuh');
     ok(penjualan(s, hariIni) === s.posHarian[hariIni].omzet, 'Kas Penjualan = omzet (termasuk yang dibayar saldo)');
-    ok(titipan(s) === 0, 'titipan habis terpakai');
+    ok(titipan(s) - base === 0, 'titipan Mbak Rara habis terpakai');
 
     // Isi lagi lalu tarik sebagian (QRIS) dari halaman saldo; mati ditolak selama masih ada saldo
     await p.goto(B + '#/saldo'); await p.waitForSelector('form[data-form=baru]');
@@ -120,7 +122,7 @@ const angka = (s) => Number(String(s).replace(/\D/g, ''));
     await p.click('.saldo-detail label.chip:has(input[data-change=metode][value=qris])'); await p.waitForTimeout(100);
     await p.fill('form[data-form=simpan] input[name=nominal]', '5000'); await p.click('form[data-form=simpan] button.primary'); await p.waitForTimeout(150);
     s = await st(p);
-    ok(saldo(s, rara.id) === 15000 && titipan(s) === 15000 && s.transactions.some((t) => t.id === `saldo-${hariIni}-tarik-qris` && t.jenis === 'keluar'), 'isi 20rb, tarik 5rb QRIS');
+    ok(saldo(s, rara.id) === 15000 && titipan(s) - base === 15000 && s.transactions.some((t) => t.id === `saldo-${hariIni}-tarik-qris` && t.jenis === 'keluar'), 'isi 20rb, tarik 5rb QRIS');
     ok(!(await p.$('[data-action=mati]')), 'masih ada saldo: tombol matikan disembunyikan');
 
     // Kartu publik ikut menampilkan saldo
